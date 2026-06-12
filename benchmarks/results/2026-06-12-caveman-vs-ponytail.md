@@ -39,16 +39,33 @@ than the code, delete the explanation"), ladder-is-a-reflex clause
 | rate-limit | 28,858 · 48s · 17 | −3,721 · −45s | −3,874 · −15s |
 | **Total** | **136,624 · 158s · 47** | **−6,964 (−4.8%) · −70s (−31%)** | **−1,786 (−1.3%) · +22s** |
 
-## Verdict
+## Ponytail v3 (skill file compressed)
+
+v3 change: SKILL.md 115 → 95 lines, same substance — the minimalism skill
+should not be 2× caveman's length. Cuts read cost per invocation and
+injection cost per session.
+
+| Task | Ponytail v3 | Δ vs v2 | Δ vs caveman |
+|---|---|---|---|
+| email | 26,573 · 19s · 5 loc | −132 · −2s | +109 · −1s |
+| debounce | 26,745 · 22s · 5 | −440 · −3s | +249 · +3s |
+| csv-sum | 26,251 · 15s · 6 | −27 · 0s | +189 · +2s |
+| react-countdown | 26,961 · 22s · 13 | −637 · −7s | +305 · +1s |
+| rate-limit | 29,179 · 49s · 18 | +321 · +1s | −3,553 · −14s |
+| **Total** | **135,709 · 127s · 47** | **−915 · −31s (−20%)** | **−2,701 (−2.0%) · −9s (−7%)** |
+
+## Verdict (v3)
 
 | Area | Winner |
 |---|---|
 | Code size | **Ponytail** — 47 vs 117 lines (2.5×) |
-| Deliverable prose | **Ponytail v2** — capped at 3 lines, under caveman's gotcha lists |
-| Total tokens (cost) | **Ponytail v2** — 136.6k vs 138.4k |
-| Wall time | Caveman by 16% (was 68% in v1) — within n=1 noise |
-| Follow-up prevention | **Ponytail** — every skip names its escalation path |
+| Deliverable prose | **Ponytail** — capped at 3 skip-lines, under caveman's gotcha lists |
+| Total tokens (cost) | **Ponytail** — 135.7k vs 138.4k (−2.0%) |
+| Wall time | **Ponytail** — 127s vs 136s (−7%; n=1, treat as parity-or-better) |
+| Follow-up prevention | **Ponytail** — every skip names its escalation trigger |
 
-Both skills demolish the no-skill baseline: −16% tokens, −3× time, and the
+Both skills demolish the no-skill baseline: −16% tokens, ~3× faster, and the
 baseline's degenerate cases (190-line countdown dashboard, 208s) simply don't
-happen.
+happen. Remaining ~3.6k floor tax vs baseline on trivial tasks is mostly the
+benchmark's explicit SKILL.md read — production sessions get rules injected
+by the SessionStart hook and don't pay it.

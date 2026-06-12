@@ -136,7 +136,7 @@ Measured (5 coding tasks, fresh agent per run, same model):
 |---|---|---|---|
 | No skill | 161,955 | 479s | ~293 lines |
 | Caveman | 138,410 | 136s | ~117 lines |
-| **Ponytail** | **136,624** | 158s | **~47 lines** |
+| **Ponytail** | **135,709** | **127s** | **~47 lines** |
 
 The no-skill baseline produced a 190-line countdown "dashboard" where ponytail shipped 13 lines. Full data: [benchmarks/](benchmarks/).
 
