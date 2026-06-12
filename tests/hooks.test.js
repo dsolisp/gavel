@@ -21,8 +21,10 @@ const home = path.join(temp, 'home');
 const pluginData = path.join(temp, 'plugin-data');
 fs.mkdirSync(home, { recursive: true });
 
+// USERPROFILE alongside HOME: os.homedir() reads USERPROFILE on Windows, HOME on POSIX.
 const codexEnv = {
   HOME: home,
+  USERPROFILE: home,
   PLUGIN_DATA: pluginData,
   PONYTAIL_DEFAULT_MODE: 'ultra',
 };
@@ -60,6 +62,7 @@ assert.equal(output.systemMessage, 'PONYTAIL:OFF');
 
 const claudeEnv = {
   HOME: home,
+  USERPROFILE: home,
   PONYTAIL_DEFAULT_MODE: 'full',
 };
 delete claudeEnv.PLUGIN_DATA;
