@@ -54,9 +54,16 @@ Full before/after in [examples/](examples/).
 
 ## Install
 
-The skill is one file: [`skills/ponytail/SKILL.md`](skills/ponytail/SKILL.md). Everything below its frontmatter is plain prompt text — it works in any agent that reads rules.
+**Claude Code — plugin (full integration)**
 
-**Claude Code**
+```
+/plugin marketplace add DietrichGebert/ponytail
+/plugin install ponytail@ponytail
+```
+
+Auto-activation every session, `/ponytail` levels, `/ponytail-review`, `/ponytail-help`, `[PONYTAIL]` statusline badge. Restart Claude Code after install.
+
+**Claude Code — skill only**
 
 ```bash
 git clone https://github.com/DietrichGebert/ponytail.git
@@ -64,13 +71,49 @@ cp -r ponytail/skills/ponytail ~/.claude/skills/   # personal, all projects
 # or: cp -r ponytail/skills/ponytail .claude/skills/   # this project only
 ```
 
-**Cursor** — save the SKILL.md body as `.cursor/rules/ponytail.mdc`, or paste it into *Settings → Rules for AI*.
+**Cursor** — copy [`.cursor/rules/ponytail.mdc`](.cursor/rules/ponytail.mdc) into your project.
 
-**Windsurf** — save it as `.windsurf/rules/ponytail.md`, or add it to your global rules.
+**Windsurf** — copy [`.windsurf/rules/ponytail.md`](.windsurf/rules/ponytail.md).
 
-**Cline** — save it as `.clinerules/ponytail.md`.
+**Cline** — copy [`.clinerules/ponytail.md`](.clinerules/ponytail.md).
 
-**Aider** — save it as `PONYTAIL.md` and start with `aider --read PONYTAIL.md`.
+**Aider** — `aider --read AGENTS.md` with [`AGENTS.md`](AGENTS.md) in the repo root.
+
+**GitHub Copilot** — copy [`.github/copilot-instructions.md`](.github/copilot-instructions.md).
+
+## Levels
+
+| Level | Trigger | What changes |
+|---|---|---|
+| **lite** | `/ponytail lite` | Builds what's asked, names the lazier alternative in one line. |
+| **full** | `/ponytail` | The ladder enforced. Questions necessity, stdlib first, shortest diff. Default. |
+| **ultra** | `/ponytail ultra` | YAGNI extremist. Deletion before addition. Challenges the requirement before building. |
+
+Deactivate: say "stop ponytail" / "normal mode", or `/ponytail off`.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/ponytail [lite\|full\|ultra\|off]` | Switch level |
+| `/ponytail-review` | Over-engineering review — `L42: yagni: factory, one product. Inline.` |
+| `/ponytail-help` | Reference card |
+
+## Configure
+
+The plugin auto-activates at `full` every session. Change the default:
+
+```bash
+export PONYTAIL_DEFAULT_MODE=ultra   # env var, highest priority
+```
+
+or `~/.config/ponytail/config.json` (Windows: `%APPDATA%\ponytail\config.json`):
+
+```json
+{ "defaultMode": "off" }
+```
+
+`off` = no auto-activation, `/ponytail` still works on demand. Statusline badge (`[PONYTAIL]`, `[PONYTAIL:ULTRA]`) offers to configure itself if no statusline is set.
 
 ## Trigger Words
 
