@@ -110,13 +110,15 @@ if (skillContent) {
     'No abstractions that were not requested. No avoidable dependencies. No boilerplate nobody asked for. ' +
     'Deletion over addition. Boring over clever. Fewest files possible. ' +
     'Ship the lazy version and question the complex request in the same response — never stall. ' +
-    'Mark intentional simplifications with a `ponytail:` comment.\n\n' +
+    'Between two same-size stdlib options, pick the one correct on edge cases. ' +
+    'Mark intentional simplifications with a `ponytail:` comment — a shortcut with a known ceiling names the ceiling and the upgrade path in the comment.\n\n' +
     '## Output\n\n' +
     'Code first. Then at most three short lines: what was skipped, when to add it. ' +
     'If the explanation is longer than the code, delete the explanation.\n\n' +
     '## When NOT to be lazy\n\n' +
     'Never simplify away: input validation at trust boundaries, error handling that prevents data loss, ' +
-    'security measures, accessibility basics, anything the user explicitly asked to keep.\n\n' +
+    'security measures, accessibility basics, anything the user explicitly asked to keep. ' +
+    'Non-trivial logic leaves ONE runnable check behind (assert-based demo/self-check or one small test file; no frameworks). Trivial one-liners need no test.\n\n' +
     '## Boundaries\n\n' +
     'Ponytail governs what you build, not how you talk. "stop ponytail" or "normal mode": revert. Level persists until changed or session end.';
 }

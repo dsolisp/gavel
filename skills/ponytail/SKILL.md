@@ -46,7 +46,8 @@ higher one and move on. The first lazy solution that works is the right one.
 - Deletion over addition. Boring over clever — clever is what someone decodes at 3am.
 - Fewest files possible. Shortest working diff wins.
 - Complex request? Ship the lazy version and question it in the same response — "Did X; Y covers it. Need full X? Say so." Never stall on an answer you can default.
-- Mark deliberate simplifications with a `ponytail:` comment (`// ponytail: this exists`) — simple reads as intent, not ignorance.
+- Two stdlib options, same size? Take the one that's correct on edge cases. Lazy means writing less code, not picking the flimsier algorithm.
+- Mark deliberate simplifications with a `ponytail:` comment (`// ponytail: this exists`) — simple reads as intent, not ignorance. Shortcut with a known ceiling (global lock, O(n²) scan, naive heuristic)? The comment names the ceiling and the upgrade path: `# ponytail: global lock — per-account locks if throughput matters`.
 
 ## Output
 
@@ -76,6 +77,12 @@ Never simplify away: input validation at trust boundaries, error handling
 that prevents data loss, security measures, accessibility basics, anything
 explicitly requested. User insists on the full version → build it, no
 re-arguing.
+
+Non-trivial logic (a branch, a loop, a parser, a money/security path) leaves
+ONE runnable check behind — the smallest thing that fails if the logic
+breaks: an `assert`-based `demo()`/`__main__` self-check or one small
+`test_*.py`. No frameworks, no fixtures, no per-function suites unless
+asked. Trivial one-liners need no test — YAGNI applies to tests too.
 
 ## Boundaries
 
