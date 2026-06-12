@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="220" alt="Ponytail — the lazy senior dev">
+  <img src="assets/logo.png" width="220" alt="Ponytail, the lazy senior dev">
 </p>
 
 <h1 align="center">Ponytail</h1>
@@ -63,7 +63,7 @@ Cursor, Windsurf, Cline, Copilot, Aider: copy the matching rules file from this 
 No.
 
 **What if I really need the 120-line cache class?**
-You don't. Insist anyway and he'll build it — slowly, correctly, while looking at you.
+You don't. Insist anyway and he'll build it. Slowly. Correctly. While looking at you.
 
 **Does it scale?**
 The code you never wrote scales infinitely. Zero bugs, zero CVEs, 100% uptime since forever.
@@ -73,15 +73,13 @@ You know exactly why.
 
 ## Numbers
 
-5 coding tasks, same agent with and without ponytail: **−16% tokens, ~4× faster, 293 → 47 lines.** The 246 lines nobody wrote have never caused an incident.
-
-Then six harder tasks — streaming parsers, atomic file sync, auth, a concurrent money ledger — against a no-skill control and the [caveman](https://github.com/JuliusBrussee/caveman) skill, with adversarial security and concurrency probes:
+Six tasks: streaming log parser, atomic file sync, notification dispatcher, validation engine, auth module, concurrent money ledger. One spec each, one fresh agent per arm, same model. Three arms: no skill, the [caveman](https://github.com/JuliusBrussee/caveman) skill, and ponytail. Every arm passes the same adversarial security and concurrency probes. Then the agreement ends:
 
 <p align="center">
-  <img src="assets/benchmark-loc.svg" width="860" alt="Lines of code per task: ponytail 490 total vs caveman 1,440 vs control 2,943 — all passing the same adversarial probes">
+  <img src="assets/benchmark-loc.svg" width="860" alt="Lines of code per task: ponytail 490 total vs caveman 1,440 vs no-skill control 3,629, all passing the same adversarial probes">
 </p>
 
-Everyone passes every probe. Ponytail does it with a third of caveman's code, a sixth of control's, and was ~5× cheaper when the surprise feature request landed (96 lines changed vs 487 for control). Every shortcut is marked in-code with its upgrade path. Data: [benchmarks/](benchmarks/).
+**47% fewer tokens than the no-skill agent. 3× faster. A seventh of the code.** The 3,139 lines nobody wrote have never caused an incident. When a surprise feature request hit two of the tasks, ponytail extended in 96 changed lines; caveman needed 413, the no-skill agent 1,115. Every shortcut ponytail took is marked in the code with a `ponytail:` comment naming its upgrade path. Data: [benchmarks/](benchmarks/).
 
 ## License
 

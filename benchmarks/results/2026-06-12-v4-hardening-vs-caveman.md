@@ -91,6 +91,28 @@ locks at 3× the LOC).
      with its ceiling; Caveman's code marks only spec-allowed simulated transports,
      and its design trade-offs live in the chat report, invisible to a later reviewer.
 
+## Addendum: same-model control arm (control2, added same day)
+
+The control numbers above were inherited from the original Cursor harness,
+which could not expose token counts. Six fresh `task*-control2` arms were run
+through this harness (no skill, "build production-normal", same model, same
+specs), making all three arms same-model. Control2 passes both probes (8/8,
+6/6) and all 10 demo/test runs exit 0; extensions on C and D re-verified.
+
+| Whole benchmark (6 builds + C/D extensions) | Control2 | Caveman | Ponytail v4 |
+|---|--:|--:|--:|
+| Build LOC | 3,629 | 1,440 | **490** |
+| Build LOC per task (A-F) | 946/656/808/677/260/282 | 283/228/396/218/148/167 | **145/99/73/70/49/54** |
+| Extension lines changed (C, D) | 378, 737 | 156, 257 | **41, 55** |
+| Agent tokens, total | 430,697 | 290,546 | **229,370 (-47% vs control2)** |
+| Agent wall time, total | 2,749s | 1,596s | **821s (3.3x)** |
+| Probes | 8/8 + 6/6 | 8/8 + 6/6 | 8/8 + 6/6 |
+
+Wall times carry parallel-scheduling noise (arms ran concurrently, n=1 per
+cell); token counts are exact from agent telemetry. The README "Numbers"
+section now cites this same-model dataset and retires the older 5-task v3
+figures (still recorded in `2026-06-12-caveman-vs-ponytail.md`).
+
 ## Residual (honest notes)
 
 - A's spike stats still use observed-hours-only mean+3σ rather than a
