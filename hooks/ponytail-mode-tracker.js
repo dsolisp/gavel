@@ -2,12 +2,8 @@
 // ponytail — UserPromptSubmit hook to track which ponytail mode is active
 // Inspects user input for /ponytail commands and writes mode to flag file
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { getDefaultMode } = require('./ponytail-config');
-
-const flagPath = path.join(os.homedir(), '.claude', '.ponytail-active');
+const { clearMode, setMode, writeHookOutput } = require('./ponytail-runtime');
 
 let input = '';
 process.stdin.on('data', chunk => { input += chunk; });
@@ -18,9 +14,9 @@ process.stdin.on('end', () => {
     const prompt = (data.prompt || '').trim().toLowerCase();
 
     // Match /ponytail commands
-    if (prompt.startsWith('/ponytail')) {
+    if (/^[/@$]ponytail/.test(prompt)) {
       const parts = prompt.split(/\s+/);
-      const cmd = parts[0]; // /ponytail, /ponytail-review, /ponytail:ponytail, etc.
+      const cmd = parts[0].replace(/^[@$]/, '/');
       const arg = parts[1] || '';
 
       let mode = null;
@@ -36,16 +32,22 @@ process.stdin.on('end', () => {
       }
 
       if (mode && mode !== 'off') {
-        fs.mkdirSync(path.dirname(flagPath), { recursive: true });
-        fs.writeFileSync(flagPath, mode);
+        setMode(mode);
+        writeHookOutput(
+          'UserPromptSubmit',
+          mode,
+          'PONYTAIL MODE CHANGED — level: ' + mode,
+        );
       } else if (mode === 'off') {
-        try { fs.unlinkSync(flagPath); } catch (e) {}
+        clearMode();
+        writeHookOutput('UserPromptSubmit', 'off', 'PONYTAIL MODE OFF');
       }
     }
 
     // Detect deactivation
     if (/\b(stop ponytail|normal mode)\b/i.test(prompt)) {
-      try { fs.unlinkSync(flagPath); } catch (e) {}
+      clearMode();
+      writeHookOutput('UserPromptSubmit', 'off', 'PONYTAIL MODE OFF');
     }
   } catch (e) {
     // Silent fail

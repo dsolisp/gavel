@@ -56,14 +56,29 @@ Lazy, not negligent: trust-boundary validation, data-loss handling, security, an
 
 The most effort ponytail will ever ask of you:
 
+### Claude Code
+
 ```
 /plugin marketplace add DietrichGebert/ponytail
 /plugin install ponytail@ponytail
 ```
 
+### Codex
+
+```bash
+codex plugin marketplace add DietrichGebert/ponytail
+codex
+```
+
+Open `/plugins`, select the Ponytail marketplace, and install Ponytail. Then
+open `/hooks`, review and trust its two lifecycle hooks, and start a new thread.
+
 That was it. He'd be proud. He won't say it.
 
 Active every session. `/ponytail-review` finds what to delete in your diff. `/ponytail ultra` exists for when the codebase has wronged you personally. `/ponytail-help` explains the rest.
+
+In Codex, invoke the skills as `@ponytail`, `@ponytail-review`, and
+`@ponytail-help`. Startup and mode-change text shows the current mode.
 
 Cursor, Windsurf, Cline, Copilot, Aider: copy the matching rules file from this repo ([`.cursor/rules/`](.cursor/rules/), [`.windsurf/rules/`](.windsurf/rules/), [`.clinerules/`](.clinerules/), [`.github/copilot-instructions.md`](.github/copilot-instructions.md), [`AGENTS.md`](AGENTS.md)).
 

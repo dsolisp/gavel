@@ -10,24 +10,28 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { getDefaultMode } = require('./ponytail-config');
+const {
+  clearMode,
+  isCodex,
+  setMode,
+  writeHookOutput,
+} = require('./ponytail-runtime');
 
 const claudeDir = path.join(os.homedir(), '.claude');
-const flagPath = path.join(claudeDir, '.ponytail-active');
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 const mode = getDefaultMode();
 
 // "off" mode — skip activation entirely, don't write flag or emit rules
 if (mode === 'off') {
-  try { fs.unlinkSync(flagPath); } catch (e) {}
-  process.stdout.write('OK');
+  clearMode();
+  writeHookOutput('SessionStart', 'off', isCodex ? '' : 'OK');
   process.exit(0);
 }
 
 // 1. Write flag file
 try {
-  fs.mkdirSync(path.dirname(flagPath), { recursive: true });
-  fs.writeFileSync(flagPath, mode);
+  setMode(mode);
 } catch (e) {
   // Silent fail -- flag is best-effort, don't block the hook
 }
@@ -45,7 +49,11 @@ try {
 const INDEPENDENT_MODES = new Set(['review']);
 
 if (INDEPENDENT_MODES.has(mode)) {
-  process.stdout.write('PONYTAIL MODE ACTIVE — level: ' + mode + '. Behavior defined by /ponytail-' + mode + ' skill.');
+  writeHookOutput(
+    'SessionStart',
+    mode,
+    'PONYTAIL MODE ACTIVE — level: ' + mode + '. Behavior defined by /ponytail-' + mode + ' skill.',
+  );
   process.exit(0);
 }
 
@@ -124,7 +132,7 @@ if (skillContent) {
 }
 
 // 3. Detect missing statusline config — nudge Claude to help set it up
-try {
+if (!isCodex) try {
   let hasStatusline = false;
   if (fs.existsSync(settingsPath)) {
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
@@ -153,4 +161,4 @@ try {
   // Silent fail — don't block session start over statusline detection
 }
 
-process.stdout.write(output);
+writeHookOutput('SessionStart', mode, output);
