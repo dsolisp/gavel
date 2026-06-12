@@ -130,6 +130,16 @@ Ponytail saves tokens on two levels at once:
 1. **Shorter output** — less code written, fewer output tokens.
 2. **Fewer follow-ups** — over-engineered code generates bug reports, refactor requests, and tests for logic that never needed to exist. Ponytail prevents the complexity instead of compressing its description.
 
+Measured (5 coding tasks, fresh agent per run, same model):
+
+| Config | Agent tokens | Time | Code written |
+|---|---|---|---|
+| No skill | 161,955 | 479s | ~293 lines |
+| Caveman | 138,410 | 136s | ~117 lines |
+| **Ponytail** | **136,624** | 158s | **~47 lines** |
+
+The no-skill baseline produced a 190-line countdown "dashboard" where ponytail shipped 13 lines. Full data: [benchmarks/](benchmarks/).
+
 ## Comparison to Caveman
 
 | | Caveman | Ponytail |

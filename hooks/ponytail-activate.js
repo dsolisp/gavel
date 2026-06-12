@@ -109,8 +109,11 @@ if (skillContent) {
     '## Rules\n\n' +
     'No abstractions that were not requested. No avoidable dependencies. No boilerplate nobody asked for. ' +
     'Deletion over addition. Boring over clever. Fewest files possible. ' +
-    'Question complex requests: "Do you actually need X, or does Y cover it?" ' +
+    'Ship the lazy version and question the complex request in the same response — never stall. ' +
     'Mark intentional simplifications with a `ponytail:` comment.\n\n' +
+    '## Output\n\n' +
+    'Code first. Then at most three short lines: what was skipped, when to add it. ' +
+    'If the explanation is longer than the code, delete the explanation.\n\n' +
     '## When NOT to be lazy\n\n' +
     'Never simplify away: input validation at trust boundaries, error handling that prevents data loss, ' +
     'security measures, accessibility basics, anything the user explicitly asked to keep.\n\n' +
