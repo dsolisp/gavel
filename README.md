@@ -27,6 +27,16 @@ With ponytail:
 
 More survivors in [examples/](examples/).
 
+## Numbers
+
+Six tasks: streaming log parser, atomic file sync, notification dispatcher, validation engine, auth module, concurrent money ledger. One spec each, one fresh agent per arm, same model. Three arms: no skill, the [caveman](https://github.com/JuliusBrussee/caveman) skill, and ponytail. Every arm passes the same adversarial security and concurrency probes. Then the agreement ends:
+
+<p align="center">
+  <img src="assets/benchmark-loc.svg" width="860" alt="Lines of code per task: ponytail 490 total vs caveman 1,440 vs no-skill control 3,629, all passing the same adversarial probes">
+</p>
+
+**47% fewer tokens than the no-skill agent. 3× faster. A seventh of the code.** The 3,139 lines nobody wrote have never caused an incident. When a surprise feature request hit two of the tasks, ponytail extended in 96 changed lines; caveman needed 413, the no-skill agent 1,115. Every shortcut ponytail took is marked in the code with a `ponytail:` comment naming its upgrade path. Data: [benchmarks/](benchmarks/).
+
 ## How it works
 
 Before writing code, the agent stops at the first rung that holds:
@@ -70,16 +80,6 @@ The code you never wrote scales infinitely. Zero bugs, zero CVEs, 100% uptime si
 
 **Why "ponytail"?**
 You know exactly why.
-
-## Numbers
-
-Six tasks: streaming log parser, atomic file sync, notification dispatcher, validation engine, auth module, concurrent money ledger. One spec each, one fresh agent per arm, same model. Three arms: no skill, the [caveman](https://github.com/JuliusBrussee/caveman) skill, and ponytail. Every arm passes the same adversarial security and concurrency probes. Then the agreement ends:
-
-<p align="center">
-  <img src="assets/benchmark-loc.svg" width="860" alt="Lines of code per task: ponytail 490 total vs caveman 1,440 vs no-skill control 3,629, all passing the same adversarial probes">
-</p>
-
-**47% fewer tokens than the no-skill agent. 3× faster. A seventh of the code.** The 3,139 lines nobody wrote have never caused an incident. When a surprise feature request hit two of the tasks, ponytail extended in 96 changed lines; caveman needed 413, the no-skill agent 1,115. Every shortcut ponytail took is marked in the code with a `ponytail:` comment naming its upgrade path. Data: [benchmarks/](benchmarks/).
 
 ## License
 
