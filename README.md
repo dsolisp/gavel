@@ -73,7 +73,15 @@ You know exactly why.
 
 ## Numbers
 
-5 coding tasks, same agent with and without ponytail: **−16% tokens, ~4× faster, 293 → 47 lines.** The 246 lines nobody wrote have never caused an incident. Data: [benchmarks/](benchmarks/).
+5 coding tasks, same agent with and without ponytail: **−16% tokens, ~4× faster, 293 → 47 lines.** The 246 lines nobody wrote have never caused an incident.
+
+Then six harder tasks — streaming parsers, atomic file sync, auth, a concurrent money ledger — against a no-skill control and the [caveman](https://github.com/JuliusBrussee/caveman) skill, with adversarial security and concurrency probes:
+
+<p align="center">
+  <img src="assets/benchmark-loc.svg" width="860" alt="Lines of code per task: ponytail 490 total vs caveman 1,440 vs control 2,943 — all passing the same adversarial probes">
+</p>
+
+Everyone passes every probe. Ponytail does it with a third of caveman's code, a sixth of control's, and was ~5× cheaper when the surprise feature request landed (96 lines changed vs 487 for control). Every shortcut is marked in-code with its upgrade path. Data: [benchmarks/](benchmarks/).
 
 ## License
 
