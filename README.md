@@ -69,6 +69,14 @@ Cursor, Windsurf, Cline, Copilot, Aider, Kiro: copy the matching rules file from
 
 Kiro: copy `.kiro/steering/ponytail.md` to `~/.kiro/steering/` (global) or `.kiro/steering/` in your project.
 
+## Development
+
+When changing the compact rule text, keep the agent copies aligned:
+
+```bash
+node scripts/check-rule-copies.js
+```
+
 ## FAQ
 
 **Does it need a config file?**
