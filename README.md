@@ -5,13 +5,18 @@
 <h1 align="center">Ponytail</h1>
 
 <p align="center">
-  <em>Makes your AI agent think like the laziest senior dev in the room.<br>
-  The best code is the code you never wrote.</em>
+  <em>He says nothing. He writes one line. It works.</em>
 </p>
 
 ---
 
-AI agents over-deliver. Ask for a date picker, get a component library.
+You know him. Long ponytail. Oval glasses. Has been at the company longer than the version control. You show him fifty lines; he looks at them, says nothing, and replaces them with one.
+
+Ponytail puts him inside your AI agent.
+
+## Before / after
+
+You ask for a date picker. Your agent installs flatpickr, writes a wrapper component, adds a stylesheet, and starts a discussion about timezones.
 
 With ponytail:
 
@@ -20,7 +25,7 @@ With ponytail:
 <input type="date">
 ```
 
-More before/afters in [examples/](examples/).
+More survivors in [examples/](examples/).
 
 ## How it works
 
@@ -35,24 +40,40 @@ Before writing code, the agent stops at the first rung that holds:
 6. Only then: the minimum that works
 ```
 
-Never lazy about: validation at trust boundaries, error handling against data loss, security, accessibility.
+Lazy, not negligent: trust-boundary validation, data-loss handling, security, and accessibility are never on the chopping block.
 
 ## Install
 
-Claude Code:
+The most effort ponytail will ever ask of you:
 
 ```
 /plugin marketplace add DietrichGebert/ponytail
 /plugin install ponytail@ponytail
 ```
 
-Active every session. `/ponytail lite|full|ultra|off` switches intensity, `/ponytail-review` hunts over-engineering, `/ponytail-help` explains the rest.
+That was it. He'd be proud. He won't say it.
+
+Active every session. `/ponytail-review` finds what to delete in your diff. `/ponytail ultra` exists for when the codebase has wronged you personally. `/ponytail-help` explains the rest.
 
 Cursor, Windsurf, Cline, Copilot, Aider: copy the matching rules file from this repo ([`.cursor/rules/`](.cursor/rules/), [`.windsurf/rules/`](.windsurf/rules/), [`.clinerules/`](.clinerules/), [`.github/copilot-instructions.md`](.github/copilot-instructions.md), [`AGENTS.md`](AGENTS.md)).
 
+## FAQ
+
+**Does it need a config file?**
+No.
+
+**What if I really need the 120-line cache class?**
+You don't. Insist anyway and he'll build it — slowly, correctly, while looking at you.
+
+**Does it scale?**
+The code you never wrote scales infinitely. Zero bugs, zero CVEs, 100% uptime since forever.
+
+**Why "ponytail"?**
+You know exactly why.
+
 ## Numbers
 
-5 coding tasks, same agent with and without ponytail: **−16% tokens, ~4× faster, 293 → 47 lines of code.** Data: [benchmarks/](benchmarks/).
+5 coding tasks, same agent with and without ponytail: **−16% tokens, ~4× faster, 293 → 47 lines.** The 246 lines nobody wrote have never caused an incident. Data: [benchmarks/](benchmarks/).
 
 ## License
 
