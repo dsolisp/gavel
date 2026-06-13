@@ -51,8 +51,13 @@ Five files, three classes, a custom exception, and a dependency-injection chain 
 ## With Ponytail
 
 ```python
-# ponytail: it's one query
-@app.get("/users/{user_id}")
+# ponytail: drop the layers; keep the response schema, it whitelists what leaves the API
+class UserOut(BaseModel):
+    id: int
+    name: str
+    email: str
+
+@app.get("/users/{user_id}", response_model=UserOut)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if not user:
@@ -60,4 +65,4 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 ```
 
-**5 files → 5 lines.** Layers earn their place when there are two implementations, not before. Add the service layer when a second caller shows up — if it ever does.
+**5 files → 9 lines.** The repository, service, and custom exception were ceremony. The response schema was not: it whitelists which fields leave the API, so it stays. Returning the raw ORM model (`return user`) would leak every column, including the ones you never meant to expose. That is the line ponytail draws, and it is the same one the skill draws in "when NOT to be lazy": cut the layers, keep the trust boundary. Add a service layer when a second caller shows up, if it ever does.
