@@ -16,8 +16,8 @@
 </p>
 
 <p align="center">
-  <strong>47% fewer tokens &middot; 3&times; faster &middot; one-seventh the code</strong><br>
-  <sub>Same six tasks, same model, same adversarial security and concurrency probes. <a href="benchmarks/">See the benchmark.</a></sub>
+  <strong>80-94% less code &middot; 3-6&times; faster &middot; 47-77% cheaper</strong><br>
+  <sub>Median of 10 runs across Haiku, Sonnet, and Opus. <a href="benchmarks/">Reproduce it yourself.</a></sub>
 </p>
 
 ---
@@ -41,13 +41,13 @@ More survivors in [examples/](examples/).
 
 ## Numbers
 
-Six tasks: streaming log parser, atomic file sync, notification dispatcher, validation engine, auth module, concurrent money ledger. One spec each, one fresh agent per arm, same model. Three arms: no skill, the [caveman](https://github.com/JuliusBrussee/caveman) skill, and ponytail. Every arm passes the same adversarial security and concurrency probes. Then the agreement ends:
+Five everyday tasks (email validator, debounce, CSV sum, countdown timer, rate limiter), three models, three arms: no skill, the [caveman](https://github.com/JuliusBrussee/caveman) skill, and ponytail. Ten runs per cell, median reported.
 
 <p align="center">
-  <img src="assets/benchmark-loc.svg" width="860" alt="Lines of code per task: ponytail 490 total vs caveman 1,440 vs no-skill control 3,629, all passing the same adversarial probes">
+  <img src="assets/benchmark-3model.svg" width="860" alt="Median lines of code per arm across Haiku, Sonnet and Opus; ponytail writes 80-94% less code than the no-skill baseline">
 </p>
 
-**47% fewer tokens than the no-skill agent. 3× faster. A seventh of the code.** The 3,139 lines nobody wrote have never caused an incident. When a surprise feature request hit two of the tasks, ponytail extended in 96 changed lines; caveman needed 413, the no-skill agent 1,115. Every shortcut ponytail took is marked in the code with a `ponytail:` comment naming its upgrade path. Data: [benchmarks/](benchmarks/).
+**80-94% less code, 47-77% less cost, and 3-6× faster than a no-skill agent, on every model.** Every shortcut ponytail takes is marked in the code with a `ponytail:` comment naming its upgrade path. Reproduce it yourself: `npx promptfoo eval -c benchmarks/promptfooconfig.yaml`. Method and raw numbers: [benchmarks/](benchmarks/). Production-grade tasks, where an unconstrained agent bloats far more, are written up in [benchmarks/results/](benchmarks/results/).
 
 ## How it works
 
