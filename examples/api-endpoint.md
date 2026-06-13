@@ -46,7 +46,7 @@ def get_user(user_id: int, service: UserService = Depends(get_user_service)):
         raise HTTPException(status_code=404, detail="User not found")
 ```
 
-Five files, three classes, a custom exception, and a dependency-injection chain — wrapping one database call.
+Five files, three classes, a custom exception, and a dependency-injection chain, wrapping one database call.
 
 ## With Ponytail
 

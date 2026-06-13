@@ -36,7 +36,7 @@ A class, a wrapper, a regex that still rejects valid addresses and accepts inval
 ## With Ponytail
 
 ```python
-# ponytail: good enough — real validation is sending the mail
+# ponytail: good enough, real validation is sending the mail
 "@" in email and "." in email.split("@")[-1]
 ```
 

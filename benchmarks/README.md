@@ -38,7 +38,7 @@ Tasks: email validator, JS debounce, CSV sum, React countdown, FastAPI rate-limi
 | caveman | 14.9 | 34.7 | 23.1 |
 | **ponytail** | **9.9** | **20.1** | **18.0** |
 
-Versus baseline, ponytail writes **80-94% less code**, costs **47-77% less**, and runs **3-6x faster** — on every model.
+Versus baseline, ponytail writes **80-94% less code**, costs **47-77% less**, and runs **3-6x faster**, on every model.
 
 ## Notes
 

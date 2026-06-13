@@ -99,7 +99,7 @@ Run OpenCode from a checkout of this repo (the plugin reuses its `hooks/` and `s
 { "plugin": ["./.opencode/plugins/ponytail.mjs"] }
 ```
 
-Injects the ruleset every turn at the active level; adds `/ponytail` and `/ponytail-review`. OpenCode also auto-loads this repo's `AGENTS.md`, so the rules hold even without the plugin — the plugin adds the `lite/full/ultra/off` levels.
+Injects the ruleset every turn at the active level; adds `/ponytail` and `/ponytail-review`. OpenCode also auto-loads this repo's `AGENTS.md`, so the rules hold even without the plugin. The plugin adds the `lite/full/ultra/off` levels.
 
 That was it. He'd be proud. He won't say it.
 

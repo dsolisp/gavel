@@ -36,7 +36,7 @@ export default function DatePicker({ value, onChange, minDate, maxDate }) {
 }
 ```
 
-One dependency, one wrapper component, two `useEffect` hooks, a cleanup function, and a CSS import — to pick a date.
+One dependency, one wrapper component, two `useEffect` hooks, a cleanup function, and a CSS import, to pick a date.
 
 ## With Ponytail
 

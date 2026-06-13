@@ -1,4 +1,4 @@
-# Secrets — never commit API keys
+# Secrets, never commit API keys
 .env
 .env.*
 !.env.example
