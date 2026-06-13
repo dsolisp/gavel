@@ -59,12 +59,9 @@ Resolution: env var > config file > `full`.
 
 ## Update
 
-Pull the latest ponytail into your install:
-```
-/plugin marketplace update ponytail
-/plugin install ponytail@ponytail
-```
-Or turn on auto-update in `/plugin` under Marketplaces. Other hosts use their own update flow (Codex plugin manager, opencode or pi reinstall from the repo).
+Enable auto-update once: open `/plugin`, go to Marketplaces, pick ponytail, Enable auto-update. Claude Code then pulls new versions at startup (run `/reload-plugins` when it prompts). Manual refresh: `/plugin marketplace update ponytail` then `/reload-plugins`.
+
+If `/plugin` is not recognized, your Claude Code is out of date. Update it (`npm install -g @anthropic-ai/claude-code@latest`, or `brew upgrade claude-code`) and restart. Other hosts use their own update flow.
 
 ## More
 
