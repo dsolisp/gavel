@@ -57,6 +57,15 @@ with `/ponytail` when wanted.
 
 Resolution: env var > config file > `full`.
 
+## Update
+
+Pull the latest ponytail into your install:
+```
+/plugin marketplace update ponytail
+/plugin install ponytail@ponytail
+```
+Or turn on auto-update in `/plugin` under Marketplaces. Other hosts use their own update flow (Codex plugin manager, opencode or pi reinstall from the repo).
+
 ## More
 
 Full docs + examples: https://github.com/DietrichGebert/ponytail
