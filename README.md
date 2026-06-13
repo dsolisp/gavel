@@ -8,6 +8,18 @@
   <em>He says nothing. He writes one line. It works.</em>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
+  <img src="https://img.shields.io/github/v/release/DietrichGebert/ponytail?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/badge/works%20with-10%20agents-111111?style=flat-square" alt="Works with 10 agents">
+  <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
+</p>
+
+<p align="center">
+  <strong>47% fewer tokens &middot; 3&times; faster &middot; one-seventh the code</strong><br>
+  <sub>Same six tasks, same model, same adversarial security and concurrency probes. <a href="benchmarks/">See the benchmark.</a></sub>
+</p>
+
 ---
 
 You know him. Long ponytail. Oval glasses. Has been at the company longer than the version control. You show him fifty lines; he looks at them, says nothing, and replaces them with one.
