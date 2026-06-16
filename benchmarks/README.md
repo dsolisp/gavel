@@ -11,9 +11,12 @@ check with `node --version` and upgrade if needed):
 
 ```bash
 cp ../.env.example ../.env      # add your ANTHROPIC_API_KEY
-npx promptfoo@latest eval -c promptfooconfig.yaml --repeat 10
+npx promptfoo@latest eval -c promptfooconfig.yaml --env-file ../.env --repeat 10
 npx promptfoo@latest view
 ```
+
+`--env-file ../.env` is required because promptfoo reads `.env` from the current
+directory (`benchmarks/`), not the repo root where the file lives.
 
 ### Local models via Ollama
 

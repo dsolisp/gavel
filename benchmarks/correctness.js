@@ -13,7 +13,11 @@ const path = require('path');
 
 // Extract fenced code blocks, tagged by language.
 function extractBlocks(text) {
-  const matches = [...text.matchAll(/```(\w*)\n([\s\S]*?)```/g)];
+  text = String(text || '');
+  const matches = [...text.matchAll(/```(\w*)\r?\n([\s\S]*?)```/g)];
+  // ponytail: terse models often answer with bare, unfenced code. Treat the whole
+  // response as one block so the gate scores the code instead of reporting "no block".
+  if (matches.length === 0 && text.trim()) return [{ lang: '', code: text }];
   return matches.map((m) => ({ lang: (m[1] || '').toLowerCase(), code: m[2] }));
 }
 
@@ -121,7 +125,7 @@ print("PASS")
   },
 
   debounce(blocks) {
-    const code = blocks.find((b) => b.lang === 'javascript' || b.lang === 'js' || (!b.lang && b.code.includes('function')));
+    const code = blocks.find((b) => b.lang === 'javascript' || b.lang === 'js' || (!b.lang && (b.code.includes('function') || b.code.includes('=>'))));
     if (!code) return { pass: false, reason: 'No JavaScript code block found' };
 
     const harness = `
