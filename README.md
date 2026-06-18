@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <strong>80-94% less code &middot; 3-6&times; faster &middot; 42-75% cheaper</strong><br>
-  <sub>Per-task code, latency, and cost on the Claude API, not your plan's quota. Median across Haiku, Sonnet, and Opus (10 runs for code and latency, 30 for the re-verified cost). Results vary by model and prompt: the ruleset re-injects each turn, so on a short prompt or a terse reasoning model that overhead can outweigh the savings. <a href="benchmarks/">Reproduce it yourself.</a></sub>
+  <strong>~54% less code &middot; ~20% cheaper &middot; ~27% faster &middot; 100% safe</strong><br>
+  <sub>Measured on real Claude Code sessions editing a real open-source repo (FastAPI + React), against the same agent with no skill. Mean across 12 feature tasks (Haiku 4.5, n=4). ponytail keeps every safety guard while a bare "write one-liners" prompt drops one. (An older single-shot test showed a larger 80-94% gap, but that counted a chatty model's prose; this is the honest multi-turn number.) <a href="benchmarks/results/2026-06-18-agentic.md">Full writeup</a> &middot; <a href="benchmarks/">reproduce it</a>.</sub>
 </p>
 
 ---
@@ -44,15 +44,30 @@ More survivors in [examples/](examples/).
 
 ## Numbers
 
-Five everyday tasks (email validator, debounce, CSV sum, countdown timer, rate limiter), three models, three arms: no skill, the [caveman](https://github.com/JuliusBrussee/caveman) skill, and ponytail. Ten runs per cell, median reported.
+The honest measurement is a real agent doing real work: a headless Claude Code session editing [tiangolo's full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template) (a real FastAPI + React repo), scored on the `git diff` it leaves behind. Twelve feature tickets, the same agent with and without the skill, n=4, Haiku 4.5.
+
+| vs no-skill baseline | LOC | tokens | cost | time | safe |
+|---|--:|--:|--:|--:|--:|
+| **ponytail** | **-54%** | **-22%** | **-20%** | **-27%** | **100%** |
+| caveman (terse-prose control) | -20% | +7% | +3% | +2% | 100% |
+| "YAGNI + one-liners" prompt | -33% | -14% | -21% | -30% | 95% |
+
+ponytail is the only arm that cuts every metric, and the only one that stays fully safe while doing it. The cut is biggest where there is a real over-build trap (date picker 404 to 23 lines, color picker 287 to 23, because it reaches for a native `<input>` instead of a component) and near zero on code that is already minimal. Full method, per-task tables, and limitations: [benchmarks/results/2026-06-18-agentic.md](benchmarks/results/2026-06-18-agentic.md).
+
+<details>
+<summary><strong>Older single-shot numbers (isolated generation)</strong></summary>
+
+Five everyday tasks, three models, three arms (no skill, [caveman](https://github.com/JuliusBrussee/caveman), ponytail), ten runs, median reported. One prompt, one completion, counting lines of the answer:
 
 <p align="center">
-  <img src="assets/benchmark-3model.svg" width="860" alt="Median lines of code per arm across Haiku, Sonnet and Opus; ponytail writes 80-94% less code than the no-skill baseline">
+  <img src="assets/benchmark-3model.svg" width="860" alt="Median lines of code per arm across Haiku, Sonnet and Opus">
 </p>
 
-**80-94% less code, 42-75% less cost, and 3-6× faster than a no-skill agent, on every Claude model.** Every shortcut ponytail takes is marked in the code with a `ponytail:` comment naming its upgrade path. Reproduce it yourself: `npx promptfoo eval -c benchmarks/promptfooconfig.yaml`. Method and raw numbers: [benchmarks/](benchmarks/). Production-grade tasks, where an unconstrained agent bloats far more, are written up in [benchmarks/results/](benchmarks/results/).
+This showed **80-94% less code**. [#126](https://github.com/DietrichGebert/ponytail/issues/126) fairly pointed out that the bare-model baseline pads its answer with prose and options, so that gap is partly a conversational-baseline artifact. The agentic numbers above are the corrected, defensible version. Reproduce the single-shot run with `npx promptfoo eval -c benchmarks/promptfooconfig.yaml`.
 
-**That is the byproduct, not the pitch.** These are Claude numbers, and they vary by model. Capable instruction-following models follow the ladder and write far less, cheaper and faster. Terse reasoning models can go the other way: the ladder is a deliberation step, so the model spends thinking tokens working through the rungs before it saves any output, and together with the always-on ruleset that can cost more than the shorter code saves. On GPT-5.5 it does. And all of this is single-shot, one prompt in and one answer out: a real agent session re-injects the ruleset and runs the ladder every turn, which this benchmark does not measure, so per-session cost can land either way. The rule was never "fewest tokens." It is: write only what the task needs, and never cut validation, error handling, security, or accessibility. The code ends up small because it is necessary, not golfed, and that is the part that stays maintainable. Lower cost and latency are a side effect on the models that follow it.
+</details>
+
+**The rule was never "fewest tokens."** It is: write only what the task needs, and never cut validation, error handling, security, or accessibility. The code ends up small because it is necessary, not golfed. Lower cost and latency are a side effect on the models that follow the ladder; a terse reasoning model that spends thinking tokens deliberating the rungs can go the other way (on GPT-5.5 it does).
 
 ## How it works
 

@@ -61,6 +61,15 @@ Tasks: email validator, JS debounce, CSV sum, React countdown, FastAPI rate-limi
 
 Versus baseline, ponytail writes **80-94% less code**, costs **42-75% less**, and runs **3-6x faster**, on every Claude model. Cost re-verified at 30 reps, with OpenAI and Gemini arms, in [results/2026-06-17-cost-verification.md](results/2026-06-17-cost-verification.md).
 
+> **Read this number honestly (updated 2026-06-18).** The gap above is single-shot, against a bare
+> model that answers with several options plus commentary, so it counts prose, not just code, and
+> overstates the win. [#126](https://github.com/DietrichGebert/ponytail/issues/126) was right about
+> that. The [agentic benchmark](agentic/) re-runs the comparison as a *real Claude Code session on a
+> real public repo*: ponytail cuts **60-94%** on features with an over-build trap (custom component
+> vs native input), is a wash on already-minimal code, never writes more, and stays **100% safe**
+> while the bare "one-liner" prompt drops a guard. That is the honest, defensible number. See
+> [results/2026-06-18-agentic.md](results/2026-06-18-agentic.md).
+
 ## Metrics
 
 | File | Metric | Behavior |
