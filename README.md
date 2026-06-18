@@ -101,6 +101,8 @@ The Claude Code and Codex plugins run two tiny Node.js lifecycle hooks, so `node
 /plugin install ponytail@ponytail
 ```
 
+The desktop app has no `/plugin` command. Install it from the UI instead: Customize, the + by personal plugins, Create plugin and add marketplace, Add from repository, then enter the repo URL (thanks @NiklasDHahn, #98).
+
 ### Codex
 
 ```bash
@@ -151,6 +153,8 @@ Run OpenCode from a checkout of this repo (the plugin reuses its `hooks/` and `s
 Injects the ruleset every turn at the active level; adds the `/ponytail` commands (see [Commands](#commands)). OpenCode also auto-loads this repo's `AGENTS.md`, so the rules hold even without the plugin. The plugin adds the `lite/full/ultra/off` levels.
 
 The `./` path resolves against your project's `opencode.json`; to share one checkout across projects, point it at the absolute path of the `.mjs` instead (it finds its `hooks/` and `skills/` relative to its own file).
+
+The plugin path loads the ruleset everywhere, but the `/ponytail` commands are separate files in `.opencode/command/` that OpenCode only discovers from your project or the global commands dir. To use them outside this checkout, link them once: `ln -sf /absolute/path/to/ponytail/.opencode/command/* ~/.config/opencode/command/`.
 
 ### Gemini CLI
 
