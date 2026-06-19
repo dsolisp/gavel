@@ -2,7 +2,7 @@
 // ponytail — Claude Code SessionStart activation hook
 //
 // Runs on every session start:
-//   1. Writes flag file at ~/.claude/.ponytail-active (statusline reads this)
+//   1. Writes flag file at $CLAUDE_CONFIG_DIR/.ponytail-active (defaults to ~/.claude; statusline reads this)
 //   2. Emits ponytail ruleset as hidden SessionStart context
 //   3. Detects missing statusline config and emits setup nudge
 
@@ -43,7 +43,9 @@ let output = getPonytailInstructions(mode);
 if (!isCodex) try {
   let hasStatusline = false;
   if (fs.existsSync(settingsPath)) {
-    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    // Strip UTF-8 BOM some editors prepend on Windows (breaks JSON.parse)
+    const raw = fs.readFileSync(settingsPath, 'utf8').replace(/^\uFEFF/, '');
+    const settings = JSON.parse(raw);
     if (settings.statusLine) {
       hasStatusline = true;
     }
@@ -69,4 +71,8 @@ if (!isCodex) try {
   // Silent fail — don't block session start over statusline detection
 }
 
-writeHookOutput('SessionStart', mode, output);
+try {
+  writeHookOutput('SessionStart', mode, output);
+} catch (e) {
+  // Silent fail — stdout closed/EPIPE at hook exit must not surface as a hook failure
+}

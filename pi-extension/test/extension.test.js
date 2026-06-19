@@ -57,7 +57,7 @@ function withTempConfig(fn) {
 test("extension registers Ponytail commands", () => {
   const { commands } = createPiHarness();
 
-  assert.deepEqual([...commands.keys()].sort(), ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-help", "ponytail-review"]);
+  assert.deepEqual([...commands.keys()].sort(), ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-gain", "ponytail-help", "ponytail-review"]);
 });
 
 test("/ponytail updates session mode and injects instructions", async () => withTempConfig(async () => {
@@ -100,12 +100,14 @@ test("skill alias commands delegate to Pi skill commands", async () => {
   await commands.get("ponytail-review").handler("", ctx);
   await commands.get("ponytail-audit").handler("", ctx);
   await commands.get("ponytail-debt").handler("", ctx);
+  await commands.get("ponytail-gain").handler("", ctx);
   await commands.get("ponytail-help").handler("", ctx);
 
   assert.deepEqual(sentUserMessages.map((entry) => entry.text), [
     "/skill:ponytail-review",
     "/skill:ponytail-audit",
     "/skill:ponytail-debt",
+    "/skill:ponytail-gain",
     "/skill:ponytail-help",
   ]);
 });
@@ -120,4 +122,16 @@ test("normal mode disables persistent instructions", async () => withTempConfig(
 
   const disabled = await events.get("before_agent_start")({ systemPrompt: "BASE" }, ctx);
   assert.equal(disabled, undefined);
+}));
+
+test("a request mentioning normal mode stays active", async () => withTempConfig(async () => {
+  const { commands, events } = createPiHarness();
+  const ctx = createCommandContext();
+
+  await events.get("session_start")({ reason: "startup" }, ctx);
+  await commands.get("ponytail").handler("ultra", ctx);
+  await events.get("input")({ text: "add a normal mode toggle next to dark mode", source: "interactive" }, ctx);
+
+  const result = await events.get("before_agent_start")({ systemPrompt: "BASE" }, ctx);
+  assert.match(result.systemPrompt, /PONYTAIL MODE ACTIVE/);
 }));
