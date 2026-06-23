@@ -56,7 +56,7 @@ for (const slug of slugs) {
     '--slug', slug,
     '--name', displayName(slug),
     '--version', version,
-    '--tag', 'latest',
+    '--tags', 'latest',
     ...passthrough,
   ];
   const cmdline = args.map(quote).join(' ');
