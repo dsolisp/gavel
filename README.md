@@ -154,7 +154,13 @@ pi install git:github.com/DietrichGebert/ponytail
 
 ### OpenCode
 
-Run OpenCode from a checkout of this repo (the plugin reuses its `hooks/` and `skills/`), and add to `opencode.json`:
+Add to `opencode.json`:
+
+```json
+{ "plugin": ["opencode-ponytail"] }
+```
+
+Run from a checkout instead (the plugin reuses `hooks/` and `skills/`):
 
 ```json
 { "plugin": ["./.opencode/plugins/ponytail.mjs"] }
