@@ -260,3 +260,13 @@ Ya sabes exactamente por qué.
 ## Licencia
 
 [MIT](LICENSE). La licencia más corta que funciona.
+
+## Historial de estrellas
+
+<a href="https://www.star-history.com/dietrichgebert/ponytail#history">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=DietrichGebert/ponytail&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=DietrichGebert/ponytail&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=DietrichGebert/ponytail&type=Date" />
+ </picture>
+</a>
