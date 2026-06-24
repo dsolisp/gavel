@@ -14,6 +14,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
   <img src="https://img.shields.io/github/v/release/DietrichGebert/ponytail?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/npm/v/@dietrichgebert/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
   <img src="https://img.shields.io/badge/works%20with-14%20agents-111111?style=flat-square" alt="Works with 14 agents">
   <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
 </p>
@@ -169,8 +170,6 @@ Run from a checkout instead (the plugin reuses `hooks/` and `skills/`):
 Injects the ruleset every turn at the active level; adds the `/ponytail` commands (see [Commands](#commands)). OpenCode also auto-loads this repo's `AGENTS.md`, so the rules hold even without the plugin. The plugin adds the `lite/full/ultra/off` levels.
 
 The `./` path resolves against your project's `opencode.json`; to share one checkout across projects, point it at the absolute path of the `.mjs` instead (it finds its `hooks/` and `skills/` relative to its own file).
-
-The plugin path loads the ruleset everywhere, but the `/ponytail` commands are separate files in `.opencode/command/` that OpenCode only discovers from your project or the global commands dir. To use them outside this checkout, link them once: `ln -sf /absolute/path/to/ponytail/.opencode/command/* ~/.config/opencode/command/`.
 
 ### Gemini CLI
 

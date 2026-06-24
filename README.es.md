@@ -14,6 +14,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
   <img src="https://img.shields.io/github/v/release/DietrichGebert/ponytail?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/npm/v/@dietrichgebert/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
   <img src="https://img.shields.io/badge/funciona%20con-14%20agentes-111111?style=flat-square" alt="Works with 14 agents">
   <img src="https://img.shields.io/badge/licencia-MIT-111111?style=flat-square" alt="MIT license">
 </p>
@@ -150,7 +151,13 @@ pi install git:github.com/DietrichGebert/ponytail
 
 ### OpenCode
 
-Ejecuta OpenCode desde un checkout de este repo (el plugin reutiliza sus `hooks/` y `skills/`), y agrega esto a `opencode.json`:
+Agrega esto a `opencode.json`:
+
+```json
+{ "plugin": ["@dietrichgebert/ponytail"] }
+```
+
+O ejecútalo desde un checkout (el plugin reutiliza sus `hooks/` y `skills/`):
 
 ```json
 { "plugin": ["./.opencode/plugins/ponytail.mjs"] }
