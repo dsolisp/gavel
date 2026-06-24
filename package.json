@@ -1,5 +1,5 @@
 {
-  "name": "opencode-ponytail",
+  "name": "@dietrichgebert/ponytail",
   "version": "4.8.1",
   "description": "Lazy senior dev mode for AI agents. The best code is the code you never wrote.",
   "keywords": ["opencode-plugin", "opencode", "ponytail", "pi-package", "pi", "skills"],

@@ -157,7 +157,7 @@ pi install git:github.com/DietrichGebert/ponytail
 Add to `opencode.json`:
 
 ```json
-{ "plugin": ["opencode-ponytail"] }
+{ "plugin": ["@dietrichgebert/ponytail"] }
 ```
 
 Run from a checkout instead (the plugin reuses `hooks/` and `skills/`):
