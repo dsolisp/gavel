@@ -36,8 +36,7 @@
 ---
 
 <p align="center">
-  <strong>👀 새로운 것이 다가오고 있습니다.</strong> 아직 무엇인지 말하지 않습니다.<br>
-  <a href="https://ponytail.dev/soon"><img src="https://img.shields.io/badge/JOIN%20THE%20WAITLIST-e08a4a?style=for-the-badge" alt="대기자 명단 신청"></a>
+  <a href="https://ponytail.dev/soon"><img src="assets/waitlist-banner-ko.png" alt="새로운 것이 다가오고 있습니다, 대기자 명단 신청" width="760"></a>
 </p>
 
 이런 사람, 다들 알 거다. 긴 포니테일에 타원형 안경. 버전 관리 시스템보다 회사에 오래 있었다. 코드 쉰 줄을 들이밀면 잠깐 보더니, 말없이 한 줄로 바꿔 놓는다.

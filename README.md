@@ -36,8 +36,7 @@
 ---
 
 <p align="center">
-  <strong>👀 Something new is coming.</strong> He won't say what yet.<br>
-  <a href="https://ponytail.dev/soon"><img src="https://img.shields.io/badge/JOIN%20THE%20WAITLIST-e08a4a?style=for-the-badge" alt="Join the waitlist"></a>
+  <a href="https://ponytail.dev/soon"><img src="assets/waitlist-banner.png" alt="Something's coming, join the waitlist" width="760"></a>
 </p>
 
 You know him. Long ponytail. Oval glasses. Has been at the company longer than the version control. You show him fifty lines; he looks at them, says nothing, and replaces them with one.
