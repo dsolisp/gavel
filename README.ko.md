@@ -281,6 +281,17 @@ OpenClaw 스킬 패키지(`.openclaw/skills/`)는 `skills/`에서 생성된다. 
 **왜 하필 "ponytail"인가?**
 당신은 이유를 정확히 안다.
 
+## Sponsors
+
+<p align="center">
+  <a href="https://greenpt.com/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/logo-greenpt-dark.svg">
+      <img src="assets/logo-greenpt.svg" width="260" alt="GreenPT">
+    </picture>
+  </a>
+</p>
+
 ## License
 
 [MIT](LICENSE). 돌아가는 가장 짧은 라이선스.

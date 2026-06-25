@@ -292,6 +292,17 @@ The code you never wrote scales infinitely. Zero bugs, zero CVEs, 100% uptime si
 **Why "ponytail"?**
 You know exactly why.
 
+## Sponsors
+
+<p align="center">
+  <a href="https://greenpt.com/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/logo-greenpt-dark.svg">
+      <img src="assets/logo-greenpt.svg" width="260" alt="GreenPT">
+    </picture>
+  </a>
+</p>
+
 ## License
 
 [MIT](LICENSE). The shortest license that works.
