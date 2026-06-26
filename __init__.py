@@ -15,6 +15,7 @@ SKILL_COMMANDS = {
     "ponytail-review": "Review the current diff or provided target for over-engineering.",
     "ponytail-audit": "Audit the repo for over-engineering and deletion opportunities.",
     "ponytail-debt": "List every deliberate `ponytail:` shortcut and its upgrade path.",
+    "ponytail-gain": "Show the measured-impact scoreboard (less code, less cost, more speed).",
     "ponytail-help": "Show the Ponytail command reference.",
 }
 

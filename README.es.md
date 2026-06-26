@@ -14,8 +14,14 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
   <img src="https://img.shields.io/github/v/release/DietrichGebert/ponytail?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/npm/v/@dietrichgebert/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
   <img src="https://img.shields.io/badge/funciona%20con-14%20agentes-111111?style=flat-square" alt="Works with 14 agents">
   <img src="https://img.shields.io/badge/licencia-MIT-111111?style=flat-square" alt="MIT license">
+</p>
+
+<p align="center">
+  <a href="https://trendshift.io/repositories/50668" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/50668/daily" alt="DietrichGebert/ponytail | Trendshift" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/50668" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/50668/weekly" alt="DietrichGebert/ponytail | Trendshift" width="250" height="55"/></a>
 </p>
 
 <p align="center">
@@ -83,12 +89,15 @@ Antes de escribir código, el agente se detiene en el primer peldaño que aguant
 
 ```
 1. ¿Necesita existir esto?        → no: omitirlo (YAGNI)
-2. ¿Lo hace la stdlib?            → úsala
-3. ¿Es una feature nativa?        → úsala
-4. ¿Una dependencia ya instalada? → úsala
-5. ¿Cabe en una línea?            → una línea
-6. Solo entonces: el mínimo que funciona
+2. ¿Ya existe en este código?     → reúsalo, no lo reescribas
+3. ¿Lo hace la stdlib?            → úsala
+4. ¿Es una feature nativa?        → úsala
+5. ¿Una dependencia ya instalada? → úsala
+6. ¿Cabe en una línea?            → una línea
+7. Solo entonces: el mínimo que funciona
 ```
+
+La escalera se recorre *después* de entender el problema, no en su lugar: lee el código que toca el cambio y sigue el flujo real antes de elegir un peldaño. Flojo en la solución, nunca en la lectura.
 
 Flojo, no negligente: la validación en límites de confianza, el manejo de pérdida de datos, la seguridad y la accesibilidad nunca están en riesgo.
 
@@ -147,7 +156,13 @@ pi install git:github.com/DietrichGebert/ponytail
 
 ### OpenCode
 
-Ejecuta OpenCode desde un checkout de este repo (el plugin reutiliza sus `hooks/` y `skills/`), y agrega esto a `opencode.json`:
+Agrega esto a `opencode.json`:
+
+```json
+{ "plugin": ["@dietrichgebert/ponytail"] }
+```
+
+O ejecútalo desde un checkout (el plugin reutiliza sus `hooks/` y `skills/`):
 
 ```json
 { "plugin": ["./.opencode/plugins/ponytail.mjs"] }
@@ -245,3 +260,13 @@ Ya sabes exactamente por qué.
 ## Licencia
 
 [MIT](LICENSE). La licencia más corta que funciona.
+
+## Historial de estrellas
+
+<a href="https://www.star-history.com/dietrichgebert/ponytail#history">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=DietrichGebert/ponytail&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=DietrichGebert/ponytail&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=DietrichGebert/ponytail&type=Date" />
+ </picture>
+</a>
