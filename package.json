@@ -23,7 +23,10 @@
   },
   "files": [
     "AGENTS.md",
+    "CHANGELOG.md",
     "RELEASE_CHECKLIST.md",
+    "GAVEL_ROADMAP.md",
+    "docs/",
     "hooks/",
     "skills/",
     "agents/",

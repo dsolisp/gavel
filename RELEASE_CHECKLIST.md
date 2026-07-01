@@ -39,11 +39,12 @@ node scripts/verify-self-check-fixtures.js
 
 ```bash
 node scripts/verify-parser-fixtures.js
+node scripts/verify-profile-fixtures.js
 ```
 
-- [ ] JUnit fixture parses with expected failure count
-- [ ] Allure fixture parses with expected failure count
-- [ ] `cluster-failures.js` produces actionable clusters
+- [ ] JUnit, Allure, Playwright JSON/HTML, Cypress, analyze-ci parsers pass fixtures
+- [ ] Node + Python profile freshness fixtures pass
+- [ ] `CHANGELOG.md` and `docs/README.md` present
 
 ## 5. Agent / Skill Contract
 

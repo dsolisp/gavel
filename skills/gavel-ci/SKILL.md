@@ -63,9 +63,10 @@ Upload machine-readable reports so gavel-analyze can ingest failures:
 | JUnit XML | `node scripts/parsers/junit.js report.xml --json` |
 | Allure results dir | `node scripts/parsers/allure.js allure-results --json` |
 | Playwright JSON | `node scripts/parsers/playwright.js report.json --json` |
+| Playwright HTML dir | `node scripts/parsers/playwright-html.js playwright-report/ --json` |
 | Cypress JSON | `node scripts/parsers/cypress.js results.json --json` |
 | Unknown report | `node scripts/parsers/index.js artifact --json` |
-| Full analysis + impact | `node scripts/analyze-ci.js report.json --app-repo ../app --json` |
+| Full analysis + impact | `node scripts/analyze-ci.js report.json --app-repo ../app --area-map ./area-map.json --json` |
 
 Example GitHub Actions upload:
 

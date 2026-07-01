@@ -7,6 +7,14 @@ const { parseJUnitXml } = require('./junit');
 const { parseAllureResults } = require('./allure');
 const { parsePlaywrightJson } = require('./playwright');
 const { parseCypressJson } = require('./cypress');
+const { parsePlaywrightHtmlReport } = require('./playwright-html');
+
+function isPlaywrightHtmlReportDir(resolved) {
+  return (
+    fs.existsSync(path.join(resolved, 'index.html')) &&
+    (fs.existsSync(path.join(resolved, 'data')) || resolved.toLowerCase().includes('playwright-report'))
+  );
+}
 
 function parseReport(inputPath) {
   const resolved = path.resolve(inputPath);
@@ -16,6 +24,9 @@ function parseReport(inputPath) {
     const entries = fs.readdirSync(resolved);
     if (entries.some((name) => name.endsWith('-result.json'))) {
       return parseAllureResults(resolved);
+    }
+    if (isPlaywrightHtmlReportDir(resolved)) {
+      return parsePlaywrightHtmlReport(resolved);
     }
     throw new Error(`Unknown report directory format: ${resolved}`);
   }

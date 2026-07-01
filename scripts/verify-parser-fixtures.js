@@ -59,6 +59,17 @@ if (!clusters.clusters || clusters.clusters.length === 0) {
   process.exit(1);
 }
 
+const playwrightHtml = runJson(process.execPath, [
+  path.join(root, 'scripts/parsers/playwright-html.js'),
+  path.join(root, 'fixtures/reports/playwright-html'),
+  '--json',
+]);
+
+if (playwrightHtml.failed < 2) {
+  console.error('Playwright HTML fixture did not produce expected failures.');
+  process.exit(1);
+}
+
 const analysis = runJson(
   process.execPath,
   [path.join(root, 'scripts/analyze-ci.js'), '--json'],
@@ -70,4 +81,4 @@ if (!analysis.clusters || analysis.clusters.length === 0) {
   process.exit(1);
 }
 
-console.log('Parser fixtures OK: junit, allure, playwright, cypress, cluster, analyze-ci.');
+console.log('Parser fixtures OK: junit, allure, playwright, playwright-html, cypress, cluster, analyze-ci.');

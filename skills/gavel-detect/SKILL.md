@@ -101,6 +101,9 @@ After detection, run the freshness script when a target repo path is known:
 node scripts/check-profile-freshness.js <target-repo-root> --json
 ```
 
+Supports **Node** (`package.json`) and **Python** (`requirements.txt`, `pyproject.toml`)
+for Playwright, Cypress, WebdriverIO, Selenium, Cucumber.js, Behave, and pytest.
+
 Interpret `freshness` status:
 
 | Status | Meaning |

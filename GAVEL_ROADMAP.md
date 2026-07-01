@@ -267,9 +267,9 @@ Definition of done:
 | P1 | Affected test discovery 2.0 | Reduces verification cost while preserving confidence | **Shipped** — `scripts/affected-tests.js` |
 | P1 | CI report parser + failure clustering | Makes scheduled run failures actionable | **Shipped** — parsers + `cluster-failures.js` + skill wiring |
 | P1 | Version freshness check in `gavel-detect` | Keeps profiles current across frameworks | **Shipped** — `check-profile-freshness.js` |
-| P2 | Audit severity and autofix eligibility | Makes audit output more useful | **Partial** — severity in `gavel-audit`; autofix eligibility not started |
-| P2 | Golden fixtures per framework | Prevents profile regressions | **Shipped** — `fixtures/profiles/` |
-| P3 | Full public docs and changelog | Productization polish | Not started |
+| P2 | Audit severity and autofix eligibility | Makes audit output more useful | **Partial** — severity in audit + review; autofix not started |
+| P2 | Golden fixtures per framework | Prevents profile regressions | **Shipped** — includes Python behave fixtures |
+| P3 | Full public docs and changelog | Productization polish | **Shipped** — `CHANGELOG.md`, `docs/README.md` |
 
 ---
 
@@ -299,11 +299,19 @@ Definition of done:
 
 ### Next Up
 
-1. Add Playwright HTML report parser (not just JSON).
-2. Improve `analyze-ci` area → application path mapping (configurable map file).
-3. Extend audit severity to `gavel-review` for diff-scoped audits.
-4. Add Behave/pytest profile freshness (Python `requirements.txt` / `pyproject.toml`).
-5. Publish changelog and versioned public docs.
+1. ~~Add Playwright HTML report parser (not just JSON).~~ **Done** — `scripts/parsers/playwright-html.js`
+2. ~~Improve `analyze-ci` area → application path mapping (configurable map file).~~ **Done** — `scripts/area-map.js`, `--area-map`
+3. ~~Extend audit severity to `gavel-review` for diff-scoped audits.~~ **Done**
+4. ~~Add Behave/pytest profile freshness (Python `requirements.txt` / `pyproject.toml`).~~ **Done**
+5. ~~Publish changelog and versioned public docs.~~ **Done** — `CHANGELOG.md`, `docs/README.md`
+
+### Next Up
+
+1. Add autofix eligibility to `gavel-audit` (`safe` / `review` / `report-only`).
+2. Add pytest-playwright and robot-framework detection in `gavel-detect`.
+3. Add `gavel-area-map.json` schema validation script.
+4. Wire `analyze-ci` output into a single `gavel-analyze` result envelope template block.
+5. Tag `v0.2.0` after autofix eligibility and schema validation land.
 
 ---
 

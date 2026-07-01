@@ -15,8 +15,36 @@ diff's best outcome is getting leaner and more disciplined.
 
 ## Format
 
-`L<line>: <tag> <what>. <replacement>.`, or `<file>:L<line>: ...` for
-multi-file diffs.
+Prefix every finding with severity, then location and tag:
+
+`<severity> L<line>: <tag> <what>. <replacement>.`
+
+Or for multi-file diffs: `<severity> <file>:L<line>: <tag> ...`
+
+### Severity
+
+| Severity | Use when |
+|----------|----------|
+| `blocker` | Hides bugs or breaks trust (`expect-in-action`, `manual-wait`, `no-di`) |
+| `fix` | Maintainability / Constitution (`selector-leak`, `css-loc`, `hardcoded`, `no-step`, `fat-spec`, `over-test`) |
+| `cleanup` | Shrink without behavior risk (`shrink`, minor `fat-spec`) |
+| `delete` | Remove redundant coverage (`yagni`) |
+
+### Tag → default severity
+
+| Tag | Severity |
+|-----|----------|
+| `expect-in-action` | blocker |
+| `manual-wait` | blocker |
+| `no-di` | blocker |
+| `selector-leak` | fix |
+| `css-loc` | fix |
+| `hardcoded` | fix |
+| `no-step` | fix |
+| `fat-spec` | fix |
+| `over-test` | fix |
+| `shrink` | cleanup |
+| `yagni` | delete |
 
 Tags:
 
@@ -37,14 +65,11 @@ Tags:
 Bad: "This test might have too many assertions, consider reducing them."
 
 Good:
-- `L12-28: over-test: 5 assertions all check the same modal is visible. One toBeVisible() on the modal container.`
-- `L8: css-loc: page.locator('.submit-btn'). Click via getByRole('button', { name: 'Submit' }).`
-- `L18: selector-leak: locators.modal.locator('button.close'). Move closeButton to the locator class.`
-- `L15: hardcoded: 'test@example.com' in test body. UserFactory.create() for test data.`
-- `L3-20: fat-spec: inline selectors and navigation logic. Extract to AdminChallengesPage POM.`
-- `L5: no-step: 30-line test with no logical grouping. Wrap navigation, action, and assertion in test.step().`
-- `L22: manual-wait: waitForTimeout(3000). Remove; web-first assertion auto-retries.`
-- `L2: no-di: new LoginPage(page) in spec. Use fixture DI: { loginPage }.`
+- `blocker L22: manual-wait: waitForTimeout(3000). Remove; web-first assertion auto-retries.`
+- `fix L8: css-loc: page.locator('.submit-btn'). Click via getByRole('button', { name: 'Submit' }).`
+- `fix L18: selector-leak: locators.modal.locator('button.close'). Move closeButton to the locator class.`
+- `delete L1-40: yagni: duplicates billing-snapshot-lifecycle coverage. Delete this spec.`
+- `cleanup L3-20: shrink: inline navigation can be one action call. Use billingPage.open().`
 
 ## Scoring
 

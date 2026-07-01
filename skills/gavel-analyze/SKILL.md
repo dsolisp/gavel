@@ -88,7 +88,13 @@ node scripts/parsers/playwright.js playwright-report.json --json
 node scripts/parsers/cypress.js cypress-results.json --json
 
 # Full CI analysis with optional commit correlation (gavel-impact)
-node scripts/analyze-ci.js path/to/report.json --app-repo path/to/app-repo --commits 15 --json
+node scripts/analyze-ci.js path/to/report.json \
+  --app-repo path/to/app-repo \
+  --area-map fixtures/config/area-map.example.json \
+  --commits 15 --json
+
+# Playwright HTML report directory
+node scripts/parsers/playwright-html.js playwright-report/ --json
 node scripts/parsers/playwright.js report.json --json | node scripts/analyze-ci.js --json
 ```
 

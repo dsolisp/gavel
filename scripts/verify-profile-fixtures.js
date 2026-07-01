@@ -34,6 +34,38 @@ if (stale.status === 0) {
   process.exit(1);
 }
 
+const behaveFresh = run(process.execPath, [
+  path.join(root, 'scripts/check-profile-freshness.js'),
+  path.join(root, 'fixtures/profiles/behave-fresh'),
+  '--json',
+]);
+
+if (behaveFresh.status !== 0) {
+  console.error('Expected fresh Behave fixture to pass freshness check.');
+  console.error(behaveFresh.stdout || behaveFresh.stderr);
+  process.exit(1);
+}
+
+const behaveStale = run(process.execPath, [
+  path.join(root, 'scripts/check-profile-freshness.js'),
+  path.join(root, 'fixtures/profiles/behave-stale'),
+  '--json',
+]);
+
+if (behaveStale.status === 0) {
+  console.error('Expected stale Behave fixture to fail freshness check.');
+  process.exit(1);
+}
+
+const areaMap = require(path.join(root, 'scripts/area-map.js'));
+const resolved = areaMap.resolveAppSearchPaths('tests/admin/billing', {
+  'tests/admin/billing': { appPaths: ['app/cfd/billing'] },
+});
+if (!resolved.paths.includes('app/cfd/billing')) {
+  console.error('area-map resolution failed.');
+  process.exit(1);
+}
+
 const requiredProfileSnippets = [
   ['skills/gavel-playwright/SKILL.md', 'getByRole'],
   ['skills/gavel-cypress/SKILL.md', 'cy.get'],
@@ -51,4 +83,4 @@ for (const [relPath, snippet] of requiredProfileSnippets) {
   }
 }
 
-console.log('Profile fixtures OK: freshness checks and profile snippets verified.');
+console.log('Profile fixtures OK: freshness, area-map, and profile snippets verified.');
