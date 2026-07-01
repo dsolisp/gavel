@@ -1,0 +1,6 @@
+{
+  "invalid-root": {
+    "appPaths": ["app/billing"]
+  },
+  "tests/admin/billing": []
+}

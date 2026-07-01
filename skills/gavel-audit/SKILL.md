@@ -22,6 +22,7 @@ Same categories as gavel-review, plus suite-level findings:
 - `orphan-test:` test with no matching feature/ticket, or testing removed functionality. Replacement: delete or verify relevance.
 - `css-loc:` CSS/XPath selector count in the suite. Replacement: semantic locators.
 - `selector-leak:` chained raw selector count outside locator classes (`locator.locator`, `querySelector`, `closest`, `.find()`, `$`, `find_element`). Replacement: named locators.
+- `expect-in-action:` `expect()`, `assert()`, or framework assertion calls in action/page/locator files. Replacement: return state, move assertion to spec.
 - `hardcoded:` hardcoded data count in test bodies. Replacement: factories.
 - `no-step:` tests without logical grouping. Replacement: test.step().
 - `manual-wait:` manual wait/sleep count. Replacement: web-first assertions.
@@ -40,8 +41,55 @@ Scan for:
 
 ## Output
 
-One line per finding, ranked by impact:
-`<tag> <what to cut or fix>. <replacement>. [path]`
+One line per finding, ranked by impact. Prefix every line with severity:
+
+| Severity | Use when |
+|----------|----------|
+| `blocker` | Constitution violation that can hide real bugs (`expect-in-action`, `manual-wait`, `no-di`) |
+| `fix` | Incorrect patterns that break maintainability (`selector-leak`, `css-loc`, `hardcoded`, `no-step`) |
+| `cleanup` | Dead code or duplication (`dead-pom`, `dead-locator`, `dup-factory`) |
+| `delete` | Safe removal candidates (`orphan-test` with no ticket, unused POM/locator confirmed) |
+
+Format:
+
+`<severity> <autofix> <tag> <what to cut or fix>. <replacement>. [path]`
+
+Examples:
+
+`blocker review expect-in-action assertion in action file. Move expect to spec. [pages/actions/BillingActions.ts]`
+`delete safe dead-locator getter never referenced. Delete getter. [locators/admin/BillingLocators.ts]`
+
+## Autofix eligibility
+
+| Autofix | Meaning | Agent / action |
+|---------|---------|----------------|
+| `safe` | Mechanical change, low behavior risk | `node scripts/audit-autofix.js <repo>` (dry-run) or gavel-refactor after grep |
+| `review` | Needs human or healer judgment | gavel-healer / gavel-refactor with test run |
+| `report-only` | List only — do not auto-edit | Document for ticket or manual triage |
+
+Safe dead-locator runner (default dry-run):
+
+```bash
+node scripts/audit-autofix.js <automation-repo>           # list candidates
+node scripts/audit-autofix.js <automation-repo> --apply   # remove confirmed dead symbols
+```
+
+## Tag → severity + autofix
+
+| Tag | Severity | Autofix |
+|-----|----------|---------|
+| `expect-in-action` | blocker | review |
+| `manual-wait` | blocker | review |
+| `no-di` | blocker | review |
+| `selector-leak` | fix | review |
+| `css-loc` | fix | review |
+| `hardcoded` | fix | review |
+| `no-step` | fix | review |
+| `flake-risk` | fix | report-only |
+| `dead-pom` | cleanup | review |
+| `dead-locator` | cleanup | safe |
+| `dup-factory` | cleanup | review |
+| `orphan-test` | delete | report-only |
 
 End with a summary:
 ```

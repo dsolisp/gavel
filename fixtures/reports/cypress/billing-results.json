@@ -1,0 +1,31 @@
+{
+  "stats": {
+    "suites": 1,
+    "tests": 2,
+    "passes": 0,
+    "failures": 2,
+    "pending": 0
+  },
+  "runs": [
+    {
+      "spec": { "relative": "cypress/e2e/billing.cy.ts" },
+      "suites": [
+        {
+          "title": "Billing",
+          "tests": [
+            {
+              "title": "saves draft",
+              "state": "failed",
+              "displayError": "Timed out retrying: Expected to find element: [role=\"button\"], but never found it."
+            },
+            {
+              "title": "publishes snapshot",
+              "state": "failed",
+              "displayError": "Timed out retrying: Expected to find element: [role=\"button\"], but never found it."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

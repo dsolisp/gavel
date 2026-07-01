@@ -101,3 +101,9 @@ Run compile + lint after any edit. If either fails, revert.
 - Marker references an issue that no longer exists → flag as undocumented
 - Test passes locally but CI still fails → flag for user (environmental issue)
 - Marker is inside a skip block / describe.skip — out of scope for this audit
+
+## Result Envelope
+
+Analysis-only agent. Return `templates/result-envelope.md` with status `DONE`
+when every marker was reviewed. Omit **Changes** unless markers were removed.
+Include **Next Action** for markers that need gavel-healer or human review.

@@ -27,6 +27,8 @@ Check these signals in order:
 | `Selenium.WebDriver` in .csproj | **Selenium (C#)** |
 | `cypress` in package.json, `cypress.config.*` | **Cypress** |
 | `@wdio/cli` in package.json, `wdio.conf.*` | **WebdriverIO** |
+| `pytest-playwright` in Python deps | **pytest-playwright** |
+| `robotframework` in deps, `*.robot` files | **Robot Framework** |
 
 ### Test Runner
 
@@ -39,6 +41,8 @@ Check these signals in order:
 | `behave` in requirements.txt, `features/` dir | **Behave** |
 | `@playwright/test` | **Playwright test runner** |
 | `mocha`/`jest`/`vitest` in package.json | **Mocha/Jest/Vitest** |
+| `pytest-playwright` + `pytest` | **pytest-playwright** |
+| `robotframework` | **Robot Framework** |
 
 ### Language
 
@@ -70,6 +74,7 @@ Detect from file extensions: `.ts`/`.js` = TypeScript/JavaScript, `.py` = Python
   gavel-detect results:
 
   Framework:     Playwright
+  Version:       1.61.x (check package.json / lockfile for exact)
   Test runner:   @playwright/test
   Language:      TypeScript
   POM pattern:   Mixin composition
@@ -77,7 +82,52 @@ Detect from file extensions: `.ts`/`.js` = TypeScript/JavaScript, `.py` = Python
   Profile:       gavel-playwright (activated)
 ```
 
+Include detected **version** from `package.json`, `requirements.txt`, `pom.xml`,
+or lockfile when available. Cross-check profile **Current release** section —
+flag if project is more than one minor behind.
+
+| Framework | Typical package | As of 2026-07-01 |
+|-----------|-----------------|------------------|
+| Playwright | `playwright` / `@playwright/test` | 1.61.1 |
+| Cypress | `cypress` | 15.18.0 |
+| WebdriverIO | `webdriverio` | 9.29.0 |
+| Selenium (Py) | `selenium` | 4.45.0 |
+| Cucumber.js | `@cucumber/cucumber` | 13.0.0 |
+| Behave | `behave` | 1.3.3 |
+| pytest-playwright | `pytest-playwright` | 0.6.2 |
+| Robot Framework | `robotframework` | 7.2.0 |
+
 If no framework is detected: `No test framework detected. Run /gavel-init to bootstrap one.`
+
+## Version Freshness
+
+After detection, run the freshness script when a target repo path is known:
+
+```bash
+node scripts/check-profile-freshness.js <target-repo-root> --json
+```
+
+Supports **Node** (`package.json`) and **Python** (`requirements.txt`, `pyproject.toml`)
+for Playwright, Cypress, WebdriverIO, Selenium, Cucumber.js, Behave, pytest,
+pytest-playwright, and Robot Framework.
+
+Interpret `freshness` status:
+
+| Status | Meaning |
+|--------|---------|
+| `fresh` | Within profile current release window |
+| `stale-patch` | One minor behind profile |
+| `stale-minor` | More than one minor behind — review profile caveats |
+| `stale-major` | Major version behind — migration risk |
+| `ahead-major` | Project newer than profile — profile may need update |
+
+Include freshness in detect output:
+
+```
+  Freshness:     fresh (playwright @1.61.1, profile current 1.61.1)
+```
+
+Golden fixtures: `fixtures/profiles/` (verified by `npm run verify`).
 
 ## Profile Activation
 
@@ -87,6 +137,8 @@ Once detected, the matching profile is activated for the session:
 - Cypress -> `gavel-cypress`
 - WebdriverIO -> `gavel-webdriverio`
 - Cucumber/Behave -> `gavel-cucumber`
+- pytest-playwright -> `gavel-playwright`
+- Robot Framework -> `gavel-robot`
 
 The profile injects framework-specific patterns into all gavel skills.
 

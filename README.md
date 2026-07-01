@@ -56,6 +56,8 @@ QA LADDER (test code):
 
 **New here?** Start with [QUICKSTART.md](QUICKSTART.md) — install → audit → heal → write, ten minutes to first verdict.
 
+**Docs:** [docs/README.md](docs/README.md) · **Changes:** [CHANGELOG.md](CHANGELOG.md) · **Roadmap:** [GAVEL_ROADMAP.md](GAVEL_ROADMAP.md)
+
 ## Install
 
 Pick one path. Hosted plugins update through their host; copied rule files update by replacing the copied files from this repo.

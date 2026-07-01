@@ -20,11 +20,13 @@ const EXPECTED_SKILLS = [
   'gavel-cypress',
   'gavel-webdriverio',
   'gavel-cucumber',
+  'gavel-robot',
   'gavel-plan',
   'gavel-e2e',
   'gavel-api',
   'gavel-run',
   'gavel-analyze',
+  'gavel-impact',
   'gavel-bug',
   'gavel-triage',
   'gavel-close',
@@ -35,6 +37,7 @@ const EXPECTED_SKILLS = [
   'gavel-heal',
   'gavel-flake',
   'gavel-init',
+  'gavel-self-check',
 ];
 
 const EXPECTED_AGENTS = [

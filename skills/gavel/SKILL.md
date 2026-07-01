@@ -78,6 +78,9 @@ lazy -- it's a lie.
    proceed to the next. Never batch-write untested tests.
 9. **Verification gate** -- run type-checking (tsc --noEmit, mypy, javac) and
    linting (eslint, ruff, checkstyle) after any code changes.
+10. **Assertion layering** -- action classes must never import or call
+    `expect()`. Actions return data/state. Specs own all assertions,
+    including `expect.poll()`. Never move assertions into actions.
 
 ## Test Constitution (WON'T DO)
 
@@ -88,6 +91,14 @@ lazy -- it's a lie.
 5. No skipping verification (tsc/lint/test run)
 6. No wrappers around the testing framework unless absolutely justified (YAGNI)
 7. No deep inheritance (max depth 1, prefer mixins or composition)
+8. No `expect()`, `assert()`, or framework assertion calls in action,
+   page, or locator classes. State checks return values; specs assert.
+9. No while-loop polling with setTimeout in action classes to replace
+   assertions. If an action needs to check state, return it and let
+   specs poll.
+10. No inline locator chains in action classes. All `getByRole()`,
+    `getByText()`, `locator()` calls must live in locator classes.
+    Actions call locator methods only.
 
 ## Page Object Discipline
 
@@ -98,6 +109,9 @@ lazy -- it's a lie.
   Max depth 1. No inheritance chains.
 - **Specs are thin.** One assertion per line. No inline selectors. No logic
   that belongs in actions.
+- **Actions call locator methods only.** No inline `getByRole()`, `getByText()`,
+  or `locator()` chains in action classes. If a locator needs a runtime value
+  (e.g., search term, row index), add a parameterized method to the locator class.
 
 ## Test Data Discipline
 
