@@ -50,6 +50,18 @@ const PROFILE_RELEASES = {
     profile: 'gavel-cucumber',
     current: '1.3.3',
   },
+  pytest_playwright: {
+    ecosystem: 'python',
+    packages: ['pytest-playwright'],
+    profile: 'gavel-playwright',
+    current: '0.6.2',
+  },
+  robot: {
+    ecosystem: 'python',
+    packages: ['robotframework'],
+    profile: 'gavel-run',
+    current: '7.2.0',
+  },
   pytest: {
     ecosystem: 'python',
     packages: ['pytest'],

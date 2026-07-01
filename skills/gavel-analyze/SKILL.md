@@ -95,10 +95,20 @@ node scripts/analyze-ci.js path/to/report.json \
 
 # Playwright HTML report directory
 node scripts/parsers/playwright-html.js playwright-report/ --json
-node scripts/parsers/playwright.js report.json --json | node scripts/analyze-ci.js --json
+
+# One-shot: HTML report dir → parse + Gavel Result envelope
+node scripts/analyze-ci.js playwright-report/ --envelope --project MySuite
+
+# Result envelope markdown (paste into gavel-analyze response)
+node scripts/analyze-ci.js path/to/report.json --envelope --project Tickblaze.UI
+node scripts/analyze-ci.js path/to/report.json --app-repo ../app --area-map ./area-map.json --envelope
 ```
 
-`analyze-ci.js` output includes per-cluster `classification`, `suspectCommits` (when
+`analyze-ci.js --envelope` renders the standard **Gavel Result** block from
+`templates/result-envelope.md` with CI summary, clusters, suspect commits, and
+next action pre-filled. Use JSON mode when another tool consumes the output.
+
+`analyze-ci.js` JSON includes per-cluster `classification`, `suspectCommits` (when
 `--app-repo` is set), and `nextAction`. Use suspect commits as the starting point
 for manual **gavel-impact** validation — do not treat git keyword search as proof.
 

@@ -52,29 +52,44 @@ One line per finding, ranked by impact. Prefix every line with severity:
 
 Format:
 
-`<severity> <tag> <what to cut or fix>. <replacement>. [path]`
+`<severity> <autofix> <tag> <what to cut or fix>. <replacement>. [path]`
 
 Examples:
 
-`blocker expect-in-action assertion in action file. Move expect to spec. [pages/actions/BillingActions.ts]`
-`delete dead-locator getter never referenced. Delete getter. [locators/admin/BillingLocators.ts]`
+`blocker review expect-in-action assertion in action file. Move expect to spec. [pages/actions/BillingActions.ts]`
+`delete safe dead-locator getter never referenced. Delete getter. [locators/admin/BillingLocators.ts]`
 
-## Tag → default severity
+## Autofix eligibility
 
-| Tag | Severity |
-|-----|----------|
-| `expect-in-action` | blocker |
-| `manual-wait` | blocker |
-| `no-di` | blocker |
-| `selector-leak` | fix |
-| `css-loc` | fix |
-| `hardcoded` | fix |
-| `no-step` | fix |
-| `flake-risk` | fix |
-| `dead-pom` | cleanup |
-| `dead-locator` | cleanup |
-| `dup-factory` | cleanup |
-| `orphan-test` | delete (only when relevance confirmed) |
+| Autofix | Meaning | Agent / action |
+|---------|---------|----------------|
+| `safe` | Mechanical change, low behavior risk | `node scripts/audit-autofix.js <repo>` (dry-run) or gavel-refactor after grep |
+| `review` | Needs human or healer judgment | gavel-healer / gavel-refactor with test run |
+| `report-only` | List only — do not auto-edit | Document for ticket or manual triage |
+
+Safe dead-locator runner (default dry-run):
+
+```bash
+node scripts/audit-autofix.js <automation-repo>           # list candidates
+node scripts/audit-autofix.js <automation-repo> --apply   # remove confirmed dead symbols
+```
+
+## Tag → severity + autofix
+
+| Tag | Severity | Autofix |
+|-----|----------|---------|
+| `expect-in-action` | blocker | review |
+| `manual-wait` | blocker | review |
+| `no-di` | blocker | review |
+| `selector-leak` | fix | review |
+| `css-loc` | fix | review |
+| `hardcoded` | fix | review |
+| `no-step` | fix | review |
+| `flake-risk` | fix | report-only |
+| `dead-pom` | cleanup | review |
+| `dead-locator` | cleanup | safe |
+| `dup-factory` | cleanup | review |
+| `orphan-test` | delete | report-only |
 
 End with a summary:
 ```

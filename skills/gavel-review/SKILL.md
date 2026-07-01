@@ -15,11 +15,11 @@ diff's best outcome is getting leaner and more disciplined.
 
 ## Format
 
-Prefix every finding with severity, then location and tag:
+Prefix every finding with severity, autofix eligibility, then location and tag:
 
-`<severity> L<line>: <tag> <what>. <replacement>.`
+`<severity> <autofix> L<line>: <tag> <what>. <replacement>.`
 
-Or for multi-file diffs: `<severity> <file>:L<line>: <tag> ...`
+Or for multi-file diffs: `<severity> <autofix> <file>:L<line>: <tag> ...`
 
 ### Severity
 
@@ -30,21 +30,38 @@ Or for multi-file diffs: `<severity> <file>:L<line>: <tag> ...`
 | `cleanup` | Shrink without behavior risk (`shrink`, minor `fat-spec`) |
 | `delete` | Remove redundant coverage (`yagni`) |
 
-### Tag → default severity
+### Tag → default severity + autofix
 
-| Tag | Severity |
-|-----|----------|
-| `expect-in-action` | blocker |
-| `manual-wait` | blocker |
-| `no-di` | blocker |
-| `selector-leak` | fix |
-| `css-loc` | fix |
-| `hardcoded` | fix |
-| `no-step` | fix |
-| `fat-spec` | fix |
-| `over-test` | fix |
-| `shrink` | cleanup |
-| `yagni` | delete |
+| Tag | Severity | Autofix |
+|-----|----------|---------|
+| `expect-in-action` | blocker | review |
+| `manual-wait` | blocker | review |
+| `no-di` | blocker | review |
+| `selector-leak` | fix | review |
+| `css-loc` | fix | review |
+| `hardcoded` | fix | review |
+| `no-step` | fix | review |
+| `fat-spec` | fix | review |
+| `over-test` | fix | review |
+| `shrink` | cleanup | safe |
+| `yagni` | delete | report-only |
+
+## Autofix eligibility (diff-scoped)
+
+| Autofix | Meaning | Agent / action |
+|---------|---------|----------------|
+| `safe` | Mechanical change in the diff, low behavior risk | gavel-refactor may apply after grep confirms zero external refs |
+| `review` | Needs human or healer judgment | gavel-healer / gavel-refactor with test run |
+| `report-only` | List only — do not auto-edit | Document for ticket or manual triage |
+
+Diff-scoped safe fixes (mirror `gavel-audit`):
+
+- `safe` + `shrink`: inline trivial navigation or duplicate step in the diff only
+- `safe` + dead locator symbol removed in diff: grep confirms zero refs outside the locator file
+- `review` for all blocker/fix tags — never auto-apply waits, DI, or selector moves
+- `report-only` for `yagni` — human decides delete vs keep
+
+For dead locator removal at repo scale, use `node scripts/audit-autofix.js <repo>` (dry-run default).
 
 Tags:
 
@@ -65,11 +82,12 @@ Tags:
 Bad: "This test might have too many assertions, consider reducing them."
 
 Good:
-- `blocker L22: manual-wait: waitForTimeout(3000). Remove; web-first assertion auto-retries.`
-- `fix L8: css-loc: page.locator('.submit-btn'). Click via getByRole('button', { name: 'Submit' }).`
-- `fix L18: selector-leak: locators.modal.locator('button.close'). Move closeButton to the locator class.`
-- `delete L1-40: yagni: duplicates billing-snapshot-lifecycle coverage. Delete this spec.`
-- `cleanup L3-20: shrink: inline navigation can be one action call. Use billingPage.open().`
+- `blocker review L22: manual-wait: waitForTimeout(3000). Remove; web-first assertion auto-retries.`
+- `fix review L8: css-loc: page.locator('.submit-btn'). Click via getByRole('button', { name: 'Submit' }).`
+- `fix review L18: selector-leak: locators.modal.locator('button.close'). Move closeButton to the locator class.`
+- `delete report-only L1-40: yagni: duplicates billing-snapshot-lifecycle coverage. Delete this spec.`
+- `cleanup safe L3-20: shrink: inline navigation can be one action call. Use billingPage.open().`
+- `cleanup safe locators/BillingLocators.ts:L45: dead-locator: unused getter in diff. Delete getter; grep shows zero refs.`
 
 ## Scoring
 
@@ -81,7 +99,7 @@ If there is nothing to cut: `Lean already. Ship.`
 
 Scope: test bloat, over-testing, and Test Constitution violations only.
 Correctness bugs in the application, security holes, and performance are
-explicitly out of scope. Route them to a normal review pass. Does not apply
-the fixes, only lists them.
+explicitly out of scope. Route them to a normal review pass. Lists findings;
+only `safe` items may be applied by gavel-refactor after grep confirmation.
 
 "stop gavel-review" or "normal mode": revert to verbose review style.

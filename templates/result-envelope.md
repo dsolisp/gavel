@@ -54,6 +54,12 @@ refuses to summarize work as complete when required fields are missing.
 - Omit **Changes** and **Verification** tables when no code was edited
 - Include **Next Action** pointing to the implementer (`gavel-healer`, `gavel-generator`, etc.)
 
+### CI suite runs (`gavel-analyze`)
+
+When ingesting CI via `analyze-ci.js`, use `--envelope` or map JSON into this template.
+Required sections: **Classification**, **CI Summary**, **Failure Clusters**,
+**Suspect Commits**, **Next Action**. See `scripts/ci-analysis-envelope.js`.
+
 ## Examples
 
 ### Complete (implementer)

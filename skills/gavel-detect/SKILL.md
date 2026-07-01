@@ -27,6 +27,8 @@ Check these signals in order:
 | `Selenium.WebDriver` in .csproj | **Selenium (C#)** |
 | `cypress` in package.json, `cypress.config.*` | **Cypress** |
 | `@wdio/cli` in package.json, `wdio.conf.*` | **WebdriverIO** |
+| `pytest-playwright` in Python deps | **pytest-playwright** |
+| `robotframework` in deps, `*.robot` files | **Robot Framework** |
 
 ### Test Runner
 
@@ -39,6 +41,8 @@ Check these signals in order:
 | `behave` in requirements.txt, `features/` dir | **Behave** |
 | `@playwright/test` | **Playwright test runner** |
 | `mocha`/`jest`/`vitest` in package.json | **Mocha/Jest/Vitest** |
+| `pytest-playwright` + `pytest` | **pytest-playwright** |
+| `robotframework` | **Robot Framework** |
 
 ### Language
 
@@ -90,6 +94,8 @@ flag if project is more than one minor behind.
 | Selenium (Py) | `selenium` | 4.45.0 |
 | Cucumber.js | `@cucumber/cucumber` | 13.0.0 |
 | Behave | `behave` | 1.3.3 |
+| pytest-playwright | `pytest-playwright` | 0.6.2 |
+| Robot Framework | `robotframework` | 7.2.0 |
 
 If no framework is detected: `No test framework detected. Run /gavel-init to bootstrap one.`
 
@@ -102,7 +108,8 @@ node scripts/check-profile-freshness.js <target-repo-root> --json
 ```
 
 Supports **Node** (`package.json`) and **Python** (`requirements.txt`, `pyproject.toml`)
-for Playwright, Cypress, WebdriverIO, Selenium, Cucumber.js, Behave, and pytest.
+for Playwright, Cypress, WebdriverIO, Selenium, Cucumber.js, Behave, pytest,
+pytest-playwright, and Robot Framework.
 
 Interpret `freshness` status:
 
@@ -130,6 +137,8 @@ Once detected, the matching profile is activated for the session:
 - Cypress -> `gavel-cypress`
 - WebdriverIO -> `gavel-webdriverio`
 - Cucumber/Behave -> `gavel-cucumber`
+- pytest-playwright -> `gavel-playwright`
+- Robot Framework -> `gavel-robot`
 
 The profile injects framework-specific patterns into all gavel skills.
 

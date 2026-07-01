@@ -18,6 +18,7 @@ This runs:
 - `verify-self-check-fixtures.js` — Constitution rule fixtures
 - `verify-parser-fixtures.js` — JUnit, Allure, Playwright, Cypress, analyze-ci fixtures
 - `verify-profile-fixtures.js` — profile freshness + snippet checks
+- `verify-audit-autofix.js` — dead locator dry-run and apply on fixtures
 
 ## 2. Manifest Completeness
 
@@ -44,7 +45,9 @@ node scripts/verify-profile-fixtures.js
 
 - [ ] JUnit, Allure, Playwright JSON/HTML, Cypress, analyze-ci parsers pass fixtures
 - [ ] Node + Python profile freshness fixtures pass
-- [ ] `CHANGELOG.md` and `docs/README.md` present
+- [ ] `validate-area-map.js` passes on example map
+- [ ] `analyze-ci.js --envelope` renders Gavel Result block (JSON and `playwright-report/` dir)
+- [ ] `audit-autofix.js` dry-run and `--apply` pass on fixtures
 
 ## 5. Agent / Skill Contract
 

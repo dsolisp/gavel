@@ -20,6 +20,7 @@ const EXPECTED_SKILLS = [
   'gavel-cypress',
   'gavel-webdriverio',
   'gavel-cucumber',
+  'gavel-robot',
   'gavel-plan',
   'gavel-e2e',
   'gavel-api',

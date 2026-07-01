@@ -3,6 +3,7 @@
 //
 // Usage:
 //   node scripts/analyze-ci.js <report-path> [--app-repo path] [--area-map path] [--commits 15] [--json]
+//   node scripts/analyze-ci.js playwright-report/ --envelope --project MySuite
 //   node scripts/parsers/junit.js results.xml --json | node scripts/analyze-ci.js --json
 
 const fs = require('fs');
@@ -11,13 +12,16 @@ const { execSync } = require('child_process');
 const { parseReport } = require('./parsers/index');
 const { clusterFailures } = require('./cluster-failures');
 const { loadAreaMap, resolveAppSearchPaths } = require('./area-map');
+const { formatCiAnalysisEnvelope } = require('./ci-analysis-envelope');
 
 function parseArgs(argv) {
   const jsonOutput = argv.includes('--json');
-  const flagValues = new Set(['--app-repo', '--commits', '--area-map']);
+  const envelopeOutput = argv.includes('--envelope');
+  const flagValues = new Set(['--app-repo', '--commits', '--area-map', '--project']);
   const appRepoIdx = argv.indexOf('--app-repo');
   const commitsIdx = argv.indexOf('--commits');
   const areaMapIdx = argv.indexOf('--area-map');
+  const projectIdx = argv.indexOf('--project');
   const inputPath = argv.find(
     (arg, index) => !arg.startsWith('--') && !flagValues.has(argv[index - 1]),
   );
@@ -25,6 +29,8 @@ function parseArgs(argv) {
   return {
     inputPath,
     jsonOutput,
+    envelopeOutput,
+    project: projectIdx >= 0 ? argv[projectIdx + 1] : 'automation-suite',
     appRepo: appRepoIdx >= 0 ? argv[appRepoIdx + 1] : null,
     areaMapPath: areaMapIdx >= 0 ? argv[areaMapIdx + 1] : null,
     commitLimit: commitsIdx >= 0 ? Number(argv[commitsIdx + 1]) : 15,
@@ -135,9 +141,8 @@ function buildAnalysis(report, options) {
 }
 
 function main() {
-  const { inputPath, jsonOutput, appRepo, areaMapPath, commitLimit } = parseArgs(
-    process.argv.slice(2),
-  );
+  const { inputPath, jsonOutput, envelopeOutput, project, appRepo, areaMapPath, commitLimit } =
+    parseArgs(process.argv.slice(2));
   const report = readReport(inputPath);
   report.passRate =
     report.total > 0 ? Number(((report.passed / report.total) * 100).toFixed(1)) : 0;
@@ -148,6 +153,11 @@ function main() {
     areaMap,
     commitLimit,
   });
+
+  if (envelopeOutput) {
+    console.log(formatCiAnalysisEnvelope(analysis, { project }));
+    return;
+  }
 
   if (jsonOutput) {
     console.log(JSON.stringify(analysis, null, 2));
@@ -174,4 +184,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildAnalysis, correlateCommits, classifyCluster };
+module.exports = { buildAnalysis, correlateCommits, classifyCluster, formatCiAnalysisEnvelope };

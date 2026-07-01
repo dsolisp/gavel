@@ -81,4 +81,38 @@ if (!analysis.clusters || analysis.clusters.length === 0) {
   process.exit(1);
 }
 
-console.log('Parser fixtures OK: junit, allure, playwright, playwright-html, cypress, cluster, analyze-ci.');
+const envelope = spawnSync(
+  process.execPath,
+  [
+    path.join(root, 'scripts/analyze-ci.js'),
+    path.join(root, 'fixtures/reports/playwright/billing-report.json'),
+    '--envelope',
+    '--project',
+    'fixture-suite',
+  ],
+  { encoding: 'utf8' },
+);
+
+if (envelope.status !== 0 || !envelope.stdout.includes('## Gavel Result')) {
+  console.error('analyze-ci --envelope did not render result block.');
+  process.exit(1);
+}
+
+const htmlEnvelope = spawnSync(
+  process.execPath,
+  [
+    path.join(root, 'scripts/analyze-ci.js'),
+    path.join(root, 'fixtures/reports/playwright-html'),
+    '--envelope',
+    '--project',
+    'fixture-html-suite',
+  ],
+  { encoding: 'utf8' },
+);
+
+if (htmlEnvelope.status !== 0 || !htmlEnvelope.stdout.includes('## Gavel Result')) {
+  console.error('analyze-ci playwright-report/ one-shot --envelope failed.');
+  process.exit(1);
+}
+
+console.log('Parser fixtures OK: junit, allure, playwright, playwright-html, cypress, cluster, analyze-ci, envelope, html one-shot.');

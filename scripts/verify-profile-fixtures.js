@@ -57,6 +57,21 @@ if (behaveStale.status === 0) {
   process.exit(1);
 }
 
+for (const [label, fixturePath] of [
+  ['pytest-playwright', 'fixtures/profiles/pytest-playwright-fresh'],
+  ['robot', 'fixtures/profiles/robot-fresh'],
+]) {
+  const result = run(process.execPath, [
+    path.join(root, 'scripts/check-profile-freshness.js'),
+    path.join(root, fixturePath),
+    '--json',
+  ]);
+  if (result.status !== 0) {
+    console.error(`Expected fresh ${label} fixture to pass freshness check.`);
+    process.exit(1);
+  }
+}
+
 const areaMap = require(path.join(root, 'scripts/area-map.js'));
 const resolved = areaMap.resolveAppSearchPaths('tests/admin/billing', {
   'tests/admin/billing': { appPaths: ['app/cfd/billing'] },

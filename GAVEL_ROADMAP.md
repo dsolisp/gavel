@@ -267,7 +267,7 @@ Definition of done:
 | P1 | Affected test discovery 2.0 | Reduces verification cost while preserving confidence | **Shipped** — `scripts/affected-tests.js` |
 | P1 | CI report parser + failure clustering | Makes scheduled run failures actionable | **Shipped** — parsers + `cluster-failures.js` + skill wiring |
 | P1 | Version freshness check in `gavel-detect` | Keeps profiles current across frameworks | **Shipped** — `check-profile-freshness.js` |
-| P2 | Audit severity and autofix eligibility | Makes audit output more useful | **Partial** — severity in audit + review; autofix not started |
+| P2 | Audit severity and autofix eligibility | Makes audit output more useful | **Shipped** — severity + autofix in `gavel-audit` |
 | P2 | Golden fixtures per framework | Prevents profile regressions | **Shipped** — includes Python behave fixtures |
 | P3 | Full public docs and changelog | Productization polish | **Shipped** — `CHANGELOG.md`, `docs/README.md` |
 
@@ -307,11 +307,27 @@ Definition of done:
 
 ### Next Up
 
-1. Add autofix eligibility to `gavel-audit` (`safe` / `review` / `report-only`).
-2. Add pytest-playwright and robot-framework detection in `gavel-detect`.
-3. Add `gavel-area-map.json` schema validation script.
-4. Wire `analyze-ci` output into a single `gavel-analyze` result envelope template block.
-5. Tag `v0.2.0` after autofix eligibility and schema validation land.
+1. ~~Add autofix eligibility to `gavel-audit` (`safe` / `review` / `report-only`).~~ **Done**
+2. ~~Add pytest-playwright and robot-framework detection in `gavel-detect`.~~ **Done**
+3. ~~Add `gavel-area-map.json` schema validation script.~~ **Done** — `validate-area-map.js`
+4. ~~Wire `analyze-ci` output into a single `gavel-analyze` result envelope template block.~~ **Done** — `--envelope`
+5. ~~Tag `v0.2.0` after autofix eligibility and schema validation land.~~ **Done**
+
+### Next Up
+
+1. ~~Extend autofix eligibility to `gavel-review` with diff-scoped safe fixes.~~ **Done**
+2. ~~Add Robot Framework profile (`gavel-robot`) or document `gavel-run` patterns.~~ **Done**
+3. ~~Add `analyze-ci` HTML report one-shot: `playwright-report/` → `--envelope` without manual parser step.~~ **Done**
+4. ~~Add audit autofix runner script (safe-only dead locator deletion behind `--dry-run`).~~ **Done** — `scripts/audit-autofix.js`
+5. ~~Tag `v0.3.0` after robot profile or autofix runner ships.~~ **Done**
+
+### Next Up
+
+1. Extend `audit-autofix.js` to dead POM classes and unused factory exports.
+2. Wire `audit-autofix` findings into `gavel-audit` ranked output format.
+3. Add `gavel-review --apply-safe` agent workflow doc (orchestrator + refactor handoff).
+4. Publish adapter sync CI job template for GitHub Actions.
+5. Tag `v0.4.0` after audit-autofix scope expansion.
 
 ---
 

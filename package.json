@@ -1,6 +1,6 @@
 {
   "name": "@dsolisp/gavel",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Minimalism + QA discipline for AI agents. Framework-adaptive test quality enforcement with YAGNI at the core.",
   "keywords": ["opencode-plugin", "opencode", "gavel", "qa", "testing", "playwright", "selenium", "cypress", "webdriverio", "pytest", "junit", "cucumber", "skills", "test-constitution", "page-object-model"],
   "license": "MIT",
@@ -38,7 +38,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/validate-manifest.js && node scripts/check-versions.js && node scripts/verify-self-check-fixtures.js && node scripts/verify-parser-fixtures.js && node scripts/verify-profile-fixtures.js",
+    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/validate-manifest.js && node scripts/check-versions.js && node scripts/verify-self-check-fixtures.js && node scripts/verify-parser-fixtures.js && node scripts/verify-profile-fixtures.js && node scripts/verify-area-map.js && node scripts/verify-audit-autofix.js",
     "self-check": "node scripts/self-check.js",
     "affected-tests": "node scripts/affected-tests.js",
     "test": "npm run verify"
