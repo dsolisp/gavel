@@ -46,6 +46,22 @@ Specs are thin. Use fixture DI. Group with test.step() or equivalent.
 
 Run type-checking, linting, then the test. Verify pass before proceeding.
 
+## Application Redesign Patterns
+
+When the product UI changes but test intent is unchanged (test-maintenance-drift):
+
+1. **Read application source (read-only)** before changing locators
+2. **Map old → new surface** — labels, roles, control types, action placement
+3. **Fix layer order** — locators → actions → specs
+4. **Common patterns (framework-agnostic):**
+   - **Async loading shell** — wait for a stable sentinel before interactions
+   - **Duplicate action labels** — scope locators to row/card/section, not global first match
+   - **Custom dropdowns** — open/close listbox; wait for options; close before next dropdown
+   - **Restricted / negative paths** — support optional skip of full page-ready wait
+5. **Iterate** — first locator pass often needs a second pass after data-load timing
+
+See active framework profile for syntax (`gavel-playwright`, `gavel-cypress`, etc.).
+
 ## Test Structure Best Practices
 
 - **Specs should be thin**: behavior-focused, no inline selectors

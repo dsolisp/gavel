@@ -22,6 +22,7 @@ Same categories as gavel-review, plus suite-level findings:
 - `orphan-test:` test with no matching feature/ticket, or testing removed functionality. Replacement: delete or verify relevance.
 - `css-loc:` CSS/XPath selector count in the suite. Replacement: semantic locators.
 - `selector-leak:` chained raw selector count outside locator classes (`locator.locator`, `querySelector`, `closest`, `.find()`, `$`, `find_element`). Replacement: named locators.
+- `expect-in-action:` `expect()`, `assert()`, or framework assertion calls in action/page/locator files. Replacement: return state, move assertion to spec.
 - `hardcoded:` hardcoded data count in test bodies. Replacement: factories.
 - `no-step:` tests without logical grouping. Replacement: test.step().
 - `manual-wait:` manual wait/sleep count. Replacement: web-first assertions.

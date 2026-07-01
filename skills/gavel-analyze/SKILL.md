@@ -23,7 +23,20 @@ Post-run suite analysis. Framework-adaptive.
 | **seed** | 404 on seeded data, empty grids, "not found" | Re-seed database |
 | **app bug** | Assertion fails on correct test logic | File bug report |
 | **test bug** | Wrong locator, stale auth, wrong config | Fix test |
+| **test-maintenance-drift** | Clustered failures, same route/area, element-not-found or renamed-control pattern after recent deploy | gavel-impact → gavel-healer |
 | **expected fail** | Marked expected failure (test.fail, @ExpectedFailure) | Document, link bug |
+
+### Detecting test-maintenance-drift
+
+Flag when **most** of these are true:
+
+- ≥3 failures in the same feature area, route, or spec directory
+- Errors are locator timeouts, missing text/roles, or "not attached" — not 5xx/auth
+- Pass rate was high recently; failures coincide with application merges
+- Retries do not help (not flaky — consistently missing DOM)
+
+Hand off to **gavel-impact** for commit correlation, then **gavel-healer** to update
+automation. Do not classify as app-bug without evidence the product regressed.
 
 ## Output Template
 

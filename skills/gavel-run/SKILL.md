@@ -62,6 +62,29 @@ coverage run -m pytest && coverage report --fail-under=80
 
 Skip step 4 and you're claiming quality you haven't measured. The default coverage threshold is **80%**; raise it for critical paths (auth, payment, tenant isolation), lower it for throwaway code.
 
+## Affected Test Discovery
+
+After modifying action/locator files, find which specs are affected and run
+only those. This is faster than running the full suite and catches broken
+imports that TypeScript may miss (e.g., methods removed but type inference
+resolves to a different overload).
+
+```bash
+# Step 1: Identify modified files
+git diff --name-only --diff-filter=M
+
+# Step 2: Find specs importing a specific class
+grep -rl "ModifiedActionsClass" tests/
+
+# Step 3: Run only those specs
+npx playwright test $(grep -rl "ModifiedActionsClass" tests/ | \
+  sed 's|.*/tests/|tests/|' | sed 's/\.ts$//')
+```
+
+For larger suites, run affected specs first, then full suite if time permits.
+Never skip the affected test run before declaring done. Report pass count
+(e.g. `8/8`). Missing test-run evidence = **INCOMPLETE** per gavel-orchestrator.
+
 ## Parallel Execution & Sharding
 
 CI speed is non-negotiable. Run tests in parallel from day one.

@@ -26,6 +26,10 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 5. No speculative abstractions (YAGNI violation)
 6. No deep inheritance (max depth 1, prefer mixins/composition)
 7. No skipping test runs after refactoring
+8. No replacing assertions with while-loop polling. When removing `expect` from
+   an action, convert to a state-returning method (`getXState()`) and move the
+   assertion to the spec.
+9. No adding `expect` imports to action/page/locator files
 
 ## Common Smells
 
@@ -61,6 +65,30 @@ Before adding any abstraction:
 
 After refactoring:
 - Compile/lint check
-- Run the full affected test suite
+- Identify affected specs: grep for imports of modified files
+- Run affected specs (not just type-check)
+- Run full suite if time permits
 - Compare pass rate before vs after — must be equal or better
+- If tests not run: declare INCOMPLETE, not done
 - No test should be removed or skipped without explicit justification
+
+## Selector-Leak Remediation
+
+When refactoring action classes, check for inline locator chains and
+centralize them:
+
+```text
+1. Find this.page.getBy* or row.locator() in action files
+2. Move to corresponding locator class as a property or parameterized method
+3. Update action to call this.locators.methodName()
+```
+
+This applies to ANY element targeting outside the locator layer:
+- `page.getByRole()`, `page.getByText()`, `page.getByLabel()`
+- `page.locator()`, `row.locator()`, `element.locator()`
+- `page.$`, `page.$$`, `querySelector`, `querySelectorAll`
+- `find_element`, `find_elements` (Selenium)
+- `closest()`, `matches()`, `find()` traversals
+
+If a locator needs a runtime value (search term, row index), add a
+parameterized method to the locator class rather than building an inline chain.

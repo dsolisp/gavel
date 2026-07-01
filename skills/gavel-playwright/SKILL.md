@@ -1,194 +1,145 @@
----
+﻿---
 name: gavel-playwright
 description: >
-  Playwright framework profile for gavel. Provides Playwright-specific patterns:
-  web-first assertions, test.step(), fixture DI, mixin POM, getByRole locators.
-  Activated automatically by gavel-detect when Playwright is detected.
+  Playwright framework profile for gavel. Playwright-specific locator APIs,
+  fixtures, web-first assertions, and run commands. Activated by gavel-detect.
+  Cross-framework UI patterns live in gavel-e2e, not here.
 ---
 
 # Gavel Playwright Profile
 
-Playwright-specific patterns that supplement the universal Test Constitution.
+Playwright-specific bindings only. Universal POM/workflow rules: `gavel` + `gavel-e2e`.
+
+**Current release (as of 2026-07-01):** `1.61.1` (patch; feature release `1.61.0`, 2026-06-15)
 
 ## Locators
 
 ```typescript
-// PRIORITY ORDER:
-page.getByRole('button', { name: 'Submit' })        // 1st: semantic
-page.getByLabel('Email')                              // 2nd: form labels
-page.getByPlaceholder('Enter email')                  // 3rd: placeholders
-page.getByText('Welcome')                             // 4th: text content
-page.getByTestId('submit-btn')                        // 5th: testid (last resort)
-// NEVER: page.locator('.btn') or page.locator('//div')
+page.getByRole('button', { name: 'Submit' })     // 1st
+page.getByLabel('Email')                         // 2nd
+page.getByPlaceholder('Enter email')             // 3rd
+page.getByText('Welcome')                        // 4th
+page.getByTestId('submit-btn')                   // 5th — last resort
+// NEVER: page.locator('.btn') or XPath
 ```
+
+`getByRole` supports `description` option (v1.60+) for accessible description matching.
 
 ## Selector Boundary
 
-Only locator classes may create or refine element targets. Actions/pages/specs must not call `locator.locator('...')`, `page.$`, `$eval`, `evaluate()` with `querySelector(All)`, `closest`, or `matches`. Expose nested/dynamic targets as named locators such as `deleteButtonForRow(name)`.
+Only locator classes create targets. Actions/specs call named locators — no
+`locator.locator()`, `page.$`, or `querySelector` in specs/actions.
 
-## Assertions (web-first, auto-retrying)
+## Assertions (web-first)
 
 ```typescript
 await expect(locator).toBeVisible();
 await expect(locator).toHaveText('Success');
-await expect(locator).toBeEnabled();
 await expect(page).toHaveURL(/\/dashboard/);
-await expect(response).toBeOK();          // API responses
-await expect(response).toBeApiError(400); // API errors
+await expect(response).toBeOK();
+await expect(locator).toMatchAriaSnapshot(`- button "Submit"`);
+await expect(page).toHaveScreenshot('screen.png', { mask: [loc.dynamic] });
+```
+
+Polling (specs only — see Assertion Layering):
+
+```typescript
+await expect.poll(() => actions.getGridState()).not.toBe('loading');
+await expect.soft.poll(() => count()).toBeGreaterThan(0);  // v1.61+
+await expect(async () => { /* multi-step */ }).toPass({ timeout: 10_000 });
 ```
 
 ## DI via Fixtures
 
 ```typescript
-// fixtures/adminFixtures.ts
 import { test as base } from '@playwright/test';
+
 export const test = base.extend<{ adminPage: AdminPage }>({
   adminPage: async ({ page }, use) => {
-    const adminPage = new AdminPage(page); // only in fixtures, never in specs
-    await adminPage.login();
-    await use(adminPage);
+    const p = new AdminPage(page);
+    await p.login();
+    await use(p);
   },
 });
-
-// specs: use { adminPage } from fixtures, never new AdminPage(page)
-```
-
-## POM: Mixin Composition
-
-```typescript
-// Mixin: reusable behavior
-export function SidebarNav<T extends new (...args: any[]) => {}>(Base: T) {
-  return class extends Base {
-    async navigateTo(item: string) { /* ... */ }
-  };
-}
-
-// Page object: compose mixins
-export class AdminDashboardPage extends SidebarNav(LocatorMixin(AdminBasePage)) {}
 ```
 
 ## Logical Grouping
 
 ```typescript
-await test.step('Navigate to dashboard', async () => {
-  await adminPage.navigateTo('/dashboard');
-});
-await test.step('Verify metrics load', async () => {
-  await expect(adminPage.locators.metricsCard).toBeVisible();
-});
+await test.step('Navigate', async () => { await actions.openDashboard(); });
 ```
 
 ## Wait Strategy
 
-NEVER use `waitForTimeout()` or `networkidle`. Playwright's web-first assertions
-auto-retry. For custom waits:
+No `waitForTimeout()` or `networkidle`. Prefer `expect()` auto-retry, then:
+
 ```typescript
-await page.waitForResponse(resp => resp.url().includes('/api/data'));
+await page.waitForResponse(r => r.url().includes('/api/data'));
 await locator.waitFor({ state: 'visible' });
 ```
+
+## Assertion Layering
+
+`expect()` and `expect.poll()` live in **specs only**. Actions return state;
+specs assert. See `gavel` Test Constitution.
 
 ## Run Commands
 
 ```bash
-npx tsc --noEmit                          # TypeScript check
-npx eslint .                              # Linting
-npx playwright test --project=chromium    # Run tests
-npx playwright test -g "TBADM-42"        # Run specific test
-npx playwright show-report               # View report
+npx tsc --noEmit
+npx eslint .
+npx playwright test --project=chromium
+npx playwright test -g "test name"
+npx playwright show-report
+npx playwright test --trace on   # debug
+```
+
+## Release Highlights (1.61.x)
+
+Use when upgrading or choosing APIs:
+
+| Feature | API | Notes |
+|---------|-----|-------|
+| WebAuthn passkeys | `context.credentials.create()` / `.install()` | Virtual authenticator; no hardware |
+| Web Storage | `page.localStorage`, `page.sessionStorage` | Prefer over `evaluate(localStorage…)` |
+| Video modes | `testOptions.video` | Same mode names as `trace` (`retain-on-failure-and-retries`, etc.) |
+| Soft poll | `expect.soft.poll()` | Non-fatal polling assertion |
+| API TLS info | `apiResponse.securityDetails()`, `.serverAddr()` | APIRequestContext responses |
+| WebSocket in traces | HAR + trace | WS traffic recorded |
+| CLI | `-G` | Shorthand for `--grep-invert` |
+| Browsers | Chromium 149, Firefox 151, WebKit 26.5 | Ubuntu 26.04 supported |
+
+**Upgrade note:** Pin `1.61.1` if using Node 22.15+ (sync loader fix in patch).
+
+## Release Highlights (1.60.x — still relevant)
+
+| Feature | API |
+|---------|-----|
+| HAR on tracing | `context.tracing.startHar()` / `stopHar()` |
+| File drop simulation | `locator.drop({ files })` |
+| Abort test from hook | `test.abort('reason')` |
+| Aria on Page | `expect(page).toMatchAriaSnapshot()` |
+
+## API Testing (no browser)
+
+```typescript
+test('GET /users', async ({ request }) => {
+  const response = await request.get('/api/users');
+  await expect(response).toBeOK();
+});
+```
+
+## Component Testing
+
+```typescript
+import { test, expect } from '@playwright/experimental-ct-react';
+test('button', async ({ mount }) => {
+  const c = await mount(<Button label="Submit" />);
+  await expect(c.getByRole('button', { name: 'Submit' })).toBeVisible();
+});
 ```
 
 ## Tags
 
-| Tag | Purpose |
-|-----|---------|
-| `@smoke` | Fastest critical-path checks |
-| `@sanity` | Important feature verification |
-| `@regression` | Broader coverage |
-| `@integration` | Cross-surface user journeys |
-| `@prod` | Read-only, non-mutating tests |
-| `@flaky:env` | Quarantined: environment-dependent flakiness |
-| `@flaky:data` | Quarantined: data/seed-dependent flakiness |
-| `@flaky:ui` | Quarantined: DOM/animation-dependent flakiness |
-
-## 2026 Native Features
-
-Use these instead of third-party tools where possible.
-
-### Accessibility (`toMatchAriaSnapshot`)
-
-```typescript
-// Built-in ARIA snapshot assertion. No axe-core dependency for the common cases.
-await expect(locators.main).toMatchAriaSnapshot(`
-  - heading "Dashboard"
-  - button "Refresh"
-`);
-
-// For deeper WCAG audits, pair with @axe-core/playwright:
-import AxeBuilder from '@axe-core/playwright';
-await new AxeBuilder({ page }).analyze(); // run after expect.toPass()
-```
-
-### Visual Regression (`toHaveScreenshot`)
-
-```typescript
-// First run captures, subsequent runs compare.
-await expect(page).toHaveScreenshot('dashboard.png', { maxDiffPixels: 100 });
-
-// Element-only visual diff (use sparingly; full-page is usually right):
-await expect(locators.nav).toHaveScreenshot('navbar.png');
-
-// Mask dynamic regions so the diff focuses on what changed:
-await expect(page).toHaveScreenshot('dashboard.png', {
-  mask: [locators.timestamp],
-});
-```
-
-### Component Testing (no server)
-
-```typescript
-// Mount components in isolation, no backend needed.
-import { test, expect } from '@playwright/experimental-ct-react';
-test('button renders label', async ({ mount }) => {
-  const component = await mount(<Button label="Submit" />);
-  await expect(component.getByRole('button', { name: 'Submit' })).toBeVisible();
-});
-```
-
-### API Testing (`request` fixture, no browser)
-
-```typescript
-test('GET /api/users returns list', async ({ request }) => {
-  const response = await request.get('/api/users');
-  expect(response.status()).toBe(200);
-  const body = await response.json();
-  expect(body).toMatchSchema(usersSchema); // contract check
-});
-```
-
-### Polling & Retry (`expect.toPass`, `expect.poll`)
-
-```typescript
-// Poll a condition until it passes (or times out). Replaces flaky wait loops.
-await expect(async () => {
-  const status = await page.evaluate(() => fetch('/health').then(r => r.status));
-  expect(status).toBe(200);
-}).toPass({ timeout: 10_000, intervals: [500, 1000, 2000] });
-
-// Poll a value (use when a polling API exists, prefer toPass for actions).
-await expect.poll(async () => {
-  return await page.evaluate(() => document.title);
-}).toBe('Dashboard');
-```
-
-### Trace & Annotations
-
-```typescript
-test('critical user flow', async ({ page }, testInfo) => {
-  testInfo.annotations.push({ type: 'ticket', description: 'TBADM-42' });
-  // Trace is auto-captured on failure. Force-capture on pass for hard flows:
-  await testInfo.attach('trace-summary', {
-    body: await page.evaluate(() => performance.timing.toJSON()),
-    contentType: 'application/json',
-  });
-});
-```
+Use project `grep` / `grepInvert` or inline `test.describe` grouping.
+Common conventions: `@smoke`, `@sanity`, `@regression`, `@integration`.

@@ -44,7 +44,29 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 4. **Apply fix**: precise change, no workarounds
 5. **Verify**: run test + compile + lint
-6. **Iterate**: fix one error at a time
+6. **Iterate**: fix one error at a time; first pass often needs follow-up
+
+## Test Maintenance Drift Playbook
+
+When gavel-analyze or gavel-impact classifies **test-maintenance-drift**:
+
+1. **Read application source (read-only)** — find the current page/component/API
+   contract. Do not guess locators from old test names.
+2. **Map old → new surface** — labels, roles, control types (e.g. button vs
+   combobox), action placement (toolbar vs table row).
+3. **Fix in layer order** — locators first, then actions, then specs.
+4. **Handle common UI redesign patterns:**
+   - **Async shell** — page shows spinner/skeleton before controls; add a
+     `waitForPageReady()` action that waits for a stable sentinel (heading,
+     primary control, or data strip) before interactions.
+   - **Duplicate action labels** — multiple buttons with the same name; scope
+     locators to row, card, or section (never `.first()` on ambiguous controls).
+   - **Custom dropdowns** — trigger via `aria-haspopup` + portaled `listbox`;
+     close listbox before opening the next; retry open if data refetch blocks UI.
+   - **Restricted / alternate roles** — navigation may land on access-denied or
+     login; support optional "skip ready wait" for security-negative tests.
+5. **Run affected tests** — see gavel-run → Affected Test Discovery.
+6. **Return pass count** — e.g. `8/8` targeted tests; not "should pass".
 
 ## Capability-Based Debugging
 
@@ -62,6 +84,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 | Session exhaustion | Parallelism exceeds environment capacity | Reduce workers or isolate sessions |
 | Schema changes | Response contract changed | Update service assertions after confirming contract |
 | Navigation changes | User flow or route changed | Update action flow and locators via inspection |
+| Application redesign | Clustered locator failures in one area | Follow Test Maintenance Drift Playbook |
 | Race condition | Shared state between tests | Add factory isolation and idempotent cleanup |
 | Stale element | DOM re-rendered after action | Re-query through the stack's locator model |
 

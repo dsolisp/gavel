@@ -1,164 +1,121 @@
 ---
 name: gavel-cucumber
 description: >
-  Cucumber/BDD framework profile for gavel. Provides Gherkin patterns for
-  Cucumber-JVM, Cucumber.js, Behave (Python), and SpecFlow (C#). Covers feature
-  files, step definitions, Scenario Outline, tags, data tables, hooks.
-  Activated automatically by gavel-detect when .feature files are found.
+  Cucumber/BDD framework profile for gavel. Gherkin, step definitions, tags,
+  hooks, and parallel execution for Cucumber.js 13+, Behave, and Cucumber-JVM.
+  Activated by gavel-detect when .feature files are found.
 ---
 
 # Gavel Cucumber/BDD Profile
 
-Cucumber-specific patterns that supplement the universal Test Constitution.
+BDD-specific bindings. Step bodies delegate to framework profiles for locators
+and assertions.
+
+**Current releases (as of 2026-07-01):**
+
+| Runner | Version | Released |
+|--------|---------|----------|
+| Cucumber.js (`@cucumber/cucumber`) | **13.0.0** | 2026-06-02 |
+| Behave (Python) | **1.3.3** | 2025-09-04 |
+| Cucumber-JVM | Check project `pom.xml` / Gradle | — |
 
 ## Feature File Structure
 
 ```gherkin
 @sanity @regression
-Feature: Admin Dashboard
-  As an admin user
-  I want to view the dashboard
-  So that I can monitor system metrics
-
+Feature: Dashboard
   Background:
     Given I am logged in as an admin
 
-  Scenario: Dashboard loads with metrics
+  Scenario: Metrics load
     When I navigate to the dashboard
     Then I should see the metrics card
-    And the metrics card should display current data
 
-  Scenario Outline: Dashboard filters by date range
-    When I navigate to the dashboard
-    And I select the "<range>" date filter
-    Then the metrics should show "<expected>" data
-
+  Scenario Outline: Filter by range
+    When I select the "<range>" filter
+    Then metrics show "<expected>" data
     Examples:
-      | range   | expected  |
-      | Today   | today     |
-      | Week    | this week |
-      | Month   | this month|
+      | range | expected  |
+      | Today | today     |
+      | Week  | this week |
 ```
 
-## Step Definitions
-
-### Cucumber.js (JavaScript)
+## Step Definitions (delegate to POM/actions)
 
 ```javascript
+// Cucumber.js
 const { Given, When, Then } = require('@cucumber/cucumber');
 
-Given('I am logged in as an admin', async function() {
+Given('I am logged in as an admin', async function () {
   this.adminPage = await AdminPage.create(this.driver);
   await this.adminPage.login();
 });
-
-When('I navigate to the dashboard', async function() {
-  await this.adminPage.navigateToDashboard();
-});
-
-Then('I should see the metrics card', async function() {
-  await expect(this.adminPage.locators.metricsCard).toBeDisplayed();
-});
 ```
-
-### Behave (Python)
 
 ```python
-from behave import given, when, then
-
+# Behave
 @given('I am logged in as an admin')
-def step_login_admin(context):
+def step_login(context):
     context.admin_page = AdminPage(context.driver)
     context.admin_page.login()
-
-@when('I navigate to the dashboard')
-def step_navigate_dashboard(context):
-    context.admin_page.navigate_to_dashboard()
-
-@then('I should see the metrics card')
-def step_see_metrics(context):
-    assert context.admin_page.is_metrics_visible()
 ```
 
-### Cucumber-JVM (Java)
-
-```java
-public class DashboardSteps {
-    private AdminPage adminPage;
-
-    @Given("I am logged in as an admin")
-    public void loginAdmin() {
-        adminPage = new AdminPage(DriverFactory.getDriver());
-        adminPage.login();
-    }
-
-    @When("I navigate to the dashboard")
-    public void navigateToDashboard() {
-        adminPage.navigateToDashboard();
-    }
-
-    @Then("I should see the metrics card")
-    public void seeMetricsCard() {
-        assertTrue(adminPage.isMetricsVisible());
-    }
-}
-```
-
-## Tag Management
+## Tags
 
 | Tag | Purpose |
 |-----|---------|
-| `@smoke` | Fastest critical-path checks |
-| `@sanity` | Important feature verification |
-| `@regression` | Broader coverage |
-| `@wip` | Work in progress (exclude from CI) |
-| `@bug-XXX` | Linked to known bug |
+| `@smoke` | Critical path |
+| `@sanity` | Key features |
+| `@regression` | Broad coverage |
+| `@wip` | Exclude from CI |
+| `@bug-XXX` | Known defect link |
 
 ## Hooks
 
 ```javascript
-// Before/After hooks for setup/teardown
-Before({ tags: '@sanity' }, async function() {
+Before({ tags: '@sanity' }, async function () {
   this.driver = await createDriver();
 });
 
-After(async function() {
-  await this.driver?.quit();
-});
-
-// Idempotent cleanup
-After(async function() {
-  try { await this.apiClient?.deleteTestUser(); } catch { /* already deleted */ }
-});
-```
-
-## Data Tables
-
-```gherkin
-Then the user list should contain:
-  | name     | role    | status  |
-  | Alice    | admin   | active  |
-  | Bob      | viewer  | active  |
-```
-
-```javascript
-Then('the user list should contain:', async function(dataTable) {
-  const rows = dataTable.hashes();
-  for (const row of rows) {
-    await expect(this.page.getUserRow(row.name)).toContainText(row.role);
-  }
+After(async function () {
+  try { await this.apiClient?.deleteTestUser(); } catch { /* idempotent */ }
 });
 ```
 
 ## Run Commands
 
 ```bash
-# Cucumber.js
-npx cucumber-js --tags "@sanity"
+# Cucumber.js 13+
+npx cucumber-js --tags "@sanity and not @wip"
+npx cucumber-js --parallel 4        # worker-thread parallel (v13)
 
-# Behave (Python)
+# Behave
 behave --tags=@sanity features/
 
 # Cucumber-JVM
 mvn test -Dcucumber.filter.tags="@sanity"
 ```
+
+## Cucumber.js 13.0 — Breaking Changes
+
+Read `UPGRADING.md#1300` before upgrading:
+
+| Change | Impact |
+|--------|--------|
+| Parallel runtime | Reimplemented with **worker threads** |
+| `BeforeAll` / `AfterAll` | Always executed (even with parallel) |
+| Node.js | **20.x and 25.x dropped**; Node **26.x** added |
+| Formatters | Legacy `SummaryFormatter` / `ProgressFormatter` deprecated |
+| `FORCE_COLOR` | Set from deprecated format option |
+
+## Behave 1.3.x
+
+- Stable at 1.3.3; use `behave --tags` for filtering
+- Step modules in `features/steps/`; `environment.py` for hooks
+- Context object (`context`) carries page objects — same layering as Cucumber World
+
+## Boundaries
+
+- Steps orchestrate; they do not own selectors (call locator/action layer)
+- No assertions in step helpers — assert in Then steps or delegate to spec-style checks per active UI profile
+- Feature files describe behavior, not implementation selectors

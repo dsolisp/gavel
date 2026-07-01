@@ -28,6 +28,7 @@ Tags:
 - `no-step:` logical grouping without test.step() / subTest / equivalent. Replacement: wrap in step.
 - `manual-wait:` waitForTimeout, sleep, networkidle. Replacement: framework-native wait or web-first assertion.
 - `no-di:` `new PageObject(page)` or `new Service()` in spec. Replacement: fixture DI.
+- `expect-in-action:` `expect()`, `assert()`, or framework assertion calls in action/page/locator files. Replacement: return state, move assertion to spec.
 - `yagni:` test that duplicates existing coverage. Replacement: nothing, delete it.
 - `shrink:` same test logic, fewer lines. Show the shorter form.
 

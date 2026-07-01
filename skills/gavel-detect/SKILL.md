@@ -70,12 +70,26 @@ Detect from file extensions: `.ts`/`.js` = TypeScript/JavaScript, `.py` = Python
   gavel-detect results:
 
   Framework:     Playwright
+  Version:       1.61.x (check package.json / lockfile for exact)
   Test runner:   @playwright/test
   Language:      TypeScript
   POM pattern:   Mixin composition
   CI system:     GitHub Actions
   Profile:       gavel-playwright (activated)
 ```
+
+Include detected **version** from `package.json`, `requirements.txt`, `pom.xml`,
+or lockfile when available. Cross-check profile **Current release** section —
+flag if project is more than one minor behind.
+
+| Framework | Typical package | As of 2026-07-01 |
+|-----------|-----------------|------------------|
+| Playwright | `playwright` / `@playwright/test` | 1.61.1 |
+| Cypress | `cypress` | 15.18.0 |
+| WebdriverIO | `webdriverio` | 9.29.0 |
+| Selenium (Py) | `selenium` | 4.45.0 |
+| Cucumber.js | `@cucumber/cucumber` | 13.0.0 |
+| Behave | `behave` | 1.3.3 |
 
 If no framework is detected: `No test framework detected. Run /gavel-init to bootstrap one.`
 
