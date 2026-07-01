@@ -91,3 +91,12 @@ When gavel-analyze or gavel-impact classifies **test-maintenance-drift**:
 ## Escalation
 
 If the issue is an app bug (not a test bug), escalate to gavel-bug for standardized reporting. Do NOT work around broken app behavior.
+
+## Result Envelope
+
+Return `templates/result-envelope.md` on completion.
+
+- `DONE` — fix shipped, compile/lint passed, affected tests run with pass count
+- `INCOMPLETE` — diagnosis only, or tests not run after fix
+- `APP BUG` / `ENV ISSUE` / `FLAKY` — per classification table above
+- Include suspect commit(s) when gavel-impact provided them

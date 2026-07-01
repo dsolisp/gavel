@@ -112,3 +112,10 @@ End with one of:
 - If a commit changes authentication/authorization flows → always `investigate`, never auto-recommend
 - If a commit removes an endpoint QA has tests for → flag as priority 1
 - If a commit touches complex caching/service layer → always `investigate`
+
+## Result Envelope
+
+Analysis-only agent. Return `templates/result-envelope.md` with status `DONE`
+when the verdict table is complete. Omit **Verification** — this agent does not
+run tests. **Next Action** must name the implementer (`gavel-healer`,
+`gavel-generator`) or state "No action required."

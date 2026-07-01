@@ -89,6 +89,21 @@ Output one of:
 → <agent/skill to call>
 ```
 
+## Result Envelope
+
+Diagnosis-only skill. Map verdict to `templates/result-envelope.md` status:
+
+| Verdict | Envelope Status |
+|---------|-----------------|
+| TEST BUG | `DONE` (diagnosis) — Next Action → gavel-healer |
+| APP BUG | `APP BUG` |
+| ENV ISSUE | `ENV ISSUE` |
+| FLAKY | `FLAKY` |
+| AMBIGUOUS | `INCOMPLETE` |
+
+Omit **Changes** and **Verification** tables. Include evidence bullets under
+**Classification** and a single **Next Action**.
+
 ## Rules
 
 - One test at a time. Do NOT diagnose a whole suite — that's gavel-analyze.

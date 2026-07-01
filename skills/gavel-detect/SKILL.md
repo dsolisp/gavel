@@ -93,6 +93,32 @@ flag if project is more than one minor behind.
 
 If no framework is detected: `No test framework detected. Run /gavel-init to bootstrap one.`
 
+## Version Freshness
+
+After detection, run the freshness script when a target repo path is known:
+
+```bash
+node scripts/check-profile-freshness.js <target-repo-root> --json
+```
+
+Interpret `freshness` status:
+
+| Status | Meaning |
+|--------|---------|
+| `fresh` | Within profile current release window |
+| `stale-patch` | One minor behind profile |
+| `stale-minor` | More than one minor behind — review profile caveats |
+| `stale-major` | Major version behind — migration risk |
+| `ahead-major` | Project newer than profile — profile may need update |
+
+Include freshness in detect output:
+
+```
+  Freshness:     fresh (playwright @1.61.1, profile current 1.61.1)
+```
+
+Golden fixtures: `fixtures/profiles/` (verified by `npm run verify`).
+
 ## Profile Activation
 
 Once detected, the matching profile is activated for the session:

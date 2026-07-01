@@ -23,15 +23,21 @@
   },
   "files": [
     "AGENTS.md",
+    "RELEASE_CHECKLIST.md",
     "hooks/",
     "skills/",
     "agents/",
+    "scripts/",
+    "fixtures/",
+    "templates/",
     ".opencode/",
     "examples/",
     "LICENSE"
   ],
   "scripts": {
-    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/check-versions.js",
+    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/validate-manifest.js && node scripts/check-versions.js && node scripts/verify-self-check-fixtures.js && node scripts/verify-parser-fixtures.js && node scripts/verify-profile-fixtures.js",
+    "self-check": "node scripts/self-check.js",
+    "affected-tests": "node scripts/affected-tests.js",
     "test": "npm run verify"
   },
   "publishConfig": {

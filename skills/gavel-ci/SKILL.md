@@ -53,3 +53,49 @@ jobs:
 3. Upload test reports as artifacts
 4. Use matrix strategy for multi-browser testing
 5. Set appropriate timeouts (tests should complete in < 30 min)
+
+## CI Report Artifacts
+
+Upload machine-readable reports so gavel-analyze can ingest failures:
+
+| Artifact | Parser |
+|----------|--------|
+| JUnit XML | `node scripts/parsers/junit.js report.xml --json` |
+| Allure results dir | `node scripts/parsers/allure.js allure-results --json` |
+| Playwright JSON | `node scripts/parsers/playwright.js report.json --json` |
+| Cypress JSON | `node scripts/parsers/cypress.js results.json --json` |
+| Unknown report | `node scripts/parsers/index.js artifact --json` |
+| Full analysis + impact | `node scripts/analyze-ci.js report.json --app-repo ../app --json` |
+
+Example GitHub Actions upload:
+
+```yaml
+- run: npx playwright test --reporter=junit
+  if: always()
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: junit-report
+    path: results.xml
+```
+
+Post-run workflow:
+
+```text
+download CI artifact
+  → parse report (junit/allure/index)
+  → cluster failures (cluster-failures.js)
+  → gavel-analyze classification
+  → gavel-impact when drift cluster detected
+```
+
+## Gavel Verify Gate (package repo)
+
+For the gavel package itself, release readiness requires:
+
+```bash
+npm run verify
+node scripts/self-check.js <target-automation-repo> --json
+```
+
+See `RELEASE_CHECKLIST.md` for the full release gate list.

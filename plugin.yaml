@@ -16,6 +16,7 @@ provides_commands:
   - gavel-heal
   - gavel-flake
   - gavel-init
+  - gavel-self-check
 provides_skills:
   - gavel
   - gavel-review
@@ -32,9 +33,17 @@ provides_skills:
   - gavel-plan
   - gavel-run
   - gavel-analyze
+  - gavel-impact
   - gavel-bug
   - gavel-triage
   - gavel-close
   - gavel-env
   - gavel-auth
+  - gavel-hub
   - gavel-ci
+  - gavel-self-check
+  - gavel-playwright
+  - gavel-selenium
+  - gavel-cypress
+  - gavel-webdriverio
+  - gavel-cucumber

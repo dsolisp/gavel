@@ -1,0 +1,60 @@
+{
+  "stats": {
+    "expected": 1,
+    "unexpected": 2,
+    "skipped": 0,
+    "duration": 12000
+  },
+  "suites": [
+    {
+      "title": "billing",
+      "file": "tests/admin/billing/billing-snapshot-lifecycle.spec.ts",
+      "specs": [
+        {
+          "title": "creates snapshot",
+          "file": "tests/admin/billing/billing-snapshot-lifecycle.spec.ts",
+          "tests": [
+            {
+              "title": "creates snapshot",
+              "results": [{ "status": "passed" }]
+            }
+          ]
+        },
+        {
+          "title": "edits toolbar action",
+          "file": "tests/admin/billing/billing-snapshot-lifecycle.spec.ts",
+          "tests": [
+            {
+              "title": "edits toolbar action",
+              "results": [
+                {
+                  "status": "failed",
+                  "error": {
+                    "message": "TimeoutError: locator.getByRole('button', { name: 'Save' }) not found"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "publishes snapshot",
+          "file": "tests/admin/billing/billing-snapshot-lifecycle.spec.ts",
+          "tests": [
+            {
+              "title": "publishes snapshot",
+              "results": [
+                {
+                  "status": "failed",
+                  "error": {
+                    "message": "TimeoutError: locator.getByRole('button', { name: 'Publish' }) not found"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

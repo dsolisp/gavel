@@ -36,16 +36,19 @@ request / CI failure
 
 | Lesson | Status | Implemented In | Remaining Roadmap Work |
 |---|---|---|---|
-| Assertion layering: actions never assert; specs own `expect` / assertions | Implemented | `skills/gavel`, `skills/gavel-playwright`, `skills/gavel-audit`, `skills/gavel-review`, `agents/gavel-refactor`, `agents/gavel-orchestrator` | Add static self-checks that fail if assertion APIs appear outside allowed layers |
-| Enforced post-change verification | Implemented | `agents/gavel-orchestrator`, `agents/gavel-refactor`, `agents/gavel-healer`, `skills/gavel-run` | Add structured machine-readable completion status and evidence schema |
+| Assertion layering: actions never assert; specs own `expect` / assertions | Implemented | `skills/gavel`, `skills/gavel-playwright`, `skills/gavel-audit`, `skills/gavel-review`, `agents/gavel-refactor`, `agents/gavel-orchestrator` | Expand `gavel-self-check` rules; add per-framework fixtures |
+| Enforced post-change verification | Implemented | `agents/gavel-orchestrator`, `agents/gavel-refactor`, `agents/gavel-healer`, `skills/gavel-run` | Wire result envelope into remaining skills (`gavel-analyze`, `gavel-heal`) |
 | While-loop polling trap | Implemented | `skills/gavel`, `skills/gavel-playwright`, `agents/gavel-refactor` | Add equivalent anti-pattern examples to non-Playwright profiles where useful |
 | Pre-change architecture analysis | Implemented | `agents/gavel-orchestrator`, `agents/gavel-refactor`, `agents/gavel-healer` | Add checklist reuse across generator and API specialist agents |
-| Selector leaks in action/spec layers | Implemented | `skills/gavel`, `skills/gavel-audit`, `skills/gavel-review`, `agents/gavel-refactor` | Add automated scanner for raw selectors outside locator classes |
+| Selector leaks in action/spec layers | Implemented | `skills/gavel`, `skills/gavel-audit`, `skills/gavel-review`, `agents/gavel-refactor`, `scripts/self-check.js` | Improve scanner precision; reduce false positives on allowed patterns |
 | Affected test discovery | Implemented | `skills/gavel-run`, `agents/gavel-orchestrator`, `agents/gavel-refactor`, `agents/gavel-healer` | Improve discovery beyond string grep using import graph / runner metadata |
-| Orchestrator handoff: plan-only is incomplete | Implemented | `agents/gavel-orchestrator` | Add a standard `DONE / INCOMPLETE / BLOCKED / APP BUG / ENV ISSUE` result envelope |
-| Test-maintenance drift workflow | Implemented | `skills/gavel-analyze`, `skills/gavel-impact`, `agents/gavel-orchestrator`, `agents/gavel-healer`, `skills/gavel-e2e` | Add report parsers and commit correlation helpers |
-| Thin framework profiles | Implemented | `skills/gavel-playwright`, `skills/gavel-selenium`, `skills/gavel-cypress`, `skills/gavel-webdriverio`, `skills/gavel-cucumber`, `skills/gavel-detect` | Add version freshness automation and profile self-tests |
-| Iterative improvement of Gavel source itself | Partially implemented | Source rules updated from lessons | Add self-test suite for Gavel instructions, manifest completeness checks, and release checklist |
+| Orchestrator handoff: plan-only is incomplete | Implemented | `agents/gavel-orchestrator`, `templates/result-envelope.md` | Add machine-readable JSON envelope export for orchestrator consumers |
+| Test-maintenance drift workflow | Implemented | `skills/gavel-analyze`, `skills/gavel-impact`, `agents/gavel-orchestrator`, `agents/gavel-healer`, `skills/gavel-e2e` | Wire report parsers into `gavel-analyze` workflow |
+| Thin framework profiles | Implemented | `skills/gavel-playwright`, `skills/gavel-selenium`, `skills/gavel-cucumber`, `skills/gavel-webdriverio`, `skills/gavel-cypress`, `skills/gavel-detect` | Add version freshness automation and profile self-tests |
+| Iterative improvement of Gavel source itself | Partially implemented | `scripts/validate-manifest.js`, `npm run verify` | Add self-test suite for Gavel instructions and release checklist |
+| Manifest completeness | Partially implemented | `plugin.yaml`, `scripts/validate-manifest.js` | Adapter skill-copy sync checks (`.qoder`, workspace mirrors) |
+| Constitution self-check | Partially implemented | `skills/gavel-self-check`, `scripts/self-check.js` | Golden fixtures per framework; CI integration examples |
+| CI report parsing | Partially implemented | `scripts/parsers/allure.js`, `scripts/parsers/junit.js` | Playwright/Cypress/Cucumber parsers; cluster integration in `gavel-analyze` |
 
 ---
 
@@ -72,11 +75,14 @@ Goal: make it impossible for Gavel to claim success without evidence.
 - Add an orchestrator rule: no test output means `INCOMPLETE`.
 - Add a reusable completion template shared by orchestrator, healer, refactor, generator, and API specialist.
 
+**Progress (2026-07-01):** `templates/result-envelope.md` added. All seven agents reference the envelope. Skills still pending.
+
 Definition of done:
 
-- All specialist agents use the same result envelope.
-- Orchestrator refuses to summarize plan-only work as complete.
-- Docs include examples of complete vs incomplete outputs.
+- All specialist agents use the same result envelope. **Done**
+- Orchestrator refuses to summarize plan-only work as complete. **Done**
+- Docs include examples of complete vs incomplete outputs. **Done** (`templates/result-envelope.md`)
+- All public skills reference the envelope where they declare completion. **Remaining**
 
 ### Phase 2 - Automated Gavel Self-Checks
 
@@ -92,11 +98,14 @@ Goal: enforce the Constitution on Gavel-generated or Gavel-edited test code.
 - Add a `gavel-self-check` script or skill that runs against a target automation repo.
 - Add fixture examples for each framework profile.
 
+**Progress (2026-07-01):** `scripts/self-check.js`, `fixtures/self-check/violations/`, and
+`verify-self-check-fixtures.js` in `npm run verify`.
+
 Definition of done:
 
-- A single command or skill can report Constitution violations.
-- The report uses `gavel-audit` tags.
-- At least one sample project or fixture validates each rule.
+- A single command or skill can report Constitution violations. **Done**
+- The report uses `gavel-audit` tags. **Done**
+- At least one sample project or fixture validates each rule. **Done**
 
 ### Phase 3 - Affected Test Discovery 2.0
 
@@ -111,11 +120,14 @@ Goal: run the smallest meaningful test set after a change.
 - Return recommended commands for Playwright, Selenium, Cypress, WebdriverIO, and Cucumber.
 - Use runner metadata when available.
 
+**Progress (2026-07-01):** `scripts/affected-tests.js` with `--git` and `--changed` modes.
+Documented in `skills/gavel-run`. Tag-based clustering not started.
+
 Definition of done:
 
-- Given changed locator/action/helper files, Gavel suggests targeted test commands.
-- Commands are framework-specific through active profile.
-- Full-suite escalation is recommended only when shared layers changed.
+- Given changed locator/action/helper files, Gavel suggests targeted test commands. **Done**
+- Commands are framework-specific through active profile. **Done**
+- Full-suite escalation is recommended only when shared layers changed. **Done**
 
 ### Phase 4 - CI Intelligence
 
@@ -140,10 +152,13 @@ Goal: turn failed scheduled runs into actionable QA decisions.
   - seed/data issue
   - flake
 
+**Progress (2026-07-01):** Parsers, `cluster-failures.js`, fixtures, and skill wiring in
+`gavel-analyze` / `gavel-ci`. Playwright/Cypress native JSON parsers not started.
+
 Definition of done:
 
-- Gavel can summarize a failed CI run with pass rate, clusters, likely root cause, suspected commits, and next action.
-- Output is short enough for CTO/lead sharing and detailed enough for implementation handoff.
+- Gavel can summarize a failed CI run with pass rate, clusters, likely root cause, suspected commits, and next action. **Partial** — parse + cluster done; impact correlation manual
+- Output is short enough for CTO/lead sharing and detailed enough for implementation handoff. **Partial**
 
 ### Phase 5 - Framework Profile Freshness
 
@@ -182,11 +197,13 @@ Goal: make shipped Gavel match source capabilities.
   - every public agent is discoverable in supported adapters
   - `.cursor`, `.qoder`, and source copies are in sync
 
+**Progress (2026-07-01):** `plugin.yaml` updated with all 29 public skills. `scripts/validate-manifest.js` added to `npm run verify`.
+
 Definition of done:
 
-- No hidden public skill exists only in source.
-- Sync drift between source and adapters is detectable.
-- Release checklist includes manifest validation.
+- No hidden public skill exists only in source. **Done**
+- Sync drift between source and adapters is detectable. **Partial** (rules sync via `check-rule-copies.js`; skill-copy sync remaining)
+- Release checklist includes manifest validation. **Done** — `RELEASE_CHECKLIST.md`
 
 ### Phase 7 - Audit and Review Maturity
 
@@ -242,27 +259,51 @@ Definition of done:
 
 ## Priority Backlog
 
-| Priority | Item | Why |
-|---|---|---|
-| P0 | Standard result envelope | Prevents ambiguous "done" responses |
-| P0 | Manifest completeness validation | Ensures shipped package exposes implemented features |
-| P0 | Gavel self-check for Constitution violations | Turns lessons into enforceable behavior |
-| P1 | Affected test discovery 2.0 | Reduces verification cost while preserving confidence |
-| P1 | CI report parser + failure clustering | Makes scheduled run failures actionable |
-| P1 | Version freshness check in `gavel-detect` | Keeps profiles current across frameworks |
-| P2 | Audit severity and autofix eligibility | Makes audit output more useful |
-| P2 | Golden fixtures per framework | Prevents profile regressions |
-| P3 | Full public docs and changelog | Productization polish |
+| Priority | Item | Why | Status |
+|---|---|---|---|
+| P0 | Standard result envelope | Prevents ambiguous "done" responses | **Shipped** — template + agent references |
+| P0 | Manifest completeness validation | Ensures shipped package exposes implemented features | **Shipped** — `validate-manifest.js` in verify |
+| P0 | Gavel self-check for Constitution violations | Turns lessons into enforceable behavior | **Shipped** — scanner + golden fixtures |
+| P1 | Affected test discovery 2.0 | Reduces verification cost while preserving confidence | **Shipped** — `scripts/affected-tests.js` |
+| P1 | CI report parser + failure clustering | Makes scheduled run failures actionable | **Shipped** — parsers + `cluster-failures.js` + skill wiring |
+| P1 | Version freshness check in `gavel-detect` | Keeps profiles current across frameworks | **Shipped** — `check-profile-freshness.js` |
+| P2 | Audit severity and autofix eligibility | Makes audit output more useful | **Partial** — severity in `gavel-audit`; autofix eligibility not started |
+| P2 | Golden fixtures per framework | Prevents profile regressions | **Shipped** — `fixtures/profiles/` |
+| P3 | Full public docs and changelog | Productization polish | Not started |
 
 ---
 
 ## Immediate Next Tasks
 
-1. Update `plugin.yaml` to reflect current public skills and profiles.
-2. Add a manifest/sync validation script.
-3. Add a `gavel-self-check` skill or script for Constitution violations.
-4. Standardize result envelope across agents.
-5. Add report parser skeletons for Allure and JUnit.
+1. ~~Update `plugin.yaml` to reflect current public skills and profiles.~~ **Done**
+2. ~~Add a manifest/sync validation script.~~ **Done** — `scripts/validate-manifest.js`
+3. ~~Add a `gavel-self-check` skill or script for Constitution violations.~~ **Done** — v1
+4. ~~Standardize result envelope across agents.~~ **Done** — extend to skills next
+5. ~~Add report parser skeletons for Allure and JUnit.~~ **Done** — wire into `gavel-analyze`
+
+### Next Up
+
+1. ~~Wire `scripts/parsers/*` into `skills/gavel-analyze` and `skills/gavel-ci`.~~ **Done**
+2. ~~Add golden fixtures that exercise each `gavel-self-check` rule.~~ **Done**
+3. ~~Extend result envelope references to `gavel-heal`, `gavel-run`, and `gavel-analyze`.~~ **Done**
+4. ~~Build affected-test discovery 2.0 (import graph) in `gavel-run`.~~ **Done**
+5. ~~Add release checklist doc with manifest + self-check + verify gates.~~ **Done**
+
+### Next Up
+
+1. ~~Add Playwright and Cypress native report parsers to `scripts/parsers/`.~~ **Done**
+2. ~~Wire `gavel-impact` commit correlation into `gavel-analyze` cluster output.~~ **Done** — `scripts/analyze-ci.js`
+3. ~~Add version freshness check to `gavel-detect`.~~ **Done** — `scripts/check-profile-freshness.js`
+4. ~~Add audit severity (`blocker` / `fix` / `cleanup` / `delete`) to `gavel-audit`.~~ **Done**
+5. ~~Add per-framework golden fixtures beyond self-check (profile regression tests).~~ **Done** — `fixtures/profiles/`
+
+### Next Up
+
+1. Add Playwright HTML report parser (not just JSON).
+2. Improve `analyze-ci` area → application path mapping (configurable map file).
+3. Extend audit severity to `gavel-review` for diff-scoped audits.
+4. Add Behave/pytest profile freshness (Python `requirements.txt` / `pyproject.toml`).
+5. Publish changelog and versioned public docs.
 
 ---
 
@@ -277,6 +318,6 @@ The former lessons-learned document identified these concrete gaps:
 - selector leaks in action classes
 - lack of self-checks for Gavel source behavior
 
-The first five are implemented in source rules and workflows. The remaining
-work is now tracked as product roadmap items: self-checks, manifest validation,
-structured completion, stronger affected-test discovery, and CI intelligence.
+The first five are implemented in source rules and workflows. Self-checks,
+manifest validation, structured completion, stronger affected-test discovery,
+and CI intelligence are now partially implemented and tracked by phase above.

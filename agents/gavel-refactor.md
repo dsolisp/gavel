@@ -72,6 +72,12 @@ After refactoring:
 - If tests not run: declare INCOMPLETE, not done
 - No test should be removed or skipped without explicit justification
 
+## Result Envelope
+
+Return `templates/result-envelope.md` on completion. Status `DONE` only when
+compile/lint and affected tests pass. Run `gavel-self-check` when available
+before declaring complete.
+
 ## Selector-Leak Remediation
 
 When refactoring action classes, check for inline locator chains and

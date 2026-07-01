@@ -117,16 +117,21 @@ If steps 2–5 are not executed: status = **INCOMPLETE**.
 
 ## Completion Contract (return to user)
 
-| Field | Required |
-|-------|----------|
-| Root cause | test-maintenance-drift / test-bug / app-bug / env |
-| Suspect commit(s) | if drift (from gavel-impact) |
-| Files changed | with layer (locator / action / spec) |
-| Compile check | pass / fail |
-| Tests run | exact command |
-| Result | pass count (e.g. `8/8` targeted tests) |
+Use the standard result envelope in `templates/result-envelope.md`.
 
-Missing test-run evidence → **INCOMPLETE**.
+| Status | When |
+|--------|------|
+| `DONE` | Evidence complete — compile + affected tests run |
+| `INCOMPLETE` | Plan/analysis only, or missing test-run evidence |
+| `BLOCKED` | Missing access, credentials, or human decision |
+| `APP BUG` | Product defect — do not work around in automation |
+| `ENV ISSUE` | Infra, seed, or service availability problem |
+| `FLAKY` | Intermittent — not stable on targeted re-run |
+
+Required fields: root cause, files changed (with layer), compile/lint result,
+exact test command, pass/fail count, remaining risk, next action.
+
+Missing test-run evidence → **INCOMPLETE** (never summarize as `DONE`).
 
 ## Pre-Change Analysis
 

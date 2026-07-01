@@ -69,6 +69,8 @@ only those. This is faster than running the full suite and catches broken
 imports that TypeScript may miss (e.g., methods removed but type inference
 resolves to a different overload).
 
+### v1 — grep (quick fallback)
+
 ```bash
 # Step 1: Identify modified files
 git diff --name-only --diff-filter=M
@@ -81,9 +83,37 @@ npx playwright test $(grep -rl "ModifiedActionsClass" tests/ | \
   sed 's|.*/tests/|tests/|' | sed 's/\.ts$//')
 ```
 
+### v2 — import graph (preferred)
+
+```bash
+# Changed files from git
+node scripts/affected-tests.js <repo-root> --git --framework playwright
+
+# Explicit changed files
+node scripts/affected-tests.js <repo-root> \
+  --changed locators/BillingLocators.ts,pages/BillingPage.ts \
+  --framework playwright --json
+```
+
+The script traces spec imports/references to locators, pages, actions, services,
+and shared helpers. It returns:
+
+- `affectedSpecs` — targeted spec paths
+- `recommendedCommand` — framework-specific run command
+- `escalateFullSuite` — `true` when shared fixtures/lib layers changed
+
 For larger suites, run affected specs first, then full suite if time permits.
 Never skip the affected test run before declaring done. Report pass count
 (e.g. `8/8`). Missing test-run evidence = **INCOMPLETE** per gavel-orchestrator.
+
+## Result Envelope
+
+When `gavel-run` completes an execution gate (not just config advice), return
+`templates/result-envelope.md`.
+
+- **Status `DONE`** — compile/lint passed and affected or requested tests ran with pass count
+- **Status `INCOMPLETE`** — command suggested but not executed, or pass count missing
+- Include exact `recommendedCommand` output in **Verification → Tests**
 
 ## Parallel Execution & Sharding
 

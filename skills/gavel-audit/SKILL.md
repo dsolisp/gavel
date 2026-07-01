@@ -41,8 +41,40 @@ Scan for:
 
 ## Output
 
-One line per finding, ranked by impact:
-`<tag> <what to cut or fix>. <replacement>. [path]`
+One line per finding, ranked by impact. Prefix every line with severity:
+
+| Severity | Use when |
+|----------|----------|
+| `blocker` | Constitution violation that can hide real bugs (`expect-in-action`, `manual-wait`, `no-di`) |
+| `fix` | Incorrect patterns that break maintainability (`selector-leak`, `css-loc`, `hardcoded`, `no-step`) |
+| `cleanup` | Dead code or duplication (`dead-pom`, `dead-locator`, `dup-factory`) |
+| `delete` | Safe removal candidates (`orphan-test` with no ticket, unused POM/locator confirmed) |
+
+Format:
+
+`<severity> <tag> <what to cut or fix>. <replacement>. [path]`
+
+Examples:
+
+`blocker expect-in-action assertion in action file. Move expect to spec. [pages/actions/BillingActions.ts]`
+`delete dead-locator getter never referenced. Delete getter. [locators/admin/BillingLocators.ts]`
+
+## Tag → default severity
+
+| Tag | Severity |
+|-----|----------|
+| `expect-in-action` | blocker |
+| `manual-wait` | blocker |
+| `no-di` | blocker |
+| `selector-leak` | fix |
+| `css-loc` | fix |
+| `hardcoded` | fix |
+| `no-step` | fix |
+| `flake-risk` | fix |
+| `dead-pom` | cleanup |
+| `dead-locator` | cleanup |
+| `dup-factory` | cleanup |
+| `orphan-test` | delete (only when relevance confirmed) |
 
 End with a summary:
 ```

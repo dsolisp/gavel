@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+// gavel — verify report parser fixtures
+
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+const root = path.join(__dirname, '..');
+
+function runJson(command, args, input) {
+  const result = spawnSync(command, args, {
+    cwd: root,
+    encoding: 'utf8',
+    input,
+  });
+  if (result.status !== 0) {
+    console.error(result.stderr || result.stdout);
+    process.exit(1);
+  }
+  return JSON.parse(result.stdout);
+}
+
+const junit = runJson(process.execPath, [
+  path.join(root, 'scripts/parsers/junit.js'),
+  path.join(root, 'fixtures/reports/junit/billing-failures.xml'),
+  '--json',
+]);
+
+const allure = runJson(process.execPath, [
+  path.join(root, 'scripts/parsers/allure.js'),
+  path.join(root, 'fixtures/reports/allure'),
+  '--json',
+]);
+
+const playwright = runJson(process.execPath, [
+  path.join(root, 'scripts/parsers/playwright.js'),
+  path.join(root, 'fixtures/reports/playwright/billing-report.json'),
+  '--json',
+]);
+
+const cypress = runJson(process.execPath, [
+  path.join(root, 'scripts/parsers/cypress.js'),
+  path.join(root, 'fixtures/reports/cypress/billing-results.json'),
+  '--json',
+]);
+
+if (junit.failed < 2 || allure.failed < 1 || playwright.failed < 2 || cypress.failed < 2) {
+  console.error('Parser fixtures did not produce expected failures.');
+  process.exit(1);
+}
+
+const clusters = runJson(
+  process.execPath,
+  [path.join(root, 'scripts/cluster-failures.js')],
+  JSON.stringify(junit),
+);
+
+if (!clusters.clusters || clusters.clusters.length === 0) {
+  console.error('cluster-failures produced no clusters.');
+  process.exit(1);
+}
+
+const analysis = runJson(
+  process.execPath,
+  [path.join(root, 'scripts/analyze-ci.js'), '--json'],
+  JSON.stringify(playwright),
+);
+
+if (!analysis.clusters || analysis.clusters.length === 0) {
+  console.error('analyze-ci produced no clusters.');
+  process.exit(1);
+}
+
+console.log('Parser fixtures OK: junit, allure, playwright, cypress, cluster, analyze-ci.');
