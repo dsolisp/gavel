@@ -1,0 +1,7 @@
+{
+  "name": "cypress-fixture-project",
+  "private": true,
+  "devDependencies": {
+    "cypress": "14.0.0"
+  }
+}

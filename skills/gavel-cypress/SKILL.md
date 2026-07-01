@@ -1,86 +1,103 @@
 ---
 name: gavel-cypress
 description: >
-  Cypress framework profile for gavel. Provides Cypress-specific patterns:
-  auto-retry assertions, custom commands, beforeEach setup, cy.get() with
-  semantic selectors. Activated automatically by gavel-detect.
+  Cypress framework profile for gavel. Auto-retry assertions, cy.intercept,
+  Studio, cy.prompt, and run commands. Activated by gavel-detect.
 ---
 
 # Gavel Cypress Profile
 
-Cypress-specific patterns that supplement the universal Test Constitution.
+Cypress-specific bindings. Universal POM/workflow: `gavel` + `gavel-e2e`.
+
+**Current release (as of 2026-07-01):** `15.18.0` (2026-06-23) — Cypress 15.x line
 
 ## Locators
 
 ```javascript
-// PRIORITY ORDER:
-cy.get('[role="button"]').contains('Submit')    // semantic + text
-cy.get('[aria-label="Email"]')                  // labeled control
-cy.get('[data-testid="submit-btn"]')            // testid (last resort)
-// NEVER: cy.get('.btn-primary') or cy.get('div > span')
+cy.get('[role="button"]').contains('Submit')
+cy.get('[aria-label="Email"]')
+cy.get('[data-testid="submit-btn"]')   // last resort
+// NEVER: cy.get('.btn-primary') or deep CSS chains in specs
 ```
 
-## Selector Boundary
+Selectors belong in page helpers / custom commands, not spec bodies.
 
-Selectors belong in custom commands or locator helpers, not specs/actions. Do not hide raw selectors in chains like `.find('...')`, `.closest('...')`, `.filter('...')`, or `cy.contains(selector, text)` outside that locator boundary.
-
-## Assertions (auto-retry, built-in)
+## Assertions (auto-retry)
 
 ```javascript
 cy.get('[role="alert"]').should('be.visible');
 cy.get('[role="alert"]').should('contain.text', 'Success');
-cy.get('input').should('be.enabled');
 cy.url().should('include', '/dashboard');
 cy.intercept('POST', '/api/data').as('postData');
 cy.wait('@postData').its('response.statusCode').should('eq', 200);
 ```
 
-## DI via beforeEach / Custom Commands
+## Cross-Origin
+
+```javascript
+cy.origin('https://other.example', () => {
+  cy.get('[data-cy="submit"]').click();
+});
+```
+
+## DI via Custom Commands
 
 ```javascript
 // support/commands.js
 Cypress.Commands.add('loginAsAdmin', () => {
-  cy.request('POST', '/api/auth/login', { /* credentials from env */ });
+  cy.session('admin', () => { /* login */ });
 });
-
-// Custom page object via commands
-Cypress.Commands.add('adminDashboard', () => {
-  return new AdminDashboardPage();
-});
-
-// specs: use commands, never instantiate in test body
 ```
 
-## POM: Custom Commands + Service Objects
+## POM Pattern
 
 ```javascript
-// pages/AdminDashboardPage.js
-const dashboardLocators = {
-  metricsCard: () => cy.get('[data-testid="metrics"]'),
-  navItem: (section) => cy.contains('[role="navigation"] a', section),
-};
-
-export class AdminDashboardPage {
-  visit() { cy.visit('/admin/dashboard'); }
-  get metricsCard() { return dashboardLocators.metricsCard(); }
-  navigateTo(section) { dashboardLocators.navItem(section).click(); }
+export class DashboardPage {
+  visit() { cy.visit('/dashboard'); }
+  metricsCard() { return cy.get('[data-testid="metrics"]'); }
 }
 ```
 
 ## Wait Strategy
 
-Cypress auto-retries assertions. NEVER use `cy.wait(2000)`. Use:
+No `cy.wait(ms)`. Use:
+
 ```javascript
-cy.get('[role="status"]').should('not.exist'); // wait for loading to disappear
+cy.get('[role="status"]').should('not.exist');
 cy.intercept('GET', '/api/data').as('data');
-cy.wait('@data');                               // wait for specific network call
+cy.wait('@data');
 ```
 
 ## Run Commands
 
 ```bash
-npx eslint .                                    # Linting
-npx cypress run --browser chrome                # Run headless
-npx cypress open                                # Interactive mode
-npx cypress run --spec "cypress/e2e/dashboard.cy.js"  # Specific spec
+npx eslint .
+npx cypress run --browser chrome
+npx cypress open
+npx cypress run --spec "cypress/e2e/dashboard.cy.js"
+bun run cypress run    # Bun supported since 15.17
 ```
+
+## Release Highlights (15.x — current)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `cy.prompt()` | Beta (15.14+) | Plain-English test steps; no feature flag |
+| Cypress Studio | Default (15.0+) | No `experimentalStudio` flag required |
+| `Cypress.ElementSelector` | Renamed | Was `Cypress.SelectorPlayground` |
+| Node.js | 20, 22, or 24 required | 18 dropped in v15 |
+| Bun | Supported | `bun run cypress` |
+| `Cypress.expose()` | Per-suite overrides | `{ expose: { key: value } }` in describe/it config |
+| `removeSRIAttributes` | Config option | Strips `integrity` on rewritten first-party assets |
+| WebKit | Experimental | Use for Safari-like runs when enabled |
+
+## Migration Notes (14 → 15)
+
+- Drop Webpack 4, Vite 4, Angular 17, Firefox-via-CDP
+- Rename `Cypress.SelectorPlayground` → `Cypress.ElementSelector`
+- Custom commands named `prompt` conflict with built-in `cy.prompt()` — rename them
+
+## Environment
+
+- Linux: glibc 2.31+ (Ubuntu 20.04+)
+- macOS: Big Sur (11) or newer for Node 20+

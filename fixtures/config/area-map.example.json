@@ -1,0 +1,11 @@
+{
+  "tests/admin/billing": {
+    "appPaths": ["app/cfd/billing", "src/components/admin/billing"]
+  },
+  "tests/admin/accounts": {
+    "appPaths": ["app/cfd/accounts", "src/app/admin/accounts"]
+  },
+  "tests/trading/checkout": {
+    "appPaths": ["app/cfd/checkout", "src/checkout"]
+  }
+}

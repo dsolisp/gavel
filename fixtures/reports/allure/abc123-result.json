@@ -1,0 +1,13 @@
+{
+  "uuid": "allure-fixture-1",
+  "name": "edits toolbar action",
+  "fullName": "billing edits toolbar action",
+  "status": "failed",
+  "statusDetails": {
+    "message": "TimeoutError: locator.getByRole('button', { name: 'Save' }) not found"
+  },
+  "labels": [
+    { "name": "suite", "value": "billing" },
+    { "name": "feature", "value": "tests/admin/billing" }
+  ]
+}

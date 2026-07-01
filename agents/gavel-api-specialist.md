@@ -63,3 +63,9 @@ After generating each API test:
 - Compile/lint check
 - Run the specific test
 - Verify both positive and negative scenarios pass
+
+## Result Envelope
+
+Return `templates/result-envelope.md` on completion. Status `DONE` only when
+generated tests were run with pass counts. Analysis or scaffold-only work →
+`INCOMPLETE`.

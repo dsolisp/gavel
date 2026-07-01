@@ -54,3 +54,9 @@ After generating each test:
 - Run the repository's lint/style gate.
 - Run the specific test to confirm it passes.
 - Capture the command and outcome in the final summary.
+
+## Result Envelope
+
+Return `templates/result-envelope.md` on completion. Status `DONE` only when
+each generated test was run and passed. Partial generation without test evidence
+→ `INCOMPLETE`.
