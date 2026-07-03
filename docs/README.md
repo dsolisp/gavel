@@ -19,8 +19,8 @@ Version: **0.4.0** (see [CHANGELOG.md](../CHANGELOG.md))
 | `scripts/affected-tests.js` | Transitive affected spec discovery |
 | `scripts/check-profile-freshness.js` | Framework version vs profile |
 | `scripts/analyze-ci.js` | Parse CI report, cluster, correlate commits |
-| `scripts/audit-autofix.js` | Safe dead code removal (locators, POMs, factories) |
-| `scripts/audit-report.js` | Ranked gavel-audit output from autofix scan |
+| `scripts/audit-autofix.js` | Safe dead code removal (locators, POMs, factories) — O(n) content cache |
+| `scripts/audit-report.js` | Ranked gavel-audit output (`--audit-format`, `--json`, `--with-self-check`) |
 | `scripts/validate-area-map.js` | Validate `gavel-area-map.json` |
 | `scripts/ci-analysis-envelope.js` | Format analyze-ci output as Gavel Result markdown |
 | `scripts/parsers/index.js` | Auto-detect report format |
@@ -39,9 +39,15 @@ node scripts/analyze-ci.js playwright-report/ \
 
 ```bash
 node scripts/audit-report.js ../Tickblaze.Web.UI.Automation
+node scripts/audit-report.js ../Tickblaze.Web.UI.Automation --audit-format
+node scripts/audit-report.js ../Tickblaze.Web.UI.Automation --json
+node scripts/audit-report.js ../Tickblaze.Web.UI.Automation --with-self-check
 node scripts/audit-autofix.js ../Tickblaze.Web.UI.Automation --audit-format
+node scripts/audit-autofix.js ../Tickblaze.Web.UI.Automation --json
 node scripts/audit-autofix.js ../Tickblaze.Web.UI.Automation --apply
 ```
+
+Both scripts support `--audit-format` (human-readable) and `--json` (machine-readable). `audit-report.js` also supports `--with-self-check` for Constitution violations in the same pass.
 
 Apply-safe handoff: [templates/apply-safe-workflow.md](../templates/apply-safe-workflow.md)
 

@@ -8,10 +8,11 @@ const root = path.join(__dirname, '..');
 
 function readYamlList(content, key) {
   const items = [];
-  const lines = content.split('\n');
+  const lines = content.split(/\r?\n/);
   let inBlock = false;
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/\r$/, '');
     if (line.startsWith(`${key}:`)) {
       inBlock = true;
       continue;

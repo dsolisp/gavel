@@ -15,3 +15,4 @@ changelog-*.png
 
 # Claude Code local settings (machine-specific permission grants)
 .claude/settings.local.json
+GAVEL_ROADMAP.md
