@@ -18,6 +18,7 @@ Same categories as gavel-review, plus suite-level findings:
 
 - `dead-pom:` page object with no spec referencing it. Replacement: delete.
 - `dead-locator:` locator getter never used by any action or spec. Replacement: delete.
+- `unused-factory:` factory export never imported. Replacement: delete export or file.
 - `dup-factory:` factory that duplicates another factory's output. Replacement: consolidate.
 - `orphan-test:` test with no matching feature/ticket, or testing removed functionality. Replacement: delete or verify relevance.
 - `css-loc:` CSS/XPath selector count in the suite. Replacement: semantic locators.
@@ -32,12 +33,21 @@ Same categories as gavel-review, plus suite-level findings:
 ## Hunt
 
 Scan for:
-1. Unused page objects (grep for class references across specs)
-2. Dead locator getters (grep for getter usage across actions/specs)
-3. Duplicate factories (compare factory outputs)
-4. Orphan tests (tests referencing removed features or tickets)
-5. Constitution violations by count (CSS locators, selector leaks, hardcoded data, manual waits, missing steps)
-6. Flake risk indicators (shared accounts, no cleanup, execution-order tests)
+1. Unused page objects — `node scripts/audit-autofix.js <repo>` or `audit-report.js`
+2. Dead locator getters — `audit-autofix.js` / `audit-report.js`
+3. Unused factory exports — `audit-autofix.js` / `audit-report.js`
+4. Duplicate factories (compare factory outputs)
+5. Orphan tests (tests referencing removed features or tickets)
+6. Constitution violations — `node scripts/self-check.js <repo>` (optional `--with-self-check` on audit-report)
+7. Flake risk indicators (shared accounts, no cleanup, execution-order tests)
+
+Ranked dead-code scan (gavel-audit format):
+
+```bash
+node scripts/audit-report.js <automation-repo>
+node scripts/audit-report.js <automation-repo> --with-self-check
+node scripts/audit-autofix.js <automation-repo> --audit-format
+```
 
 ## Output
 
@@ -67,12 +77,16 @@ Examples:
 | `review` | Needs human or healer judgment | gavel-healer / gavel-refactor with test run |
 | `report-only` | List only — do not auto-edit | Document for ticket or manual triage |
 
-Safe dead-locator runner (default dry-run):
+Safe autofix runner (default dry-run):
 
 ```bash
-node scripts/audit-autofix.js <automation-repo>           # list candidates
-node scripts/audit-autofix.js <automation-repo> --apply   # remove confirmed dead symbols
+node scripts/audit-autofix.js <automation-repo>              # list candidates
+node scripts/audit-autofix.js <automation-repo> --audit-format
+node scripts/audit-autofix.js <automation-repo> --apply      # remove confirmed dead code
+node scripts/audit-report.js <automation-repo>               # ranked gavel-audit output
 ```
+
+Apply-safe handoff: `templates/apply-safe-workflow.md`
 
 ## Tag → severity + autofix
 
@@ -86,8 +100,9 @@ node scripts/audit-autofix.js <automation-repo> --apply   # remove confirmed dea
 | `hardcoded` | fix | review |
 | `no-step` | fix | review |
 | `flake-risk` | fix | report-only |
-| `dead-pom` | cleanup | review |
+| `dead-pom` | cleanup | safe |
 | `dead-locator` | cleanup | safe |
+| `unused-factory` | cleanup | safe |
 | `dup-factory` | cleanup | review |
 | `orphan-test` | delete | report-only |
 
