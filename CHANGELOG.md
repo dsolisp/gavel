@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-01
+
+### Added
+
+- `audit-autofix.js` — dead POM and unused factory detection; `--audit-format` output
+- `scripts/audit-report.js` — ranked gavel-audit lines from autofix (+ optional self-check)
+- `templates/apply-safe-workflow.md` — orchestrator → refactor handoff for `safe` findings
+- `templates/github-actions/gavel-verify.yml` — adapter CI template
+- Audit-autofix fixtures for POMs, factories, and specs
+
+### Changed
+
+- `gavel-audit` documents `audit-report.js` and `unused-factory` / safe `dead-pom` tags
+- `gavel-orchestrator` and `gavel-refactor` document apply-safe routing
+- `audit-report.js` now supports `--audit-format` (consistent with `audit-autofix.js`)
+- `audit-autofix.js` uses O(n) content cache for reference counting (was O(n²))
+- Verify script tests `--json` output for both `audit-autofix.js` and `audit-report.js`
+- Multi-class POM fixture (`MixedPage.ts`) verifies partial-usage detection
+
 ## [0.3.0] - 2026-07-01
 
 ### Added
@@ -59,7 +78,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/dsolisp/gavel/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsolisp/gavel/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dsolisp/gavel/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dsolisp/gavel/releases/tag/v0.1.0

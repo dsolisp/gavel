@@ -1,0 +1,26 @@
+# Copy to your adapter fork or monorepo as .github/workflows/gavel-verify.yml
+name: gavel-verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Sync adapter rule copies (western + chinese)
+        run: node scripts/check-rule-copies.js --check-all
+
+      - name: Run gavel verify gate
+        run: npm run verify

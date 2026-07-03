@@ -62,6 +62,7 @@ Diff-scoped safe fixes (mirror `gavel-audit`):
 - `report-only` for `yagni` — human decides delete vs keep
 
 For dead locator removal at repo scale, use `node scripts/audit-autofix.js <repo>` (dry-run default).
+For orchestrator handoff on `safe` findings, see `templates/apply-safe-workflow.md`.
 
 Tags:
 

@@ -72,6 +72,17 @@ After refactoring:
 - If tests not run: declare INCOMPLETE, not done
 - No test should be removed or skipped without explicit justification
 
+## Apply-Safe Mode
+
+When orchestrator delegates **apply-safe** cleanup:
+
+1. Dry-run: `node scripts/audit-autofix.js <repo> --audit-format`
+2. Apply only confirmed `safe` dead code — never touch `review` findings
+3. Compile / lint + affected test run (mandatory)
+4. Status `DONE` only when tests pass
+
+See `templates/apply-safe-workflow.md`.
+
 ## Result Envelope
 
 Return `templates/result-envelope.md` on completion. Status `DONE` only when
