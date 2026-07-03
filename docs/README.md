@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.3.0** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.4.0** (see [CHANGELOG.md](../CHANGELOG.md))
 
 ## Start here
 
@@ -19,7 +19,8 @@ Version: **0.3.0** (see [CHANGELOG.md](../CHANGELOG.md))
 | `scripts/affected-tests.js` | Transitive affected spec discovery |
 | `scripts/check-profile-freshness.js` | Framework version vs profile |
 | `scripts/analyze-ci.js` | Parse CI report, cluster, correlate commits |
-| `scripts/audit-autofix.js` | Safe dead-locator removal (dry-run default) |
+| `scripts/audit-autofix.js` | Safe dead code removal (locators, POMs, factories) |
+| `scripts/audit-report.js` | Ranked gavel-audit output from autofix scan |
 | `scripts/validate-area-map.js` | Validate `gavel-area-map.json` |
 | `scripts/ci-analysis-envelope.js` | Format analyze-ci output as Gavel Result markdown |
 | `scripts/parsers/index.js` | Auto-detect report format |
@@ -29,24 +30,24 @@ Version: **0.3.0** (see [CHANGELOG.md](../CHANGELOG.md))
 Copy and customize [fixtures/config/area-map.example.json](../fixtures/config/area-map.example.json):
 
 ```bash
-# Playwright HTML report dir — one-shot parse + envelope
 node scripts/analyze-ci.js playwright-report/ \
   --envelope \
   --project Tickblaze.UI
-
-node scripts/analyze-ci.js playwright-report/ \
-  --app-repo ../TTS.CFD.Frontend \
-  --area-map ./gavel-area-map.json \
-  --envelope \
-  --json
 ```
 
-### Audit autofix (dead locators)
+### Audit autofix & ranked audit
 
 ```bash
-node scripts/audit-autofix.js ../Tickblaze.Web.UI.Automation
+node scripts/audit-report.js ../Tickblaze.Web.UI.Automation
+node scripts/audit-autofix.js ../Tickblaze.Web.UI.Automation --audit-format
 node scripts/audit-autofix.js ../Tickblaze.Web.UI.Automation --apply
 ```
+
+Apply-safe handoff: [templates/apply-safe-workflow.md](../templates/apply-safe-workflow.md)
+
+### Adapter CI template
+
+Copy [templates/github-actions/gavel-verify.yml](../templates/github-actions/gavel-verify.yml) into your fork as `.github/workflows/gavel-verify.yml`.
 
 ### Report formats
 

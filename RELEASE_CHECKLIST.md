@@ -47,7 +47,8 @@ node scripts/verify-profile-fixtures.js
 - [ ] Node + Python profile freshness fixtures pass
 - [ ] `validate-area-map.js` passes on example map
 - [ ] `analyze-ci.js --envelope` renders Gavel Result block (JSON and `playwright-report/` dir)
-- [ ] `audit-autofix.js` dry-run and `--apply` pass on fixtures
+- [ ] `audit-autofix.js` covers locators, POMs, factories; `audit-report.js` ranks output
+- [ ] `templates/apply-safe-workflow.md` and `templates/github-actions/gavel-verify.yml` present
 
 ## 5. Agent / Skill Contract
 

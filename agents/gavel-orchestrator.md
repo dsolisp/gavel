@@ -52,6 +52,7 @@ Before any agent writes a test, run the ladder:
 | Clustered failures (same area/route/error) | gavel-analyze → gavel-impact → **gavel-healer (implement)** |
 | Flaky investigation | gavel-healer → gavel-refactor |
 | Refactoring | gavel-refactor → gavel-healer |
+| Safe autofix (audit/review `safe` tags) | gavel-refactor (apply-safe) → gavel-run |
 | Test planning | gavel-plan |
 | Post-run analysis | gavel-analyze |
 | Commit impact | gavel-impact |
@@ -114,6 +115,23 @@ or generation request MUST end with explicit delegation:
 ```
 
 If steps 2–5 are not executed: status = **INCOMPLETE**.
+
+## Apply-Safe Handoff (orchestrator → gavel-refactor)
+
+When `gavel-review` or `gavel-audit` returns **`safe`** findings (dead locators, dead POMs,
+unused factories, diff-scoped `shrink`):
+
+```markdown
+**Delegate to gavel-refactor (apply-safe):**
+1. Run `node scripts/audit-autofix.js <repo> --audit-format` (dry-run)
+2. Apply only `safe` items: `node scripts/audit-autofix.js <repo> --apply`
+3. Compile / lint
+4. Run affected tests via gavel-run (or affected-tests.js when available in v0.5.0)
+5. Return envelope with candidate count before/after
+```
+
+Never delegate `--apply` for `review` or `report-only` findings.
+See `templates/apply-safe-workflow.md`.
 
 ## Completion Contract (return to user)
 
