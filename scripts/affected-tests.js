@@ -9,8 +9,8 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { detectFramework, extractTags, isTestFile } = require('./extract-tags');
 
-const SPEC_RE = /\.(spec|test)\.(ts|tsx|js|jsx)$/;
 const SUPPORT_RE = /(locators?|pages?|actions?|components?|services?|support|lib|helpers?)\//i;
 
 const EXCLUDED_DIRS = new Set([
@@ -30,6 +30,7 @@ const FRAMEWORK_COMMANDS = {
   cypress: (files) => `npx cypress run --spec ${files.join(',')}`,
   pytest: (files) => `pytest ${files.join(' ')}`,
   webdriverio: (files) => `npx wdio run wdio.conf.ts --spec ${files.join(',')}`,
+  cucumber: (files) => `npx cucumber-js ${files.join(' ')}`,
   junit: (files) => {
     const classes = files
       .map((file) => path.basename(file, path.extname(file)))
@@ -43,14 +44,19 @@ function parseArgs(argv) {
   const jsonOutput = argv.includes('--json');
   const useGit = argv.includes('--git');
   const frameworkIdx = argv.indexOf('--framework');
-  const framework = frameworkIdx >= 0 ? argv[frameworkIdx + 1] : 'playwright';
+  const framework = frameworkIdx >= 0 ? argv[frameworkIdx + 1] : null;
+  const frameworkExplicit = frameworkIdx >= 0;
   const changedIdx = argv.indexOf('--changed');
   const changed =
     changedIdx >= 0
       ? argv[changedIdx + 1].split(',').map((item) => item.trim()).filter(Boolean)
       : [];
+  const tagIdx = argv.indexOf('--tag');
+  const tag = tagIdx >= 0 ? argv[tagIdx + 1] : null;
+  const tagFwIdx = argv.indexOf('--tag-framework');
+  const tagFramework = tagFwIdx >= 0 ? argv[tagFwIdx + 1] : 'auto';
 
-  return { repoRoot, jsonOutput, useGit, framework, changed };
+  return { repoRoot, jsonOutput, useGit, framework, frameworkExplicit, changed, tag, tagFramework };
 }
 
 function walkFiles(dir, matcher, files = []) {
@@ -204,10 +210,10 @@ function discoverAffectedSpecs(repoRoot, changedFiles) {
   const normalizedChanged = changedFiles.map((file) =>
     path.normalize(path.isAbsolute(file) ? file : path.join(repoRoot, file)),
   );
-  const changedSpecs = normalizedChanged.filter((file) => SPEC_RE.test(file));
+  const changedSpecs = normalizedChanged.filter((file) => isTestFile(file));
   const changedSupport = normalizedChanged.filter(
     (file) =>
-      SPEC_RE.test(file) === false &&
+      !isTestFile(file) &&
       (SUPPORT_RE.test(file) || /fixtures?\//i.test(file) || /lib\//i.test(file)),
   );
 
@@ -224,13 +230,13 @@ function discoverAffectedSpecs(repoRoot, changedFiles) {
 
   const dependents = buildDependentsGraph(repoRoot);
   const reachable = findReachableFiles(dependents, normalizedChanged);
-  const specs = [...reachable].filter((file) => SPEC_RE.test(file)).sort();
+  const specs = [...reachable].filter((file) => isTestFile(file)).sort();
 
   return {
     strategy: 'import-trace-transitive',
     specs,
     intermediateFiles: [...reachable]
-      .filter((file) => !SPEC_RE.test(file) && !normalizedChanged.includes(file))
+      .filter((file) => !isTestFile(file) && !normalizedChanged.includes(file))
       .map((file) => path.relative(repoRoot, file).replace(/\\/g, '/'))
       .sort(),
     escalateFullSuite:
@@ -243,19 +249,70 @@ function toRepoRelative(repoRoot, files) {
   return files.map((file) => path.relative(repoRoot, file).replace(/\\/g, '/'));
 }
 
+function inferFrameworkFromFiles(files) {
+  const frameworks = new Set(files.map((file) => detectFramework(file)));
+  if (frameworks.size === 1) {
+    return [...frameworks][0];
+  }
+  return 'playwright';
+}
+
 function main() {
-  const { repoRoot, jsonOutput, useGit, framework, changed } = parseArgs(
+  const { repoRoot, jsonOutput, useGit, framework, frameworkExplicit, changed, tag, tagFramework } = parseArgs(
     process.argv.slice(2),
   );
 
   if (!repoRoot) {
     console.error(
-      'Usage: node scripts/affected-tests.js <repo-root> (--git | --changed a.ts,b.ts) [--framework playwright] [--json]',
+      'Usage: node scripts/affected-tests.js <repo-root> (--tag <name> | --git | --changed a.ts,b.ts) [--framework playwright] [--tag-framework auto|playwright|pytest|junit|cucumber] [--json]',
     );
     process.exit(2);
   }
 
   const resolvedRoot = path.resolve(repoRoot);
+
+  // Tag-based discovery (highest precedence)
+  if (tag) {
+    const tagMap = extractTags(resolvedRoot, tagFramework);
+    const matchedFiles = tagMap.get(tag.toLowerCase()) || [];
+    const matchedSpecs = matchedFiles.filter((file) => isTestFile(path.join(resolvedRoot, file)));
+    const effectiveFramework = frameworkExplicit
+      ? framework
+      : tagFramework !== 'auto'
+        ? tagFramework
+        : inferFrameworkFromFiles(matchedSpecs);
+    const commandBuilder = FRAMEWORK_COMMANDS[effectiveFramework] || FRAMEWORK_COMMANDS.playwright;
+    const command =
+      matchedSpecs.length > 0 ? commandBuilder(matchedSpecs) : 'no tagged specs found';
+
+    const result = {
+      repo: resolvedRoot,
+      framework: effectiveFramework,
+      strategy: 'tag-discovery',
+      tag,
+      tagFramework,
+      affectedSpecs: matchedSpecs,
+      recommendedCommand: command,
+      escalateFullSuite: false,
+      note: `Discovered specs with @${tag} tag.`,
+    };
+
+    if (jsonOutput) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    console.log(`Affected tests (tag @${tag}) — ${resolvedRoot}`);
+    console.log(`Strategy: tag-discovery`);
+    console.log(`Affected specs: ${result.affectedSpecs.length}`);
+    for (const spec of result.affectedSpecs) {
+      console.log(`- ${spec}`);
+    }
+    console.log(`\nRecommended (${effectiveFramework}):`);
+    console.log(result.recommendedCommand);
+    return;
+  }
+
   const changedFiles = useGit
     ? gitChangedFiles(resolvedRoot).map((file) => path.join(resolvedRoot, file))
     : changed.map((file) =>
@@ -269,13 +326,14 @@ function main() {
 
   const discovery = discoverAffectedSpecs(resolvedRoot, changedFiles);
   const relativeSpecs = toRepoRelative(resolvedRoot, discovery.specs);
-  const commandBuilder = FRAMEWORK_COMMANDS[framework] || FRAMEWORK_COMMANDS.playwright;
+  const effectiveFramework = framework || 'playwright';
+  const commandBuilder = FRAMEWORK_COMMANDS[effectiveFramework] || FRAMEWORK_COMMANDS.playwright;
   const command =
     relativeSpecs.length > 0 ? commandBuilder(relativeSpecs) : 'no affected specs found';
 
   const result = {
     repo: resolvedRoot,
-    framework,
+    framework: effectiveFramework,
     strategy: discovery.strategy,
     changedFiles: toRepoRelative(
       resolvedRoot,
@@ -301,7 +359,7 @@ function main() {
   for (const spec of result.affectedSpecs) {
     console.log(`- ${spec}`);
   }
-  console.log(`\nRecommended (${framework}):`);
+  console.log(`\nRecommended (${effectiveFramework}):`);
   console.log(result.recommendedCommand);
   if (result.escalateFullSuite) {
     console.log('\nEscalation: shared layer changed — consider full suite after targeted run.');

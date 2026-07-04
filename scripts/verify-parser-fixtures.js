@@ -3,6 +3,7 @@
 
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { buildJsonEnvelope } = require('./ci-analysis-envelope');
 
 const root = path.join(__dirname, '..');
 
@@ -43,7 +44,13 @@ const cypress = runJson(process.execPath, [
   '--json',
 ]);
 
-if (junit.failed < 2 || allure.failed < 1 || playwright.failed < 2 || cypress.failed < 2) {
+const cucumber = runJson(process.execPath, [
+  path.join(root, 'scripts/parsers/cucumber.js'),
+  path.join(root, 'fixtures/reports/cucumber/sample-results.json'),
+  '--json',
+]);
+
+if (junit.failed < 2 || allure.failed < 1 || playwright.failed < 2 || cypress.failed < 2 || cucumber.failed < 2) {
   console.error('Parser fixtures did not produce expected failures.');
   process.exit(1);
 }
@@ -115,4 +122,18 @@ if (htmlEnvelope.status !== 0 || !htmlEnvelope.stdout.includes('## Gavel Result'
   process.exit(1);
 }
 
-console.log('Parser fixtures OK: junit, allure, playwright, playwright-html, cypress, cluster, analyze-ci, envelope, html one-shot.');
+const greenEnvelope = buildJsonEnvelope(
+  {
+    summary: { format: 'fixture', total: 3, passed: 3, failed: 0, skipped: 0, passRate: 100 },
+    clusters: [],
+    note: 'green fixture',
+  },
+  { project: 'green-suite' },
+);
+
+if (greenEnvelope.status !== 'DONE') {
+  console.error('JSON envelope should report DONE for a parsed green run.');
+  process.exit(1);
+}
+
+console.log('Parser fixtures OK: junit, allure, playwright, playwright-html, cypress, cucumber, cluster, analyze-ci, envelope, html one-shot, green json envelope.');

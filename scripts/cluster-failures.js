@@ -28,16 +28,32 @@ function areaFromFailure(failure) {
 
 function errorPattern(message) {
   const text = String(message || '').toLowerCase();
-  if (text.includes('timeout') || text.includes('not found') || text.includes('not attached')) {
-    return 'locator-timeout';
+  if (text.includes('seed') || text.includes('fixture data') ||
+      text.includes('test data not found') || text.includes('seed data missing')) {
+    return 'seed';
+  }
+  // Web-first assertions (Playwright, Cypress) legitimately say "retrying" in
+  // their own timeout messages — e.g. "expect(locator).toBeVisible() failed,
+  // retrying" or Cypress "Timed out retrying after 4000ms". Bare "retry" is
+  // not a flake signal on its own; require explicit flake vocabulary instead.
+  if (text.includes('flaky') || text.includes('intermittent') || text.includes('race condition')) {
+    return 'flake';
   }
   if (text.includes('expected') && text.includes('received')) {
     return 'assertion-mismatch';
   }
+  if (text.includes('timeout') || text.includes('timed out') ||
+      text.includes('not found') || text.includes('not attached')) {
+    return 'locator-timeout';
+  }
+  if (text.includes('5xx') || text.includes('status code 5') ||
+      text.includes('stack trace') || /\bunhandled\b/.test(text)) {
+    return 'app-error';
+  }
   if (text.includes('401') || text.includes('403') || text.includes('unauthorized')) {
     return 'auth';
   }
-  if (text.includes('econnrefused') || text.includes('502') || text.includes('503')) {
+  if (text.includes('econnrefused') || text.includes('502') || text.includes('503') || text.includes('connection refused')) {
     return 'env';
   }
   return 'other';
@@ -65,6 +81,9 @@ function suggestAction(pattern, count) {
   if (pattern === 'locator-timeout' && count >= 3) {
     return 'test-maintenance-drift → gavel-impact → gavel-healer';
   }
+  if (pattern === 'locator-timeout') {
+    return 'flake → gavel-flake (single timeout)';
+  }
   if (pattern === 'auth') {
     return 'env or fixture auth → gavel-env / gavel-auth';
   }
@@ -72,7 +91,16 @@ function suggestAction(pattern, count) {
     return 'ENV ISSUE → gavel-env';
   }
   if (pattern === 'assertion-mismatch') {
-    return 'investigate app vs test → gavel-heal';
+    return 'app vs test divergence → gavel-heal';
+  }
+  if (pattern === 'app-error') {
+    return 'APP BUG SUSPECTED → gavel-bug (confirm + report)';
+  }
+  if (pattern === 'seed') {
+    return 'SEED ISSUE → gavel-env (seed verification)';
+  }
+  if (pattern === 'flake') {
+    return 'FLAKE → gavel-flake (triage)';
   }
   return 'review individually → gavel-heal';
 }
