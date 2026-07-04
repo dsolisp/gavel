@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Sample Feature: Login flow",
+    "uri": "features/login.feature",
+    "elements": [
+      {
+        "name": "Successful login with valid credentials",
+        "steps": [
+          { "result": { "status": "passed" } },
+          { "result": { "status": "passed" } },
+          { "result": { "status": "passed" } }
+        ]
+      },
+      {
+        "name": "Login fails with invalid password",
+        "steps": [
+          { "result": { "status": "passed" } },
+          {
+            "result": {
+              "status": "failed",
+              "error_message": "AssertionError: expected error message to be displayed"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Account locked after max attempts",
+        "steps": [
+          { "result": { "status": "passed" } },
+          {
+            "result": {
+              "status": "failed",
+              "error_message": "TimeoutError: element not found within 5000ms"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Skipped scenario due to precondition failure",
+        "steps": [
+          { "result": { "status": "passed" } },
+          { "result": { "status": "skipped" } }
+        ]
+      }
+    ]
+  }
+]

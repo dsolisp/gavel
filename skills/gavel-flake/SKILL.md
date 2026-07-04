@@ -115,7 +115,7 @@ A flaky test needs a home. The home is a quarantine tag, not a delete and not a 
 ### Quarantine Process
 
 1. Tag the test with the matching `@flaky:*` tag
-2. Link a bug ticket: `// gavel-flake: TBTRD-123 - shared seed race`
+2. Link a bug ticket: `// gavel-flake: PROJ-123 - shared seed race`
 3. Move the test to a quarantine file (`tests/quarantine/`) or quarantine CI lane
 4. Add to `gavel-flake` weekly report
 5. After 7 days: escalate to bug owner. No fix in 7 days → promote to `@wip` or delete

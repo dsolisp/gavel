@@ -7,6 +7,46 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-25
+
+### Added
+
+- `scripts/parsers/cucumber.js` — Cucumber.js / Cucumber-JVM / Behave JSON parser
+- `scripts/extract-tags.js` — multi-framework tag extraction (Playwright, pytest, JUnit, Cucumber)
+- `--tag` and `--tag-framework` flags for `affected-tests.js` (tag-based discovery)
+- `--json-envelope` flag for `analyze-ci.js` (schema-versioned JSON export)
+- QA-failure-mode taxonomy: `seed`, `flake`, `app-error` classifications in `cluster-failures.js`
+- Auto commit correlation per cluster (not just test-maintenance-drift) in `analyze-ci.js`
+- Schema versioning (`ENVELOPE_SCHEMA_VERSION = 1.0.0`) in `ci-analysis-envelope.js`
+- Tag discovery fixtures for Playwright, pytest, JUnit, and Cucumber real-world naming
+
+### Changed
+
+- `ci-analysis-envelope.js` uses role-neutral labels: "Lead Summary" / "Worker Handoff" (was "Classification" / "CI Summary")
+- `classifyCluster()` expanded for `app-regression`, `seed`, `flake` classifications
+- `errorPattern()` expanded for `seed`, `flake`, `app-error` detection
+- All manifest versions bumped to 0.5.0
+
+### Fixed
+
+- Tag discovery (`extract-tags.js`, `affected-tests.js --tag`) now matches real-world test
+  file naming, not just literal `.spec./.test.` — pytest (`test_*.py`, `*_test.py`), JUnit
+  (`*Test.java`, `Test*.java`, `*Tests.java`, `*IT.java`), and bare Cucumber `*.feature` files
+  were previously invisible to tag discovery
+- `errorPattern()` no longer misclassifies Playwright/Cypress web-first assertion timeouts as
+  `flake` — bare `retry` is not a flake signal since retrying is normal web-first assertion
+  behavior; flake now requires explicit vocabulary (`flaky`, `intermittent`, `race condition`)
+- Removed bare `@decorator` pytest tag pattern — pytest markers are always `@pytest.mark.*`,
+  so the old pattern produced false-positive tags from unrelated decorators
+- Removed product-specific example names from docs and skills in favor of generic placeholders
+  (`MySuite`, `../my-automation-repo`, `PROJ-123`)
+- Cucumber tag discovery now handles multi-tag lines like `@smoke @regression`
+- JUnit tag discovery now handles hyphenated and dotted tags like `@Tag("e2e-smoke")`
+  and `@Tag("ci.fast")`
+- `affected-tests.js --tag-framework <framework>` now infers the matching recommended
+  command when `--framework` is omitted
+- JSON and markdown envelopes now report parsed green runs as `DONE` instead of `INCOMPLETE`
+
 ## [0.4.0] - 2026-07-01
 
 ### Added
@@ -78,7 +118,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/dsolisp/gavel/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/dsolisp/gavel/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsolisp/gavel/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/dsolisp/gavel/compare/v0.1.0...v0.2.0

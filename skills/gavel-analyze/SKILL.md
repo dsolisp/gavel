@@ -24,6 +24,8 @@ Post-run suite analysis. Framework-adaptive.
 | **app bug** | Assertion fails on correct test logic | File bug report |
 | **test bug** | Wrong locator, stale auth, wrong config | Fix test |
 | **test-maintenance-drift** | Clustered failures, same route/area, element-not-found or renamed-control pattern after recent deploy | gavel-impact → gavel-healer |
+| **app-regression** | 5xx responses, unhandled exceptions, stack traces in test output | gavel-bug (confirm + report) |
+| **flake** | Intermittent failures, race conditions, retry-dependent results | gavel-flake (triage) |
 | **expected fail** | Marked expected failure (test.fail, @ExpectedFailure) | Document, link bug |
 
 ### Detecting test-maintenance-drift
@@ -99,17 +101,21 @@ node scripts/parsers/playwright-html.js playwright-report/ --json
 # One-shot: HTML report dir → parse + Gavel Result envelope
 node scripts/analyze-ci.js playwright-report/ --envelope --project MySuite
 
+# JSON envelope (schema-versioned, machine-readable)
+node scripts/analyze-ci.js path/to/report.json --json-envelope --project MySuite
+
 # Result envelope markdown (paste into gavel-analyze response)
-node scripts/analyze-ci.js path/to/report.json --envelope --project Tickblaze.UI
+node scripts/analyze-ci.js path/to/report.json --envelope --project MySuite
 node scripts/analyze-ci.js path/to/report.json --app-repo ../app --area-map ./area-map.json --envelope
 ```
 
-`analyze-ci.js --envelope` renders the standard **Gavel Result** block from
-`templates/result-envelope.md` with CI summary, clusters, suspect commits, and
-next action pre-filled. Use JSON mode when another tool consumes the output.
+`analyze-ci.js --envelope` renders the standard **Gavel Result** block with
+Lead Summary (one-line scan) and Worker Handoff (full table). Use `--json-envelope`
+for machine-readable output with schema version `gavel-result-envelope/1.0.0`.
 
 `analyze-ci.js` JSON includes per-cluster `classification`, `suspectCommits` (when
-`--app-repo` is set), and `nextAction`. Use suspect commits as the starting point
+`--app-repo` is set), and `nextAction`. Commit correlation runs for **every** cluster
+(not just test-maintenance-drift). Use suspect commits as the starting point
 for manual **gavel-impact** validation — do not treat git keyword search as proof.
 
 Use parser output to pre-fill **Summary**, **Pass Rate by Area**, and **Failures** tables.
