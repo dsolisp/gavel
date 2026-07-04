@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-// gavel — format analyze-ci.js output as gavel-analyze result envelope markdown
+// gavel — format analyze-ci.js output as gavel-analyze result envelope markdown/json
+
+// Schema versioning rules:
+//   MAJOR (x.0.0) — breaking shape changes; consumers must update
+//   MINOR (1.x.0) — new optional fields; consumers can ignore
+//   PATCH (1.0.x) — doc/typo fixes only
+const ENVELOPE_SCHEMA_VERSION = '1.0.0';
 
 function primaryClassification(clusters) {
   if (!clusters || clusters.length === 0) {
@@ -34,12 +40,21 @@ function formatNextAction(clusters) {
   return ranked[0].nextAction || 'gavel-heal';
 }
 
+function envelopeStatus(summary, clusters) {
+  if (summary.total > 0 && summary.failed === 0) {
+    return 'DONE';
+  }
+  return summary.failed > 0 && clusters.length > 0 ? 'DONE' : 'INCOMPLETE';
+}
+
 function formatCiAnalysisEnvelope(analysis, meta = {}) {
   const { summary, clusters, note } = analysis;
   const project = meta.project || 'unknown-project';
   const date = meta.date || new Date().toISOString().slice(0, 10);
   const rootCause = primaryClassification(clusters);
-  const status = summary.failed > 0 && clusters.length > 0 ? 'DONE' : 'INCOMPLETE';
+  const status = envelopeStatus(summary, clusters);
+
+  const leadLine = `${project} — ${summary.passRate}% pass — ${summary.failed} failed — root cause: ${rootCause} — action: ${formatNextAction(clusters)}`;
 
   const clusterLines = (clusters || [])
     .map(
@@ -58,12 +73,10 @@ function formatCiAnalysisEnvelope(analysis, meta = {}) {
 
 **Status:** ${status}
 
-### Classification
-- **Root cause:** ${rootCause}
-- **Suspect commit(s):** ${formatSuspectCommits(clusters)}
-- **Remaining risk:** ${summary.failed > 0 ? `${summary.failed} failures across ${clusters.length} cluster(s)` : 'none'}
+### Lead Summary
+${leadLine}
 
-### CI Summary — ${project} — ${date}
+### Worker Handoff — ${project} — ${date}
 
 | Metric | Value |
 |--------|------:|
@@ -87,4 +100,46 @@ ${formatNextAction(clusters)}
 _${note || ''}_`;
 }
 
-module.exports = { formatCiAnalysisEnvelope, primaryClassification };
+function buildJsonEnvelope(analysis, meta = {}) {
+  const { summary, clusters, note } = analysis;
+  const project = meta.project || 'unknown-project';
+  const rootCause = primaryClassification(clusters);
+  const status = envelopeStatus(summary, clusters);
+
+  return {
+    schema: `gavel-result-envelope/${ENVELOPE_SCHEMA_VERSION}`,
+    generatedAt: new Date().toISOString(),
+    status,
+    project,
+    date: new Date().toISOString().slice(0, 10),
+    leadSummary: {
+      passRate: summary.passRate,
+      failed: summary.failed,
+      total: summary.total,
+      format: summary.format,
+      rootCause,
+      nextAction: formatNextAction(clusters),
+    },
+    clusters: clusters.map((c) => ({
+      area: c.area,
+      pattern: c.pattern,
+      count: c.count,
+      classification: c.classification,
+      nextAction: c.nextAction,
+      suspectCommits: (c.suspectCommits || []).slice(0, 3).map((commit) => ({
+        hash: commit.hash,
+        message: commit.message,
+        searchPath: commit.searchPath,
+      })),
+    })),
+    note,
+  };
+}
+
+module.exports = {
+  formatCiAnalysisEnvelope,
+  buildJsonEnvelope,
+  primaryClassification,
+  envelopeStatus,
+  ENVELOPE_SCHEMA_VERSION,
+};

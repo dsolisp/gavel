@@ -2,7 +2,7 @@
 // gavel — parse CI report, cluster failures, optional commit correlation
 //
 // Usage:
-//   node scripts/analyze-ci.js <report-path> [--app-repo path] [--area-map path] [--commits 15] [--json]
+//   node scripts/analyze-ci.js <report-path> [--app-repo path] [--area-map path] [--commits 15] [--json] [--envelope] [--json-envelope]
 //   node scripts/analyze-ci.js playwright-report/ --envelope --project MySuite
 //   node scripts/parsers/junit.js results.xml --json | node scripts/analyze-ci.js --json
 
@@ -12,11 +12,12 @@ const { execSync } = require('child_process');
 const { parseReport } = require('./parsers/index');
 const { clusterFailures } = require('./cluster-failures');
 const { loadAreaMap, resolveAppSearchPaths } = require('./area-map');
-const { formatCiAnalysisEnvelope } = require('./ci-analysis-envelope');
+const { formatCiAnalysisEnvelope, buildJsonEnvelope } = require('./ci-analysis-envelope');
 
 function parseArgs(argv) {
   const jsonOutput = argv.includes('--json');
   const envelopeOutput = argv.includes('--envelope');
+  const jsonEnvelopeOutput = argv.includes('--json-envelope');
   const flagValues = new Set(['--app-repo', '--commits', '--area-map', '--project']);
   const appRepoIdx = argv.indexOf('--app-repo');
   const commitsIdx = argv.indexOf('--commits');
@@ -30,6 +31,7 @@ function parseArgs(argv) {
     inputPath,
     jsonOutput,
     envelopeOutput,
+    jsonEnvelopeOutput,
     project: projectIdx >= 0 ? argv[projectIdx + 1] : 'automation-suite',
     appRepo: appRepoIdx >= 0 ? argv[appRepoIdx + 1] : null,
     areaMapPath: areaMapIdx >= 0 ? argv[areaMapIdx + 1] : null,
@@ -84,14 +86,23 @@ function classifyCluster(pattern, count) {
   if (pattern === 'locator-timeout' && count >= 3) {
     return 'test-maintenance-drift';
   }
-  if (pattern === 'env') {
-    return 'env';
+  if (pattern === 'locator-timeout') {
+    return 'flake';
   }
-  if (pattern === 'auth') {
+  if (pattern === 'env' || pattern === 'auth') {
     return 'env';
   }
   if (pattern === 'assertion-mismatch') {
     return 'investigate';
+  }
+  if (pattern === 'app-error') {
+    return 'app-regression';
+  }
+  if (pattern === 'seed') {
+    return 'seed';
+  }
+  if (pattern === 'flake') {
+    return 'flake';
   }
   return 'inconclusive';
 }
@@ -99,10 +110,9 @@ function classifyCluster(pattern, count) {
 function buildAnalysis(report, options) {
   const clusters = clusterFailures(report).map((cluster) => {
     const classification = classifyCluster(cluster.pattern, cluster.count);
-    const correlation =
-      classification === 'test-maintenance-drift'
-        ? correlateCommits(options.appRepo, cluster.area, options.commitLimit, options.areaMap)
-        : { commits: [], mapping: null };
+    const correlation = options.appRepo
+      ? correlateCommits(options.appRepo, cluster.area, options.commitLimit, options.areaMap)
+      : { commits: [], mapping: null };
 
     return {
       area: cluster.area,
@@ -118,7 +128,13 @@ function buildAnalysis(report, options) {
           ? 'gavel-impact → gavel-healer'
           : classification === 'env'
             ? 'gavel-env'
-            : 'gavel-heal',
+            : classification === 'seed'
+              ? 'gavel-env (seed verification)'
+              : classification === 'app-regression'
+                ? 'gavel-bug (confirm + report)'
+                : classification === 'flake'
+                  ? 'gavel-flake (triage)'
+                  : 'gavel-heal',
     };
   });
 
@@ -134,14 +150,14 @@ function buildAnalysis(report, options) {
     areaMapLoaded: Boolean(options.areaMap),
     note: options.appRepo
       ? options.areaMap
-        ? 'Suspect commits searched using area-map paths with heuristic fallback.'
-        : 'Suspect commits searched by area keyword heuristic. Pass --area-map for accurate app paths.'
+        ? 'Suspect commits auto-correlated per cluster using area-map paths.'
+        : 'Suspect commits auto-correlated per cluster by area keyword heuristic. Pass --area-map for accuracy.'
       : 'Pass --app-repo to enable commit correlation (gavel-impact).',
   };
 }
 
 function main() {
-  const { inputPath, jsonOutput, envelopeOutput, project, appRepo, areaMapPath, commitLimit } =
+  const { inputPath, jsonOutput, envelopeOutput, jsonEnvelopeOutput, project, appRepo, areaMapPath, commitLimit } =
     parseArgs(process.argv.slice(2));
   const report = readReport(inputPath);
   report.passRate =
@@ -156,6 +172,11 @@ function main() {
 
   if (envelopeOutput) {
     console.log(formatCiAnalysisEnvelope(analysis, { project }));
+    return;
+  }
+
+  if (jsonEnvelopeOutput) {
+    console.log(JSON.stringify(buildJsonEnvelope(analysis, { project }), null, 2));
     return;
   }
 

@@ -20,7 +20,7 @@ Multi-tenant authentication for tests.
 ## Core Concepts
 
 1. **Tenant isolation**: Each tenant has its own data scope. Tokens are scoped to a tenant.
-2. **Host-based routing**: Multi-tenant apps often use subdomains (tenant1.app.com) or headers (X-Prop-Firm).
+2. **Host-based routing**: Multi-tenant apps often use subdomains (tenant1.app.com) or tenant headers.
 3. **Token scoping**: A token from tenant A cannot access tenant B's resources.
 
 ## Patterns
@@ -32,7 +32,7 @@ test.extend<{ tenantAUser: APIRequestContext }>({
   tenantAUser: async ({}, use) => {
     const response = await request.post('/api/auth/login', {
       data: { email: UserFactory.create('tenantA').email, password: env.PASSWORD },
-      headers: { 'X-Prop-Firm': 'tenant-a' },
+      headers: { 'X-Tenant': 'tenant-a' },
     });
     await use(response);
   },

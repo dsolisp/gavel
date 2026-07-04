@@ -8,6 +8,7 @@ const { parseAllureResults } = require('./allure');
 const { parsePlaywrightJson } = require('./playwright');
 const { parseCypressJson } = require('./cypress');
 const { parsePlaywrightHtmlReport } = require('./playwright-html');
+const { parseCucumberJson } = require('./cucumber');
 
 function isPlaywrightHtmlReportDir(resolved) {
   return (
@@ -50,6 +51,9 @@ function parseReport(inputPath) {
       return parseCypressJson(json);
     }
     if (Array.isArray(json)) {
+      if (json.some((item) => item.elements && item.uri)) {
+        return parseCucumberJson(json);
+      }
       if (json.some((item) => item.status && item.title)) {
         return parsePlaywrightJson(json);
       }

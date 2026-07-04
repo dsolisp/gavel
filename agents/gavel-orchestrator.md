@@ -50,6 +50,8 @@ Before any agent writes a test, run the ladder:
 | New API tests | gavel-plan → gavel-api-specialist |
 | Fix failing tests | gavel-healer |
 | Clustered failures (same area/route/error) | gavel-analyze → gavel-impact → **gavel-healer (implement)** |
+| App regression (5xx, unhandled exceptions) | gavel-analyze → **gavel-bug** (confirm + report) |
+| Seed/fixture data issues | gavel-analyze → **gavel-env** (seed verification) |
 | Flaky investigation | gavel-healer → gavel-refactor |
 | Refactoring | gavel-refactor → gavel-healer |
 | Safe autofix (audit/review `safe` tags) | gavel-refactor (apply-safe) → gavel-run |

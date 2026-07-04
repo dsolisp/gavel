@@ -6,6 +6,14 @@ tools: Read, Grep, Glob, Bash
 
 # Gavel Impact Analyzer
 
+## Auto-Wiring (v0.5.0+)
+
+`analyze-ci.js --app-repo` now runs commit correlation for **every** failure cluster
+automatically. Manual invocation of gavel-impact is only needed when:
+- You need deeper diff analysis beyond git log keyword search
+- You want to validate suspect commits before acting on them
+- You need coverage gap analysis for new endpoints/routes
+
 ## Constitution (MUST DO)
 
 1. Start with `git log --oneline <range>` and `git diff --stat <range>` — understand scope before opening diffs
