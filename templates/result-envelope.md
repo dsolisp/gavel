@@ -71,21 +71,21 @@ Required sections: **Classification**, **CI Summary**, **Failure Clusters**,
 
 ### Classification
 - **Root cause:** test-maintenance-drift
-- **Suspect commit(s):** `a1b2c3d` — renamed billing toolbar actions
-- **Remaining risk:** none for targeted billing specs
+- **Suspect commit(s):** `a1b2c3d` — renamed toolbar actions
+- **Remaining risk:** none for targeted catalog specs
 
 ### Changes
 | File | Layer | Summary |
 |------|-------|---------|
-| locators/admin/BillingLocators.ts | locator | Updated snapshot action roles |
-| pages/admin/BillingPage.ts | action | Scoped row delete to table section |
+| locators/catalog/ExampleLocators.ts | locator | Updated action roles |
+| pages/catalog/ExamplePage.ts | action | Scoped row delete to table section |
 
 ### Verification
 | Gate | Result | Detail |
 |------|--------|--------|
 | Compile | pass | `npx tsc --noEmit` |
 | Lint | pass | n/a |
-| Tests | pass | `npx playwright test tests/admin/billing/billing-snapshot-lifecycle.spec.ts` |
+| Tests | pass | `npx playwright test tests/e2e/catalog/catalog-lifecycle.spec.ts` |
 | Pass count | 3/3 |
 
 ### Next Action
@@ -114,5 +114,5 @@ none
 | Tests | skipped | not executed |
 
 ### Next Action
-Delegate to gavel-healer: implement locator/action fixes and run affected billing specs.
+Delegate to gavel-healer: implement locator/action fixes and run affected admin specs.
 ```

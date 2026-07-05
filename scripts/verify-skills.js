@@ -5,9 +5,8 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const skillsDir = path.join(root, 'skills');
 
-const EXPECTED_SKILLS = [
+const CORE_SKILLS = [
   'gavel',
   'gavel-review',
   'gavel-audit',
@@ -29,16 +28,14 @@ const EXPECTED_SKILLS = [
   'gavel-impact',
   'gavel-bug',
   'gavel-triage',
-  'gavel-close',
-  'gavel-env',
   'gavel-auth',
-  'gavel-hub',
-  'gavel-ci',
   'gavel-heal',
   'gavel-flake',
   'gavel-init',
   'gavel-self-check',
 ];
+
+const COMPANION_SKILLS = ['gavel-ci', 'gavel-env', 'gavel-hub', 'gavel-close'];
 
 const EXPECTED_AGENTS = [
   'gavel-orchestrator',
@@ -52,16 +49,22 @@ const EXPECTED_AGENTS = [
 
 let failed = false;
 
-// Check skills
-for (const skill of EXPECTED_SKILLS) {
-  const skillPath = path.join(skillsDir, skill, 'SKILL.md');
+for (const skill of CORE_SKILLS) {
+  const skillPath = path.join(root, 'skills', skill, 'SKILL.md');
   if (!fs.existsSync(skillPath)) {
     console.error(`MISSING: skills/${skill}/SKILL.md`);
     failed = true;
   }
 }
 
-// Check agents
+for (const skill of COMPANION_SKILLS) {
+  const skillPath = path.join(root, 'companion/skills', skill, 'SKILL.md');
+  if (!fs.existsSync(skillPath)) {
+    console.error(`MISSING: companion/skills/${skill}/SKILL.md`);
+    failed = true;
+  }
+}
+
 const agentsDir = path.join(root, 'agents');
 for (const agent of EXPECTED_AGENTS) {
   const agentPath = path.join(agentsDir, `${agent}.md`);
@@ -75,4 +78,6 @@ if (failed) {
   process.exit(1);
 }
 
-console.log(`All ${EXPECTED_SKILLS.length} skills and ${EXPECTED_AGENTS.length} agents verified.`);
+console.log(
+  `All ${CORE_SKILLS.length} core skills, ${COMPANION_SKILLS.length} companion skills, and ${EXPECTED_AGENTS.length} agents verified.`,
+);

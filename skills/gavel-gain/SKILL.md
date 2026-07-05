@@ -1,10 +1,9 @@
 ---
 name: gavel-gain
 description: >
-  Show gavel's test quality impact as a compact scoreboard: pass rate, coverage
-  delta, flake count, LOC per test. One-shot display, not a persistent mode.
-  Trigger: /gavel-gain, "gavel gain", "show test quality", "gavel scoreboard",
-  "how are my tests doing".
+  Suite-health scoreboard from test run results: pass rate, flake count, LOC per
+  test, coverage delta. Report-only — does not provision environments or track
+  issues. Trigger: /gavel-gain, "test quality scoreboard".
 ---
 
 # Gavel Gain

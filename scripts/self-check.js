@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { loadGavelConfig } = require('./load-gavel-config');
 
 const args = process.argv.slice(2);
 const jsonOutput = args.includes('--json');
@@ -23,9 +24,82 @@ if (!fs.existsSync(resolvedRoot)) {
   process.exit(2);
 }
 
+const config = loadGavelConfig(resolvedRoot);
+const allowlist = Array.isArray(config.allowlist) ? config.allowlist : [];
+
 const TEST_FILE_RE = /\.(spec|test)\.(ts|js|tsx|jsx|py|java|feature)$/;
-const ACTION_FILE_RE = /(pages?|actions?|components?|locators?)\//i;
 const LOCATOR_FILE_RE = /locators?\//i;
+
+function findMatches(content, pattern) {
+  const hits = [];
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (pattern.global) {
+      pattern.lastIndex = 0;
+    }
+    if (pattern.test(line)) {
+      hits.push({ line: i + 1, text: line.trim() });
+    }
+  }
+  return hits;
+}
+
+function hasInlineAllow(content, line, tag) {
+  const lines = content.split('\n');
+  const index = line - 1;
+  const context = [lines[index - 1] || '', lines[index] || '', lines[index + 1] || ''].join('\n');
+  const allowPattern = new RegExp(`gavel-allow:\\s*(\\*|${tag})`);
+  return allowPattern.test(context);
+}
+
+function isAllowlisted(file, tag, line) {
+  return allowlist.some((entry) => {
+    const fileMatch = entry.file === '*' || entry.file === file;
+    const tagMatch = entry.tag === '*' || entry.tag === tag;
+    const lineMatch = !entry.line || entry.line === line;
+    return fileMatch && tagMatch && lineMatch;
+  });
+}
+
+function splitTestBlocks(content) {
+  const blocks = [];
+  const lines = content.split('\n');
+  let current = null;
+  let depth = 0;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const startsTest = /\b(?:test|it)\s*(?:\.(?:only|skip|fixme|fail))?\s*\(/.test(line);
+
+    if (startsTest && depth === 0) {
+      if (current) {
+        blocks.push(current);
+      }
+      current = { startLine: i + 1, lines: [line] };
+      depth += (line.match(/\{/g) || []).length;
+      depth -= (line.match(/\}/g) || []).length;
+      continue;
+    }
+
+    if (current) {
+      current.lines.push(line);
+      depth += (line.match(/\{/g) || []).length;
+      depth -= (line.match(/\}/g) || []).length;
+      if (depth <= 0) {
+        blocks.push(current);
+        current = null;
+        depth = 0;
+      }
+    }
+  }
+
+  if (current) {
+    blocks.push(current);
+  }
+
+  return blocks;
+}
 
 const RULES = [
   {
@@ -88,22 +162,79 @@ const RULES = [
       return [];
     },
   },
+  {
+    tag: 'bare-test-fail',
+    description: 'test.fail() without issue tracker reference',
+    test: (filePath, content) => {
+      if (!TEST_FILE_RE.test(filePath)) {
+        return [];
+      }
+      const hits = [];
+      const lines = content.split('\n');
+      const ticketRe = /[A-Z][A-Z0-9]+-\d+|PROJ-\d+|#\d+/;
+      for (let i = 0; i < lines.length; i += 1) {
+        if (!/\btest\.fail\s*\(|\bit\.failing\s*\(|\bpytest\.mark\.xfail\b/.test(lines[i])) {
+          continue;
+        }
+        const context = `${lines[i - 1] || ''}\n${lines[i]}\n${lines[i + 1] || ''}`;
+        if (!ticketRe.test(context)) {
+          hits.push({ line: i + 1, text: lines[i].trim() });
+        }
+      }
+      return hits;
+    },
+  },
+  {
+    tag: 'test-fail-order',
+    description: 'test.fail() must precede assertions in the same test',
+    test: (filePath, content) => {
+      if (!TEST_FILE_RE.test(filePath)) {
+        return [];
+      }
+      const hits = [];
+      for (const block of splitTestBlocks(content)) {
+        const failIdx = block.lines.findIndex((line) =>
+          /\btest\.fail\s*\(|\bit\.failing\s*\(/.test(line),
+        );
+        if (failIdx < 0) {
+          continue;
+        }
+        const assertIdx = block.lines.findIndex((line) =>
+          /\bexpect\s*\(|\bassert\b|\bassertEquals\b|\bassertThat\b/.test(line),
+        );
+        if (assertIdx >= 0 && failIdx > assertIdx) {
+          hits.push({
+            line: block.startLine + failIdx,
+            text: block.lines[failIdx].trim(),
+          });
+        }
+      }
+      return hits;
+    },
+  },
+  {
+    tag: 'skip-marker',
+    description: 'Skip, quarantine, or WIP marker without reason',
+    test: (filePath, content) => {
+      if (!TEST_FILE_RE.test(filePath)) {
+        return [];
+      }
+      const hits = [];
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i];
+        if (!/\btest\.skip\s*\(|\btest\.fixme\s*\(|\bit\.skip\s*\(|\b@wip\b|\b@quarantine\b|\b@flaky\b/.test(line)) {
+          continue;
+        }
+        const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
+        if (!/reason:|\/\/|\/\*|because|ticket|[A-Z][A-Z0-9]+-\d+/.test(context)) {
+          hits.push({ line: i + 1, text: line.trim() });
+        }
+      }
+      return hits;
+    },
+  },
 ];
-
-function findMatches(content, pattern) {
-  const hits = [];
-  const lines = content.split('\n');
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    if (pattern.global) {
-      pattern.lastIndex = 0;
-    }
-    if (pattern.test(line)) {
-      hits.push({ line: i + 1, text: line.trim() });
-    }
-  }
-  return hits;
-}
 
 const EXCLUDED_DIRS = new Set([
   'node_modules',
@@ -137,6 +268,74 @@ function walkFiles(dir, files = []) {
   return files;
 }
 
+function scanTestIds(files, repoRoot) {
+  if (!config.testIdPrefix && !config.testIdPattern) {
+    return [];
+  }
+
+  const pattern = new RegExp(
+    config.testIdPattern || `${config.testIdPrefix}-(\\d+)`,
+    'g',
+  );
+  const ids = new Map();
+  const findings = [];
+
+  for (const filePath of files) {
+    const relPath = path.relative(repoRoot, filePath).replace(/\\/g, '/');
+    if (!TEST_FILE_RE.test(relPath)) {
+      continue;
+    }
+    const content = fs.readFileSync(filePath, 'utf8');
+    let match = pattern.exec(content);
+    while (match) {
+      const id = match[0];
+      if (!ids.has(id)) {
+        ids.set(id, []);
+      }
+      ids.get(id).push(relPath);
+      match = pattern.exec(content);
+    }
+    pattern.lastIndex = 0;
+  }
+
+  for (const [id, locations] of ids.entries()) {
+    if (locations.length > 1) {
+      findings.push({
+        tag: 'test-id-duplicate',
+        description: 'Duplicate test ID across specs',
+        file: locations[0],
+        line: 1,
+        text: `${id} appears in ${locations.join(', ')}`,
+      });
+    }
+  }
+
+  const numericIds = [...ids.keys()]
+    .map((id) => {
+      const match = id.match(/(\d+)$/);
+      return match ? Number(match[1]) : null;
+    })
+    .filter((value) => value !== null)
+    .sort((a, b) => a - b);
+
+  if (numericIds.length >= 2 && config.enforceConsecutiveTestIds) {
+    for (let i = 1; i < numericIds.length; i += 1) {
+      if (numericIds[i] - numericIds[i - 1] > 1) {
+        findings.push({
+          tag: 'test-id-gap',
+          description: 'Gap in consecutive test ID sequence',
+          file: 'suite',
+          line: 1,
+          text: `Missing IDs between ${numericIds[i - 1]} and ${numericIds[i]}`,
+        });
+        break;
+      }
+    }
+  }
+
+  return findings;
+}
+
 const findings = [];
 const files = walkFiles(resolvedRoot);
 
@@ -147,6 +346,9 @@ for (const filePath of files) {
   for (const rule of RULES) {
     const hits = rule.test(relPath, content);
     for (const hit of hits) {
+      if (isAllowlisted(relPath, rule.tag, hit.line) || hasInlineAllow(content, hit.line, rule.tag)) {
+        continue;
+      }
       findings.push({
         tag: rule.tag,
         description: rule.description,
@@ -157,6 +359,8 @@ for (const filePath of files) {
     }
   }
 }
+
+findings.push(...scanTestIds(files, resolvedRoot));
 
 findings.sort((a, b) => a.tag.localeCompare(b.tag) || a.file.localeCompare(b.file));
 

@@ -91,7 +91,7 @@ node scripts/affected-tests.js <repo-root> --git --framework playwright
 
 # Explicit changed files
 node scripts/affected-tests.js <repo-root> \
-  --changed locators/BillingLocators.ts,pages/BillingPage.ts \
+  --changed locators/ExampleLocators.ts,pages/ExamplePage.ts \
   --framework playwright --json
 ```
 

@@ -1,11 +1,11 @@
 {
-  "tests/admin/billing": {
-    "appPaths": ["app/cfd/billing", "src/components/admin/billing"]
+  "tests/e2e/catalog": {
+    "appPaths": ["src/features/catalog", "app/modules/catalog"]
   },
-  "tests/admin/accounts": {
-    "appPaths": ["app/cfd/accounts", "src/app/admin/accounts"]
+  "tests/e2e/users": {
+    "appPaths": ["src/features/users", "app/modules/users"]
   },
-  "tests/trading/checkout": {
-    "appPaths": ["app/cfd/checkout", "src/checkout"]
+  "tests/api/orders": {
+    "appPaths": ["src/api/orders", "app/modules/orders"]
   }
 }

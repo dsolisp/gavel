@@ -1,9 +1,9 @@
 ---
 name: gavel-api
 description: >
-  API test scenarios for any backend. Service layer pattern, auth, multi-tenant
-  headers, contract validation. Framework-adaptive. Use when asked to write API
-  tests, validate endpoints, test authentication, or verify API contracts.
+  Author API tests using the service-layer pattern in the target repo. Generates
+  test code only — not OpenAPI governance, contract platforms, or env provisioning.
+  Framework-adaptive. Use when asked to write API tests with existing patterns.
 ---
 
 # Gavel API

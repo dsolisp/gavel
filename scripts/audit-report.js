@@ -8,6 +8,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { findAutofixCandidates, formatAuditLine } = require('./audit-autofix');
+const { buildSuiteHealthSummary, formatSuiteHealth, scoreFinding } = require('./suite-health');
 
 function runSelfCheck(repoRoot) {
   const script = path.join(__dirname, 'self-check.js');
@@ -31,6 +32,11 @@ const TAG_META = {
   'no-di': { severity: 'blocker', autofix: 'review' },
   'selector-leak': { severity: 'fix', autofix: 'review' },
   'no-step': { severity: 'fix', autofix: 'review' },
+  'bare-test-fail': { severity: 'fix', autofix: 'review' },
+  'test-fail-order': { severity: 'fix', autofix: 'review' },
+  'skip-marker': { severity: 'fix', autofix: 'report-only' },
+  'test-id-duplicate': { severity: 'fix', autofix: 'report-only' },
+  'test-id-gap': { severity: 'fix', autofix: 'report-only' },
 };
 
 function mapSelfCheckFinding(finding) {
@@ -47,10 +53,11 @@ function mapSelfCheckFinding(finding) {
 
 function formatSelfCheckLine(finding) {
   const location = finding.line ? `${finding.file}:L${finding.line}` : finding.file;
-  return `${finding.severity} ${finding.autofix} ${finding.tag} ${finding.message}. [${location}]`;
+  const prefix = finding.critical ? 'critical ' : '';
+  return `${prefix}${finding.severity} ${finding.autofix} ${finding.tag} ${finding.message}. [${location}]`;
 }
 
-function rankFindings(autofixFindings, selfCheckFindings) {
+function rankFindings(autofixFindings, selfCheckFindings, repoRoot) {
   const severityRank = { blocker: 0, fix: 1, cleanup: 2, delete: 3 };
   const autofixRank = { safe: 0, review: 1, 'report-only': 2 };
 
@@ -64,6 +71,11 @@ function rankFindings(autofixFindings, selfCheckFindings) {
   ];
 
   combined.sort((a, b) => {
+    const aScore = scoreFinding(a.item, repoRoot).impactScore;
+    const bScore = scoreFinding(b.item, repoRoot).impactScore;
+    if (aScore !== bScore) {
+      return aScore - bScore;
+    }
     const aSev = severityRank[a.item.severity] ?? 9;
     const bSev = severityRank[b.item.severity] ?? 9;
     if (aSev !== bSev) {
@@ -92,18 +104,17 @@ function main() {
   const resolved = path.resolve(repoRoot);
   const autofixCandidates = findAutofixCandidates(resolved);
   const selfCheckFindings = withSelfCheck ? runSelfCheck(resolved) : [];
-  const ranked = rankFindings(autofixCandidates, selfCheckFindings);
-
-  const byTag = {};
-  for (const entry of ranked) {
-    byTag[entry.item.tag] = (byTag[entry.item.tag] || 0) + 1;
-  }
+  const scoredSelfCheck = selfCheckFindings.map((finding) => scoreFinding(finding, resolved));
+  const ranked = rankFindings(autofixCandidates, scoredSelfCheck, resolved);
+  const health = buildSuiteHealthSummary(autofixCandidates, scoredSelfCheck, resolved);
 
   const report = {
     repo: resolved,
     autofixCount: autofixCandidates.length,
     selfCheckCount: selfCheckFindings.length,
-    byTag,
+    byTag: health.byTag,
+    byArea: health.byArea,
+    suiteHealth: health,
     lines: ranked.map((entry) => entry.line),
   };
 
@@ -117,18 +128,7 @@ function main() {
       console.log(line);
     }
     console.log('');
-    console.log('Suite health (autofix scan):');
-    console.log(`  Dead POMs: ${autofixCandidates.filter((item) => item.tag === 'dead-pom').length}`);
-    console.log(
-      `  Unused factories: ${autofixCandidates.filter((item) => item.tag === 'unused-factory').length}`,
-    );
-    console.log(
-      `  Dead locators: ${autofixCandidates.filter((item) => item.tag === 'dead-locator').length}`,
-    );
-    if (withSelfCheck) {
-      console.log(`  Constitution violations: ${selfCheckFindings.length}`);
-    }
-    console.log(`  Safe autofix candidates: ${autofixCandidates.length}`);
+    console.log(formatSuiteHealth(health));
     process.exit(0);
   }
 
@@ -138,18 +138,7 @@ function main() {
   }
 
   console.log('');
-  console.log('Suite health (autofix scan):');
-  console.log(`  Dead POMs: ${autofixCandidates.filter((item) => item.tag === 'dead-pom').length}`);
-  console.log(
-    `  Unused factories: ${autofixCandidates.filter((item) => item.tag === 'unused-factory').length}`,
-  );
-  console.log(
-    `  Dead locators: ${autofixCandidates.filter((item) => item.tag === 'dead-locator').length}`,
-  );
-  if (withSelfCheck) {
-    console.log(`  Constitution violations: ${selfCheckFindings.length}`);
-  }
-  console.log(`  Safe autofix candidates: ${autofixCandidates.length}`);
+  console.log(formatSuiteHealth(health));
 }
 
 if (require.main === module) {

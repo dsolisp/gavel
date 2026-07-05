@@ -8,10 +8,10 @@
   },
   "runs": [
     {
-      "spec": { "relative": "cypress/e2e/billing.cy.ts" },
+      "spec": { "relative": "cypress/e2e/catalog.cy.ts" },
       "suites": [
         {
-          "title": "Billing",
+          "title": "Catalog",
           "tests": [
             {
               "title": "saves draft",
@@ -19,7 +19,7 @@
               "displayError": "Timed out retrying: Expected to find element: [role=\"button\"], but never found it."
             },
             {
-              "title": "publishes snapshot",
+              "title": "publishes export",
               "state": "failed",
               "displayError": "Timed out retrying: Expected to find element: [role=\"button\"], but never found it."
             }

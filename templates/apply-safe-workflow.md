@@ -33,7 +33,7 @@ gavel-review / gavel-audit
 2. Confirm only `safe` items are in scope for this task
 3. Apply: `node scripts/audit-autofix.js <repo> --apply`
 4. Compile / lint
-5. Run affected specs via `gavel-run` (or `affected-tests.js` when available in v0.5.0)
+5. Run affected specs via `gavel-run` (uses `scripts/affected-tests.js` for transitive impact)
 6. Return envelope with before/after candidate counts
 
 ## Ranked audit output
