@@ -30,16 +30,50 @@ const allowlist = Array.isArray(config.allowlist) ? config.allowlist : [];
 const TEST_FILE_RE = /\.(spec|test)\.(ts|js|tsx|jsx|py|java|feature)$/;
 const LOCATOR_FILE_RE = /locators?\//i;
 
-function findMatches(content, pattern) {
+function findMatches(content, pattern, filePath = '') {
   const hits = [];
   const lines = content.split('\n');
+  const isPython = filePath.endsWith('.py');
+  let inBlock = false;
+  let blockQuote = '';
+
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
-    if (pattern.global) {
-      pattern.lastIndex = 0;
+    const trimmed = line.trim();
+    let isComment = false;
+
+    if (inBlock) {
+      isComment = true;
+      if (blockQuote === '/*' && trimmed.endsWith('*/')) inBlock = false;
+      else if (blockQuote && trimmed.endsWith(blockQuote)) inBlock = false;
+      // Handle cases where the closing quote is not at the very end but the line is mostly comment
+      else if (blockQuote === '"""' && trimmed.includes('"""')) inBlock = false;
+      else if (blockQuote === "'''" && trimmed.includes("'''")) inBlock = false;
+    } else {
+      if (trimmed.startsWith('//') || trimmed.startsWith('#')) {
+        isComment = true;
+      } else if (trimmed.startsWith('/*')) {
+        isComment = true;
+        if (!trimmed.endsWith('*/') || trimmed.length < 4) {
+          inBlock = true;
+          blockQuote = '/*';
+        }
+      } else if (isPython && (trimmed.startsWith('"""') || trimmed.startsWith("'''"))) {
+        isComment = true;
+        const q = trimmed.startsWith('"""') ? '"""' : "'''";
+        // Check if it ends on the same line (need at least 6 chars for """...""")
+        if (trimmed.length < 6 || !trimmed.endsWith(q)) {
+          inBlock = true;
+          blockQuote = q;
+        }
+      }
     }
-    if (pattern.test(line)) {
-      hits.push({ line: i + 1, text: line.trim() });
+
+    if (!isComment && !trimmed.includes('gavel-ignore')) {
+      if (pattern.global) pattern.lastIndex = 0;
+      if (pattern.test(line)) {
+        hits.push({ line: i + 1, text: trimmed });
+      }
     }
   }
   return hits;
@@ -107,7 +141,7 @@ const RULES = [
     description: 'Assertion APIs in action/page/locator files',
     test: (filePath, content) => {
       if (LOCATOR_FILE_RE.test(filePath) || /pages?\//i.test(filePath) || /actions?\//i.test(filePath)) {
-        return findMatches(content, /\b(expect|assert|assertEquals|assertThat)\s*\(/g);
+        return findMatches(content, /\b(expect|assert|assertEquals|assertThat)\s*\(/g, filePath);
       }
       return [];
     },
@@ -124,17 +158,19 @@ const RULES = [
       }
       return findMatches(
         content,
-        /\.(getByRole|getByText|getByLabel|getByPlaceholder|getByTestId|locator)\s*\(|querySelector(All)?\s*\(|find_element(s)?\s*\(|\.closest\s*\(|\.matches\s*\(/g,
+        /\.(getByRole|getByText|getByLabel|getByPlaceholder|getByTestId|locator|findElement(s)?|find_element(s)?)\s*\(|querySelector(All)?\s*\(|\.closest\s*\(|\.matches\s*\(/g,
+        filePath,
       );
     },
   },
   {
     tag: 'manual-wait',
     description: 'Manual sleeps or arbitrary polling',
-    test: (_filePath, content) =>
+    test: (filePath, content) =>
       findMatches(
         content,
         /waitForTimeout\s*\(|page\.waitForTimeout|time\.sleep\s*\(|Thread\.sleep\s*\(|cy\.wait\s*\(\s*\d+/g,
+        filePath,
       ),
   },
   {
@@ -144,7 +180,7 @@ const RULES = [
       if (!TEST_FILE_RE.test(filePath)) {
         return [];
       }
-      return findMatches(content, /\bnew\s+[A-Z][A-Za-z0-9_]*(Page|Actions?|Component|Locators?)\s*\(/g);
+      return findMatches(content, /\bnew\s+[A-Z][A-Za-z0-9_]*(Page|Actions?|Component|Locators?)\s*\(/g, filePath);
     },
   },
   {
@@ -249,6 +285,10 @@ const EXCLUDED_DIRS = new Set([
   '.next',
   '.nuxt',
   'out',
+  '.venv',
+  'venv',
+  'venv-enhanced',
+  '.venv-ci',
 ]);
 
 function walkFiles(dir, files = []) {
