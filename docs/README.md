@@ -11,6 +11,7 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [README.md](../README.md) | Install, core commands, feature grid | New users |
 | [QUICKSTART.md](../QUICKSTART.md) | First session: audit → heal → write | QA engineers |
 | [AGENTS.md](../AGENTS.md) | Universal QA rules | All IDE adapters |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Two-repo design, browser-first authoring principle | Contributors, architects |
 | [companion/README.md](../companion/README.md) | Optional CI/env/hub/closure skills | Teams needing extras |
 
 ## Scripts
