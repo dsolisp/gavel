@@ -82,7 +82,7 @@ Note existing coverage or lack thereof.
 |--------|------|--------|-------------------|
 | abc123 | Backend / orders | New endpoint GET /api/orders/{id}/stats/ | Add test in `tests/orders/` |
 | def456 | Frontend / nav | CSS-only styling | none |
-| ghi789 | Backend / serializers | Added `total_pnl` field to AccountSerializer | Update `tests/accounts/list.spec.ts` — add assertion |
+| ghi789 | Backend / serializers | Added `display_name` field to ItemSerializer | Update `tests/items/list.spec.ts` — add assertion |
 | jkl012 | CI | Terraform version bump | none |
 
 ### Recommended tasks (in priority order)

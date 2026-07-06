@@ -38,13 +38,21 @@ Exit code `0` = no violations. Exit code `1` = violations found.
 | `manual-wait` | `waitForTimeout`, `time.sleep`, `Thread.sleep`, fixed `cy.wait(ms)` |
 | `no-di` | `new SomePage(` construction inside spec files |
 | `no-step` | Large multi-test specs without `test.step()` grouping |
+| `bare-test-fail` | `test.fail()` without issue tracker reference |
+| `test-fail-order` | `test.fail()` declared after assertions in the same test |
+| `skip-marker` | Skip/quarantine/WIP marker without reason |
+| `test-id-duplicate` | Duplicate test IDs (when `gavel.config.json` defines pattern) |
+| `test-id-gap` | Gap in consecutive test IDs (when `enforceConsecutiveTestIds: true`) |
+
+Inline allow: `// gavel-allow: manual-wait` on the line above a finding.
+Repo allowlist: `gavel.config.json` → `"allowlist": [{ "file": "...", "tag": "..." }]`.
 
 ## Output
 
 Human mode — one line per finding:
 
 ```text
-selector-leak pages/admin/BillingPage.ts:42 — this.page.getByRole('button', { name: 'Save' })
+selector-leak pages/catalog/ExamplePage.ts:42 — this.page.getByRole('button', { name: 'Save' })
 ```
 
 JSON mode — machine-readable report with `summary` counts and `findings` array.

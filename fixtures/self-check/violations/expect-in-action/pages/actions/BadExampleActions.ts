@@ -1,6 +1,6 @@
 import { expect, Page } from '@playwright/test';
 
-export class BadBillingActions {
+export class BadExampleActions {
   constructor(private readonly page: Page) {}
 
   async assertDraftVisible() {

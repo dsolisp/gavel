@@ -1,10 +1,9 @@
 ---
 name: gavel-triage
 description: >
-  Navigation guide for locating the exact source-code culprit behind a test
-  failure. Framework-adaptive: Django, Express, Spring, FastAPI, etc. Use when
-  you need to point a developer to the specific file, function, and line range
-  responsible for a bug, feeding into gavel-bug.
+  Locate application source behind a test-confirmed failure. Read-only navigation
+  guide for developers — produces file/function evidence for gavel-bug, not product
+  fixes. Framework-adaptive (Django, Express, Spring, FastAPI, etc.).
 ---
 
 # Gavel Triage

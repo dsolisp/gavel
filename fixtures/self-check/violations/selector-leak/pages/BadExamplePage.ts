@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 
-export class BadBillingPage {
+export class BadExamplePage {
   constructor(private readonly page: Page) {}
 
   async clickSave() {

@@ -1,6 +1,6 @@
 {
   "invalid-root": {
-    "appPaths": ["app/billing"]
+    "appPaths": ["src/legacy"]
   },
-  "tests/admin/billing": []
+  "tests/e2e/catalog": []
 }

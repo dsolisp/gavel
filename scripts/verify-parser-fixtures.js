@@ -22,7 +22,7 @@ function runJson(command, args, input) {
 
 const junit = runJson(process.execPath, [
   path.join(root, 'scripts/parsers/junit.js'),
-  path.join(root, 'fixtures/reports/junit/billing-failures.xml'),
+  path.join(root, 'fixtures/reports/junit/sample-failures.xml'),
   '--json',
 ]);
 
@@ -34,13 +34,13 @@ const allure = runJson(process.execPath, [
 
 const playwright = runJson(process.execPath, [
   path.join(root, 'scripts/parsers/playwright.js'),
-  path.join(root, 'fixtures/reports/playwright/billing-report.json'),
+  path.join(root, 'fixtures/reports/playwright/sample-report.json'),
   '--json',
 ]);
 
 const cypress = runJson(process.execPath, [
   path.join(root, 'scripts/parsers/cypress.js'),
-  path.join(root, 'fixtures/reports/cypress/billing-results.json'),
+  path.join(root, 'fixtures/reports/cypress/sample-run.json'),
   '--json',
 ]);
 
@@ -92,7 +92,7 @@ const envelope = spawnSync(
   process.execPath,
   [
     path.join(root, 'scripts/analyze-ci.js'),
-    path.join(root, 'fixtures/reports/playwright/billing-report.json'),
+    path.join(root, 'fixtures/reports/playwright/sample-report.json'),
     '--envelope',
     '--project',
     'fixture-suite',

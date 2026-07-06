@@ -48,21 +48,42 @@ Before any agent writes a test, run the ladder:
 |------|------------------------|
 | New E2E tests (UI) | gavel-plan → gavel-generator → gavel-healer |
 | New API tests | gavel-plan → gavel-api-specialist |
+| Test planning | gavel-plan |
+| Stack detection | gavel-detect → activate profile (gavel-playwright, gavel-selenium, gavel-cypress, gavel-webdriverio, gavel-cucumber, gavel-robot) |
+| Run tests / verification gate | gavel-run |
 | Fix failing tests | gavel-healer |
 | Clustered failures (same area/route/error) | gavel-analyze → gavel-impact → **gavel-healer (implement)** |
-| App regression (5xx, unhandled exceptions) | gavel-analyze → **gavel-bug** (confirm + report) |
-| Seed/fixture data issues | gavel-analyze → **gavel-env** (seed verification) |
-| Flaky investigation | gavel-healer → gavel-refactor |
-| Refactoring | gavel-refactor → gavel-healer |
-| Safe autofix (audit/review `safe` tags) | gavel-refactor (apply-safe) → gavel-run |
-| Test planning | gavel-plan |
 | Post-run analysis | gavel-analyze |
 | Commit impact | gavel-impact |
-| test.fail() audit | gavel-fail-audit |
-| Stack detection | gavel-detect → activate profile |
-| Environment setup | gavel-env |
-| Bug reporting | gavel-bug |
+| App regression (5xx, unhandled exceptions) | gavel-analyze → **gavel-bug** (confirm + report) |
 | Backend triage | gavel-triage |
+| Seed/fixture data issues | gavel-analyze → classify env/seed (companion: **gavel-env**) |
+| Multi-tenant auth issues | gavel-auth |
+| External API/hub credentials | companion: **gavel-hub** |
+| Flaky investigation | gavel-healer → gavel-flake → gavel-refactor |
+| Refactoring | gavel-refactor → gavel-healer |
+| Safe autofix (audit/review `safe` tags) | gavel-refactor (apply-safe) → gavel-run |
+| Whole-repo audit | gavel-audit → gavel-refactor (for `safe`/`review` findings) |
+| Diff review | gavel-review → gavel-refactor (for `safe`/`review` findings) |
+| Constitution self-check | gavel-self-check |
+| test.fail() audit | gavel-fail-audit |
+| Debt harvest | gavel-debt |
+| Quality scoreboard (suite health metrics) | gavel-gain |
+| Bug reporting (test-confirmed defect) | gavel-bug |
+| Backend triage (test-failure evidence only) | gavel-triage |
+| Bootstrap new QA project | gavel-init |
+| Help / commands | gavel-help |
+
+## Companion workflows (optional)
+
+Not part of the core happy path. See `companion/README.md`.
+
+| Task | Companion skill |
+|------|-----------------|
+| Closure summaries | gavel-close |
+| CI/cloud execution | gavel-ci |
+| Local env start/seed | gavel-env |
+| Hub/external API credentials | gavel-hub |
 
 ## Test Maintenance Drift Workflow
 
@@ -128,7 +149,7 @@ unused factories, diff-scoped `shrink`):
 1. Run `node scripts/audit-autofix.js <repo> --audit-format` (dry-run)
 2. Apply only `safe` items: `node scripts/audit-autofix.js <repo> --apply`
 3. Compile / lint
-4. Run affected tests via gavel-run (or affected-tests.js when available in v0.5.0)
+4. Run affected tests via gavel-run (uses `scripts/affected-tests.js` for transitive impact)
 5. Return envelope with candidate count before/after
 ```
 

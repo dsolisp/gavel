@@ -3,11 +3,12 @@
 
   <h1 align="center">Gavel</h1>
   <p align="center">
-    <em>The judge's hammer for test quality.</em><br>
-    <em>Minimalism + QA discipline for AI agents.</em>
+    <em>Test-code quality enforcement for AI agents.</em><br>
+    <em>One test. One verdict. Move on.</em>
   </p>
   <p align="center">
     <img src="https://img.shields.io/github/v/release/dsolisp/gavel?style=flat-square&label=release" alt="Release">
+    <img src="https://github.com/dsolisp/gavel/actions/workflows/gavel-verify.yml/badge.svg" alt="CI">
     <img src="https://img.shields.io/badge/works%20with-20%2B%20IDEs-blue?style=flat-square" alt="Works with 20+ IDEs">
     <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT license">
   </p>
@@ -15,232 +16,124 @@
 
 ---
 
-Gavel is a fork of [ponytail](https://github.com/DietrichGebert/ponytail) mutated into a **QA automation toolkit** that preserves ponytail's minimalism core while adding framework-adaptive test quality enforcement.
+Gavel is an independent QA discipline project for automation repos. It enforces **lean suites**, **trustworthy test code**, and **resilient structure** across Playwright, Selenium, Cypress, WebdriverIO, Cucumber, Robot, and pytest-playwright — without turning into a full QA platform.
 
-**The idea:** the best code is the code you never wrote (ponytail). The best test is the test that catches the real bug — no more, no less (gavel). Both ladders run on every decision.
+Inspired by [ponytail](https://github.com/DietrichGebert/ponytail)'s minimalism. Not a fork. No upstream sync required.
 
-## What it does
-
-Before writing any code, gavel's agent climbs two ladders:
-
-```
-MINIMALISM LADDER (all code):
-1. Does this need to exist?        → skip (YAGNI)
-2. Already in this codebase?       → reuse it
-3. Stdlib does it?                 → use it
-4. Native platform feature?        → use it
-5. Installed dependency?           → use it
-6. One line?                       → one line
-7. Only then: the minimum that works
-
-QA LADDER (test code):
-1. Does this test need to exist?   → skip (YAGNI)
-2. Already in this test suite?     → reuse fixture/factory/POM
-3. Framework handles it?           → use native assertions/waits
-4. Native locator covers it?       → semantic > CSS > XPath
-5. Existing POM covers it?         → extend, don't create new
-6. One assertion?                  → one assertion
-7. Only then: the minimum test that catches the real bug
-```
-
-> **Ladder Conflict Rule:** When the two ladders collide on test code, **the QA Ladder wins**. Minimalism is the default for production code; QA discipline is the override for test code because the cost of a missed assertion is a missed bug.
-
-## What it includes
-
-- **Core QA skills** — plan, author, run, review, audit, diagnose, triage, report, and close the loop
-- **Specialist agents** — workflow roles that should stay few: route, generate, diagnose, analyze impact, audit exceptions, refactor only when reuse proves it
-- **Stack-adaptive profiles** — detect runner capabilities, assertion semantics, locator APIs, fixture patterns, and reporting outputs without locking gavel to one tool
-- **20+ IDE adapters** — Cursor, Cline, Windsurf, Kiro, Copilot, Trae, Comate, Lingma, Junie, Qoder, OpenCode, and more
-- **Hook system** — SessionStart activation, SubagentStart injection, mode tracking
-- **Test Constitution** — 9 MUST DO rules + 7 WON'T DO rules
-- **Native-first testing patterns** — accessibility, visual, component, API/contract, retry, coverage, and quarantine rules expressed as reusable patterns
-
-**New here?** Start with [QUICKSTART.md](QUICKSTART.md) — install → audit → heal → write, ten minutes to first verdict.
-
-**Docs:** [docs/README.md](docs/README.md) · **Changes:** [CHANGELOG.md](CHANGELOG.md) · **Roadmap:** [GAVEL_ROADMAP.md](GAVEL_ROADMAP.md)
-
-## Install
-
-Pick one path. Hosted plugins update through their host; copied rule files update by replacing the copied files from this repo.
-
-### OpenCode (npm package)
-```json
-{
-  "plugin": ["@dsolisp/gavel"]
-}
-```
-
-For a local checkout while developing gavel:
-```json
-{
-  "plugin": ["./.opencode/plugins/gavel.mjs"]
-}
-```
-
-### Qoder
-```
-# Copy skills/ to .qoder/skills/ and agents/ to .qoder/agents/
-```
-
-### Claude Code
-```
-/plugin marketplace add dsolisp/gavel
-/plugin install gavel@gavel
-```
-
-### Cursor / Windsurf / Cline / Copilot / Kiro
-Copy the matching adapter from this repo into the target project:
-- `.cursor/rules/gavel.mdc`
-- `.clinerules/gavel.md`
-- `.windsurf/rules/gavel.md`
-- `.kiro/steering/gavel.md`
-- `.github/copilot-instructions.md`
-
-### Gemini CLI
-```bash
-gemini extensions install https://github.com/dsolisp/gavel
-```
-
-## Upgrade
-
-### If you installed a hosted plugin/package
-
-Use the host's normal update flow, then restart the IDE/session so the prompt injection reloads. For OpenCode, update the npm package version used by your environment; for Claude/Gemini, update or reinstall through their plugin/extension manager.
-
-### If you copied adapter files
-
-Replace the copied files with the same paths from the new gavel release:
+## First run (< 60s)
 
 ```bash
-# example from a checkout of this repo
-cp .cursor/rules/gavel.mdc /path/to/project/.cursor/rules/gavel.mdc
-cp .github/copilot-instructions.md /path/to/project/.github/copilot-instructions.md
+git clone https://github.com/dsolisp/gavel.git
+cd gavel
+npm run verify          # dogfood the verify gate
+node scripts/self-check.js ../your-automation-repo
+node scripts/audit-report.js ../your-automation-repo --with-self-check --audit-format
 ```
 
-If you customized a copied file, diff first and keep local project-specific rules below the gavel block.
+Install into your IDE (Cursor, Claude Code, OpenCode, etc.) using [QUICKSTART.md](QUICKSTART.md), then invoke `/gavel-audit` or `/gavel-review` on your test repo.
 
-### After every upgrade
+## What can gavel do for me?
 
-1. Restart the IDE/agent session.
-2. Run `/gavel full` or your preferred mode.
-3. Run `/gavel-detect` in the test repo.
-4. Run `/gavel-review` on one changed test diff to confirm the new rules load.
+| I want to… | Command / skill | Outcome |
+|------------|-----------------|---------|
+| Scan my suite for bloat and violations | `/gavel-audit` | Ranked scoreboard: dead POMs, leaks, waits, markers |
+| Review a test diff before merge | `/gavel-review` | One line per constitution violation |
+| Enforce layering in CI | `node scripts/self-check.js .` | Blocker/fix report with exit code |
+| Understand a CI failure cluster | `/gavel-analyze` | Classified clusters + next agent |
+| Fix a failing test | `/gavel-heal` | Verdict: test bug, app bug, env, or flake |
+| Remove safe dead code | `/gavel-refactor` (apply-safe) | Dead locators/POMs removed with test evidence |
+| Detect my stack | `/gavel-detect` | Activates the right framework profile |
+| Write UI/API tests in existing patterns | `/gavel-e2e`, `/gavel-api` | Test code using your repo's architecture |
+| Track deferred test decisions | `/gavel-debt` | Ledger of `gavel:` comments |
+| See suite health at a glance | `/gavel-gain` | Pass rate, flake count, LOC per test |
 
-### Publishing a new gavel version
+**Companion workflows** (optional, not in default install): [companion/README.md](companion/README.md) — CI migration, env setup, hub credentials, issue closure.
 
-1. Bump every manifest version together (`package.json`, plugin manifests, `gemini-extension.json`).
-2. Run `npm run verify` from `gavel/`.
-3. Tag the release as `vX.Y.Z` only after `scripts/check-versions.js` passes.
-4. Publish through the configured package/plugin release flow.
-
-## Commands
+## Core commands
 
 | Command | What it does |
 |---------|-------------|
 | `/gavel [lite \| full \| strict \| off]` | Set intensity level |
+| `/gavel-audit` | Whole-repo audit + suite health scoreboard |
 | `/gavel-review` | Review test diffs for constitution violations |
-| `/gavel-audit` | Whole-repo audit for test suite bloat |
-| `/gavel-debt` | Harvest `gavel:` deferred test decisions |
-| `/gavel-gain` | Show test quality scoreboard (pass rate, coverage, flake count) |
-| `/gavel-detect` | Auto-detect your test stack |
+| `/gavel-self-check` | Static constitution scanner |
 | `/gavel-heal` | Diagnose a failing test |
-| `/gavel-flake` | Flaky test triage + quarantine |
-| `/gavel-init` | Bootstrap a new QA project |
+| `/gavel-analyze` | Parse CI report, cluster failures |
+| `/gavel-refactor` | Improve test code; apply-safe dead code removal |
+| `/gavel-detect` | Auto-detect your test stack |
 | `/gavel-help` | Quick reference |
 
-## Intensity Levels
+## Feature grid
 
-| Level | What changes |
-|-------|-------------|
-| **lite** | Suggest improvements, name the lazier alternative |
-| **full** (default) | Enforce all rules, block constitution violations |
-| **strict** | Zero tolerance — reject any violation |
-| **off** | Disable gavel; revert to base IDE behavior |
+| Area | What Gavel enforces |
+|------|---------------------|
+| **Layering** | Locators → actions → specs; no assertion leakage |
+| **Locators** | Semantic/accessibility first; no raw selector chains outside locator classes |
+| **Waits** | Native retry assertions; no arbitrary sleeps |
+| **DI** | Fixtures over `new PageObject(page)` in specs |
+| **Suite health** | Dead POMs/locators/factories, skip markers, bare `test.fail()` |
+| **Resilience** | Overlay scoping, shared-state setup, draft-vs-list assertions (roadmap v0.8) |
+| **CI intelligence** | JUnit, Allure, Playwright, Cypress, Cucumber parsers + clustering |
+| **Evidence gate** | Compile + affected tests before declaring done |
 
-## Configuration
+## Example output
 
-Set default mode via env var or config file:
-```bash
-GAVEL_DEFAULT_MODE=strict
-# or
-~/.config/gavel/config.json  # { "defaultMode": "strict" }
+```text
+Gavel audit report — ../my-automation-repo
+blocker review manual-wait Manual sleeps or arbitrary polling. [pages/actions/ExampleActions.ts:L42]
+fix review selector-leak Raw selector chains outside locator classes. [pages/actions/ExampleActions.ts:L18]
+
+Suite health:
+  Dead POMs: 2
+  Dead locators: 5
+  Unused factories: 1
+  Selector leaks: 3
+  Manual waits: 7
+  Skip/quarantine markers: 0
+  Bare test.fail markers: 1
+  Constitution violations: 11
+  Critical-area violations: 4
+  Safe autofix candidates: 8
+  Top areas:
+    tests/e2e/catalog: 6
 ```
 
-## Framework Adaptation
+## Scripts (run on any automation repo)
 
-Gavel adapts by capability, not by brand. Detection answers these questions, then applies the universal QA rules through the native primitives your stack already has:
+| Script | Purpose |
+|--------|---------|
+| `scripts/self-check.js` | Constitution violation scan |
+| `scripts/audit-report.js` | Ranked audit + suite health (`--with-self-check`) |
+| `scripts/refactor-score.js` | Before/after line + violation delta |
+| `scripts/affected-tests.js` | Transitive affected spec discovery |
+| `scripts/analyze-ci.js` | Parse CI report, cluster, correlate commits |
 
-| Capability | Adaptation rule |
-|------------|-----------------|
-| **Runner lifecycle** | Use the suite's fixture/hook model for DI, setup, cleanup, and isolation. |
-| **Locator surface** | Prefer semantic/accessibility locators, then stable test IDs, then structural selectors only when semantics do not exist. |
-| **Assertion semantics** | Use built-in retrying/eventual assertions before custom polling or sleeps. |
-| **Composition model** | Reuse existing fixtures, factories, service clients, page actions, or step definitions before adding abstractions. |
-| **Evidence output** | Read the stack's native traces, screenshots, videos, logs, reports, and failure artifacts before changing tests. |
-| **Verification commands** | Run the project's existing type, lint, targeted test, and coverage gates instead of hardcoding a runner. |
+Report parsers: `junit`, `allure`, `playwright`, `playwright-html`, `cypress`, `cucumber`.
 
-## Native Capability Patterns
+## Install
 
-Use the stack's own capabilities instead of pulling in dependencies.
+See [QUICKSTART.md](QUICKSTART.md) for IDE-specific paths. OpenCode npm package:
 
-| Pattern | When | Native-first rule |
-|---------|------|-------------------|
-| **Accessibility verification** | Validate user-perceivable structure | Use native accessibility snapshots/queries before adding external scanners. |
-| **Visual regression** | Catch unintended CSS/layout drift | Use runner-integrated screenshots/diffs before adding visual infrastructure. |
-| **Component isolation** | Exercise UI logic below full E2E cost | Use the project's existing component mount/test harness. |
-| **API/contract checks** | Verify service boundaries and schema drift | Reuse existing request clients, fixtures, and schema validators. |
-| **Eventual assertions** | Replace flaky wait loops | Use the framework's built-in retry/assertion model. |
-| **Coverage thresholding** | Protect critical paths | Use the repository's coverage tool and raise thresholds for high-risk flows. |
-
-## The 4-Line Verification Gate
-
-Before declaring work done, run all four. Any failure blocks the merge.
-
-```bash
-<project type-check>      # 1. type-check / compile
-<project lint>            # 2. lint / style gate
-<targeted test command>   # 3. affected test or suite
-<coverage command>        # 4. coverage threshold where configured
+```json
+{ "plugin": ["@dsolisp/gavel"] }
 ```
 
-Coverage defaults to **80%**. Raise it for critical paths (auth, payment, tenant isolation). Lower it for throwaway code.
+## Docs
 
-## Quarantine Policy
-
-Flaky tests get a home, not a retry and not a delete.
-
-| Tag | Meaning | Action |
-|-----|---------|--------|
-| `@flaky:env` | Environment-dependent (network, seed timing) | Quarantine CI lane |
-| `@flaky:data` | Data/seed-dependent (shared rows, races) | Quarantine CI lane |
-| `@flaky:ui` | DOM/animation-dependent (animation, virtualization) | Quarantine CI lane |
-| `@wip` | Test under construction | Skip in CI, must remove before merge |
-
-Quarantined tests run in a separate CI lane that **never blocks merge**. They appear in the weekly `gavel-flake` report. After 7 days, an unfixed quarantine escalates: becomes a real bug ticket, gets fixed, or gets deleted.
-
-## test.fail() Expiry
-
-`test.fail()` markers are valid for **7 days**. Run `gavel-fail-audit` weekly to clear the rot: each marker either becomes a real bug ticket, gets fixed, or gets deleted. No permanent "this is broken" comments.
-
-## How it relates to ponytail
-
-Gavel is a [fork](https://github.com/DietrichGebert/ponytail) that keeps ponytail's minimalism philosophy as the foundation and adds QA discipline on top. The upstream remote is preserved for syncing ponytail improvements:
-
-```bash
-git fetch upstream
-git merge upstream/main
-```
+| Doc | Audience |
+|-----|----------|
+| [QUICKSTART.md](QUICKSTART.md) | First session — audit, heal, write |
+| [docs/README.md](docs/README.md) | Script reference and CI templates |
+| [AGENTS.md](AGENTS.md) | Universal QA rules for all adapters |
+| [GAVEL_ROADMAP.md](GAVEL_ROADMAP.md) | Product direction |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 ## Development
 
 ```bash
-node scripts/check-rule-copies.js --check-all  # verify adapter sync
-node scripts/check-versions.js                  # version consistency
-node scripts/verify-agents-md.js                # AGENTS.md sections
-node scripts/verify-skills.js                   # all skills/agents exist
-npm run verify                                  # all repository checks; no build step required
+npm run verify    # all gates including docs drift + unit tests
 ```
 
 ## License
 
-[MIT](LICENSE). Based on [ponytail](https://github.com/DietrichGebert/ponytail) by Dietrich Gebert.
+[MIT](LICENSE). QA discipline layer inspired by [ponytail](https://github.com/DietrichGebert/ponytail) minimalism.

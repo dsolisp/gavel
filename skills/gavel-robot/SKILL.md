@@ -35,14 +35,14 @@ Avoid bare CSS/XPath in `.robot` files — wrap in resource keywords.
 Resource files own locators and low-level keywords. Test cases call named keywords only.
 
 ```robot
-# resources/billing_keywords.robot  — locator owner
-Click Billing Save
+# resources/example_keywords.robot  — locator owner
+Click Example Save
     Click    role=button[name="Save"]
 
-# tests/billing.robot  — thin test
+# tests/example.robot  — thin test
 *** Test Cases ***
 Save Draft
-    Click Billing Save
+    Click Example Save
 ```
 
 ## Waits and Assertions
@@ -58,9 +58,9 @@ No `Sleep` except when documented and unavoidable (report-only in audit).
 
 ```text
 tests/
-  billing.robot
+  example.robot
 resources/
-  billing_keywords.robot
+  example_keywords.robot
   common.robot
 ```
 

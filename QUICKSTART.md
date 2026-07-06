@@ -50,7 +50,7 @@ Each finding has a one-line replacement. Take the top 5.
 ## 4. Heal a failing test (2 minutes)
 
 ```
-/gavel-heal tests/checkout.spec.ts "discount code applies to subtotal"
+/gavel-heal tests/e2e/users/user-flow.spec.ts "submit form saves draft"
 ```
 
 Gavel returns a verdict (TEST BUG / APP BUG / ENV ISSUE / FLAKY / AMBIGUOUS) with evidence and a recommended fix. Apply the fix, re-run.
@@ -58,12 +58,12 @@ Gavel returns a verdict (TEST BUG / APP BUG / ENV ISSUE / FLAKY / AMBIGUOUS) wit
 ## 5. Write one test, the gavel way (3 minutes)
 
 ```
-/gavel-e2e Add a test that the empty cart shows the 'Browse Products' CTA.
+/gavel-e2e Add a test that the empty list shows the 'Get Started' CTA.
 ```
 
 Gavel climbs the QA Ladder, applies the Test Constitution, and generates:
 
-- Semantic locator (`getByRole('link', { name: 'Browse Products' })`)
+- Semantic locator (`getByRole('link', { name: 'Get Started' })`)
 - Fixture DI (no direct instantiation)
 - Factory data (no hardcoded strings)
 - `test.step()` grouping
@@ -86,7 +86,7 @@ After generation, run the [4-line verification gate](skills/gavel-run/SKILL.md).
 ## What's next
 
 - See [examples/](examples/) for cross-framework patterns (Playwright, Selenium, Cypress, WebdriverIO)
-- See [skills/](skills/) for the full 28-skill catalog
+- See [skills/](skills/) for the full 30-skill catalog
 - See [AGENTS.md](AGENTS.md) for the complete ruleset (Minimalism Ladder + QA Ladder + Test Constitution)
 - See [skills/gavel-flake/SKILL.md](skills/gavel-flake/SKILL.md) for the flaky-test quarantine policy
 - See [skills/gavel-run/SKILL.md](skills/gavel-run/SKILL.md) for the verification gate and parallel execution

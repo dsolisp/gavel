@@ -49,8 +49,11 @@ function readSkillFrontmatter(skillPath) {
   return meta;
 }
 
-function listSkillDirs() {
-  const skillsDir = path.join(root, 'skills');
+function listSkillDirs(baseDir) {
+  const skillsDir = path.join(root, baseDir);
+  if (!fs.existsSync(skillsDir)) {
+    return [];
+  }
   return fs
     .readdirSync(skillsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -83,7 +86,8 @@ if (!fs.existsSync(pluginPath)) {
 const pluginContent = fs.readFileSync(pluginPath, 'utf8');
 const manifestSkills = readYamlList(pluginContent, 'provides_skills');
 const manifestCommands = readYamlList(pluginContent, 'provides_commands');
-const skillDirs = listSkillDirs();
+const skillDirs = listSkillDirs('skills');
+const companionSkillDirs = listSkillDirs('companion/skills');
 const agents = listAgents();
 
 const publicSkills = new Set(manifestSkills);
@@ -112,10 +116,21 @@ for (const skill of skillDirs) {
   }
 }
 
+for (const skill of companionSkillDirs) {
+  const skillPath = path.join(root, 'companion/skills', skill, 'SKILL.md');
+  if (!fs.existsSync(skillPath)) {
+    fail(`MISSING: companion/skills/${skill}/SKILL.md`);
+    continue;
+  }
+  if (publicSkills.has(skill)) {
+    fail(`COMPANION skill listed as core in plugin.yaml: ${skill}`);
+  }
+}
+
 for (const skill of manifestSkills) {
   const skillPath = path.join(root, 'skills', skill, 'SKILL.md');
   if (!fs.existsSync(skillPath)) {
-    fail(`plugin.yaml lists missing skill: ${skill}`);
+    fail(`plugin.yaml lists missing core skill: ${skill}`);
   }
 }
 
@@ -157,5 +172,5 @@ if (failed) {
 }
 
 console.log(
-  `Manifest OK: ${manifestSkills.length} public skills, ${internalSkills.length} internal, ${agents.length} agents.`,
+  `Manifest OK: ${manifestSkills.length} core skills, ${companionSkillDirs.length} companion skills, ${internalSkills.length} internal, ${agents.length} agents.`,
 );
