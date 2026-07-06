@@ -66,8 +66,8 @@ Format:
 
 Examples:
 
-`blocker review expect-in-action assertion in action file. Move expect to spec. [pages/actions/BillingActions.ts]`
-`delete safe dead-locator getter never referenced. Delete getter. [locators/admin/BillingLocators.ts]`
+`blocker review expect-in-action assertion in action file. Move expect to spec. [pages/actions/ExampleActions.ts]`
+`delete safe dead-locator getter never referenced. Delete getter. [locators/catalog/ExampleLocators.ts]`
 
 ## Autofix eligibility
 
@@ -106,17 +106,23 @@ Apply-safe handoff: `templates/apply-safe-workflow.md`
 | `dup-factory` | cleanup | review |
 | `orphan-test` | delete | report-only |
 
-End with a summary:
-```
+End with suite health from `audit-report.js --with-self-check`:
+
+```text
 Suite health:
-  <N> tests, <M> specs, <P> page objects
-  Constitution violations: <count by category>
-  Dead code: <count> unused POMs, <count> dead locators
-  Flake risk: <count> tests with shared state
-  net: -<N> lines, -<M> files possible.
+  Dead POMs: N
+  Dead locators: N
+  Unused factories: N
+  Selector leaks: N
+  Manual waits: N
+  Skip/quarantine markers: N
+  Bare test.fail markers: N
+  Constitution violations: N
+  Critical-area violations: N (when gavel.config.json marks criticalAreas)
+  Safe autofix candidates: N
 ```
 
-Nothing to cut: `Lean suite. Ship.`
+Return `templates/result-envelope.md` when the audit report is complete.
 
 ## Boundaries
 

@@ -18,6 +18,10 @@ const EXCLUDED_DIRS = new Set([
   'coverage',
   'playwright-report',
   'test-results',
+  '.venv',
+  'venv',
+  'venv-enhanced',
+  '.venv-ci',
 ]);
 
 const LOCATOR_RE = /locators?\//i;

@@ -67,4 +67,4 @@ function resolveAppSearchPaths(area, areaMap) {
   return { paths, source: 'area-map' };
 }
 
-module.exports = { loadAreaMap, resolveAppSearchPaths, findMapEntry, defaultAppGlob };
+module.exports = { loadAreaMap, resolveAppSearchPaths, findMapEntry, defaultAppGlob, normalizeArea };

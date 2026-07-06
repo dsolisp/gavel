@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="catalog" tests="3" failures="2" skipped="0">
+    <testcase classname="tests.e2e.catalog.CatalogSpec" name="creates record" file="tests/e2e/catalog/catalog.spec.ts" />
+    <testcase classname="tests.e2e.catalog.CatalogSpec" name="edits toolbar action" file="tests/e2e/catalog/catalog.spec.ts">
+      <failure message="TimeoutError: locator.getByRole('button', { name: 'Save' }) not found" />
+    </testcase>
+    <testcase classname="tests.e2e.catalog.CatalogSpec" name="publishes export" file="tests/e2e/catalog/catalog.spec.ts">
+      <failure message="TimeoutError: locator.getByRole('button', { name: 'Publish' }) not found" />
+    </testcase>
+  </testsuite>
+</testsuites>

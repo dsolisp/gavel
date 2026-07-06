@@ -1,0 +1,10 @@
+# Self-check on target automation repo (GitLab CI)
+#
+# Copy to .gitlab-ci.yml or include from your automation project.
+
+gavel-self-check:
+  image: node:22
+  stage: test
+  script:
+    - node path/to/gavel/scripts/self-check.js .
+  allow_failure: false

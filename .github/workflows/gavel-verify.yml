@@ -1,4 +1,4 @@
-name: verify
+name: gavel-verify
 
 on:
   push:
@@ -19,5 +19,5 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run repository verification
+      - name: Run gavel verify gate
         run: npm run verify

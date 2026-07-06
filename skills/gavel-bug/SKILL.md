@@ -1,9 +1,9 @@
 ---
 name: gavel-bug
 description: >
-  Writes standardized bug reports after an automated test exposes a real bug.
-  Use when confirming a test failure is a genuine product defect and you need
-  to produce a bug report for the dev team and issue tracker.
+  Writes standardized bug reports when an automated test confirms a real product
+  defect. Use only after gavel-heal or gavel-analyze classifies APP BUG — not for
+  flaky, env, or test-side failures.
 ---
 
 # Gavel Bug

@@ -1,7 +1,7 @@
 ---
 name: gavel-help
 description: >
-  Quick-reference card for all gavel modes, skills, and commands.
+  Quick-reference card for core gavel modes, skills, and commands.
   One-shot display, not a persistent mode. Trigger: /gavel-help,
   "gavel help", "what gavel commands", "how do I use gavel".
 ---
@@ -16,81 +16,49 @@ write flag files, or persist anything.
 | Level | Trigger | What changes |
 |-------|---------|-------------|
 | **Lite** | `/gavel lite` | Write what's asked, name the leaner test approach in one line. |
-| **Full** | `/gavel` | QA ladder enforced: YAGNI -> reuse -> framework -> semantic locators -> POM -> one assertion -> minimum test. Default. |
-| **Strict** | `/gavel strict` | Zero tolerance. Every Test Constitution rule is a hard gate. No exceptions. |
+| **Full** | `/gavel` | QA ladder enforced. Default. |
+| **Strict** | `/gavel strict` | Zero tolerance. Every Test Constitution rule is a hard gate. |
 
-Level sticks until changed or session end.
-
-## Core Skills
+## Core skills (default install)
 
 | Skill | Trigger | What it does |
 |-------|---------|--------------|
-| **gavel** | `/gavel` | QA discipline mode itself. Test Constitution enforcement. |
-| **gavel-review** | `/gavel-review` | Test diff review: over-testing, fat specs, Constitution violations. |
-| **gavel-audit** | `/gavel-audit` | Whole-suite audit: dead POMs, unused locators, bloat, violations. |
-| **gavel-debt** | `/gavel-debt` | Harvest `gavel:` deferral comments into a debt ledger. |
-| **gavel-gain** | `/gavel-gain` | Test quality scoreboard: pass rate, flake count, LOC per test. |
+| **gavel** | `/gavel` | QA discipline mode. Test Constitution enforcement. |
+| **gavel-review** | `/gavel-review` | Test diff review: Constitution violations. |
+| **gavel-audit** | `/gavel-audit` | Suite health scoreboard + ranked findings. |
+| **gavel-self-check** | `/gavel-self-check` | Static constitution scanner (`scripts/self-check.js`). |
+| **gavel-heal** | `/gavel-heal` | Diagnose failing test: test bug, app bug, env, flake. |
+| **gavel-analyze** | `/gavel-analyze` | Post-run failure clustering + classification. |
+| **gavel-refactor** | via agent | Improve test code; apply-safe dead code removal. |
+| **gavel-detect** | `/gavel-detect` | Auto-detect stack and activate profile. |
+| **gavel-run** | `/gavel-run` | Compile + affected test verification gate. |
+| **gavel-debt** | `/gavel-debt` | Harvest `gavel:` deferral comments. |
+| **gavel-gain** | `/gavel-gain` | Suite-health scoreboard from test results. |
+| **gavel-plan** | `/gavel-plan` | Test planning and coverage gaps. |
+| **gavel-e2e** | `/gavel-e2e` | E2E test authoring in existing patterns. |
+| **gavel-api** | `/gavel-api` | API test authoring in existing patterns. |
+| **gavel-bug** | `/gavel-bug` | Bug report from test-confirmed APP BUG only. |
+| **gavel-triage** | `/gavel-triage` | Source navigation for test-confirmed failures. |
+| **gavel-auth** | `/gavel-auth` | Multi-tenant auth for tests. |
+| **gavel-flake** | `/gavel-flake` | Flaky test triage and quarantine. |
+| **gavel-init** | `/gavel-init` | Bootstrap new QA project scaffold. |
 | **gavel-help** | `/gavel-help` | This card. |
 
-## QA Workflow Skills
+## Companion skills (optional)
 
-| Skill | Trigger | What it does |
-|-------|---------|--------------|
-| **gavel-plan** | `/gavel-plan` | ISTQB-aligned test planning, coverage gap analysis. |
-| **gavel-e2e** | `/gavel-e2e` | E2E test authoring: POM, locators, flows, fixture DI. |
-| **gavel-api** | `/gavel-api` | API test scenarios: service layer, auth, contracts. |
-| **gavel-run** | `/gavel-run` | Config, running tests, trace viewer, project setup. |
-| **gavel-analyze** | `/gavel-analyze` | Post-run suite analysis: classify failures. |
-| **gavel-bug** | `/gavel-bug` | Standardized bug reports from test failures. |
-| **gavel-triage** | `/gavel-triage` | Backend source navigation to find bug root cause. |
-| **gavel-close** | `/gavel-close` | Jira closure summaries after QA verification. |
-| **gavel-env** | `/gavel-env` | Start and verify local testing environment. |
-| **gavel-auth** | `/gavel-auth` | Multi-tenant authentication for tests. |
-| **gavel-hub** | `/gavel-hub` | Hub/external API integration test setup. |
-| **gavel-ci** | `/gavel-ci` | Cloud CI automation runner. |
+See `companion/README.md`. Not in default plugin manifest.
 
-## Diagnostic Skills
-
-| Skill | Trigger | What it does |
-|-------|---------|--------------|
-| **gavel-heal** | `/gavel-heal` | Diagnose failing test: test bug, app bug, or env issue? |
-| **gavel-flake** | `/gavel-flake` | Flaky test triage: races, shared state, timing. |
-| **gavel-detect** | `/gavel-detect` | Auto-detect runner, language, locator, assertion, report, and CI capabilities. |
-| **gavel-init** | `/gavel-init` | Bootstrap new QA project: scaffold POM, fixtures, factories. |
-
-## Capability Profiles
-
-| Profile type | Activated when detected |
-|--------------|------------------------|
-| **UI runner** | Browser automation runner, locator API, and visual/evidence artifacts. |
-| **API runner** | HTTP client, schema validation, auth fixtures, and cleanup hooks. |
-| **BDD runner** | Feature files, step bindings, scenario outlines, and tag filters. |
-| **Unit/component runner** | Component mount harness, mocks, fixtures, and coverage outputs. |
-| **CI runner** | Sharding, artifacts, retries, quarantine lane, and reports. |
+| Skill | What it does |
+|-------|--------------|
+| **gavel-ci** | Cloud CI migration and pipeline setup |
+| **gavel-env** | Local environment start, seed, verification |
+| **gavel-hub** | Hub/external API credential setup |
+| **gavel-close** | Issue-tracker closure summaries |
 
 ## Deactivate
 
-Say "stop gavel" or "normal mode". Resume anytime with `/gavel`.
-`/gavel off` also works.
-
-## Configure Default Mode
-
-Default mode = `full`, auto-active every session. Change it:
-
-**Environment variable** (highest priority):
-```bash
-export GAVEL_DEFAULT_MODE=strict
-```
-
-**Config file** (`~/.config/gavel/config.json`, Windows: `%APPDATA%\gavel\config.json`):
-```json
-{ "defaultMode": "strict" }
-```
-
-Set `"off"` to disable auto-activation. Activate manually with `/gavel`.
-
-Resolution: env var > config file > `full`.
+Say "stop gavel" or `/gavel off`. Resume with `/gavel`.
 
 ## More
 
-Full docs + examples: https://github.com/dsolisp/gavel
+Full docs: https://github.com/dsolisp/gavel

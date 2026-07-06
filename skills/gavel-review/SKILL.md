@@ -86,9 +86,9 @@ Good:
 - `blocker review L22: manual-wait: waitForTimeout(3000). Remove; web-first assertion auto-retries.`
 - `fix review L8: css-loc: page.locator('.submit-btn'). Click via getByRole('button', { name: 'Submit' }).`
 - `fix review L18: selector-leak: locators.modal.locator('button.close'). Move closeButton to the locator class.`
-- `delete report-only L1-40: yagni: duplicates billing-snapshot-lifecycle coverage. Delete this spec.`
-- `cleanup safe L3-20: shrink: inline navigation can be one action call. Use billingPage.open().`
-- `cleanup safe locators/BillingLocators.ts:L45: dead-locator: unused getter in diff. Delete getter; grep shows zero refs.`
+- `delete report-only L1-40: yagni: duplicates catalog-lifecycle coverage. Delete this spec.`
+- `cleanup safe locators/ExampleLocators.ts:L45: dead-locator: unused getter in diff. Delete getter; grep shows zero refs.`
+- `cleanup safe L3-20: shrink: inline navigation can be one action call. Use examplePage.open().`
 
 ## Scoring
 

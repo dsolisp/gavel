@@ -1,15 +1,15 @@
 import { test } from '@playwright/test';
 
-test('first billing flow', async ({ page }) => {
-  await page.goto('/billing/one');
+test('first scenario', async ({ page }) => {
+  await page.goto('/example/one');
 });
 
-test('second billing flow', async ({ page }) => {
-  await page.goto('/billing/two');
+test('second scenario', async ({ page }) => {
+  await page.goto('/example/two');
 });
 
-test('third billing flow', async ({ page }) => {
-  await page.goto('/billing/three');
+test('third scenario', async ({ page }) => {
+  await page.goto('/example/three');
 });
 
 // padding lines to exceed the large-spec threshold without test.step grouping

@@ -73,10 +73,10 @@ for (const [label, fixturePath] of [
 }
 
 const areaMap = require(path.join(root, 'scripts/area-map.js'));
-const resolved = areaMap.resolveAppSearchPaths('tests/admin/billing', {
-  'tests/admin/billing': { appPaths: ['app/cfd/billing'] },
+const resolved = areaMap.resolveAppSearchPaths('tests/e2e/catalog', {
+  'tests/e2e/catalog': { appPaths: ['src/features/catalog'] },
 });
-if (!resolved.paths.includes('app/cfd/billing')) {
+if (!resolved.paths.includes('src/features/catalog')) {
   console.error('area-map resolution failed.');
   process.exit(1);
 }

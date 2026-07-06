@@ -14,6 +14,9 @@ const EXPECTED_TAGS = [
   'manual-wait',
   'no-di',
   'no-step',
+  'bare-test-fail',
+  'test-fail-order',
+  'skip-marker',
 ];
 
 if (!fs.existsSync(fixturesDir)) {
