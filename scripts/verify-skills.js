@@ -33,6 +33,9 @@ const CORE_SKILLS = [
   'gavel-flake',
   'gavel-init',
   'gavel-self-check',
+  'gavel-ci-check',
+  'gavel-oms',
+  'gavel-pr-prep',
 ];
 
 const COMPANION_SKILLS = ['gavel-ci', 'gavel-env', 'gavel-hub', 'gavel-close'];

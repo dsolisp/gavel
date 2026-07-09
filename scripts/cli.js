@@ -2,6 +2,7 @@
 // gavel — unified CLI entry point
 
 const path = require('path');
+const fs = require('fs');
 const { spawnSync } = require('child_process');
 const { RULES } = require('./self-check');
 const { parseConfigFlag, resolveGavelConfig } = require('./load-gavel-config');
@@ -18,7 +19,7 @@ function publicCommandName() {
 
 function printHelp() {
   console.log('Usage: gavel <command> [args] [--config gavel.config.json]');
-  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect');
+  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, explain');
 }
 
 function hasPositional(args) {
@@ -115,6 +116,23 @@ function main() {
       console.log('See companion/README.md for env, hub, issue, and PR-prep workflows.');
     } else console.error('Usage: gavel companion --help');
     process.exit(rawArgs.includes('--help') || rawArgs.includes('-h') ? 0 : 2);
+  }
+  if (command === 'explain') {
+    const jsonOut = rawArgs.includes('--json');
+    const tag = rawArgs.find((a) => !a.startsWith('--'));
+    if (!tag) { console.error('Usage: gavel explain <tag> [--json]'); process.exit(2); }
+    const rule = RULES.find((r) => r.id === tag);
+    if (!rule) { console.error(`Unknown rule: ${tag}\nAvailable: ${RULES.map((r) => r.id).join(', ')}`); process.exit(2); }
+    const contract = { id: rule.id, class: rule.class, severity: rule.severity, envelopeSeverity: rule.envelopeSeverity, ...(rule.confidence ? { confidence: rule.confidence } : {}), message: rule.message, remediation: rule.remediation };
+    if (jsonOut) { fs.writeSync(1, `${JSON.stringify(contract, null, 2)}\n`); } else {
+      console.log(`Rule: ${contract.id}`);
+      console.log(`Class: ${contract.class}`);
+      console.log(`Severity: ${contract.severity} (envelope: ${contract.envelopeSeverity})`);
+      if (contract.confidence) console.log(`Confidence: ${contract.confidence}`);
+      console.log(`Message: ${contract.message}`);
+      console.log(`Remediation: ${contract.remediation}`);
+    }
+    process.exit(0);
   }
   if (!scripts[command]) {
     console.error(`Unknown command: ${command}`);

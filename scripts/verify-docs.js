@@ -92,7 +92,7 @@ for (const skill of coreSkills) {
 }
 
 for (const skill of companionSkills) {
-  if (plugin.includes(`- ${skill}`)) {
+  if (plugin.includes(`- ${skill}\n`) || plugin.endsWith(`- ${skill}`)) {
     fail(`plugin.yaml lists companion skill as core: ${skill}`);
   }
 }

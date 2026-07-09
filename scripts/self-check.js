@@ -13,7 +13,8 @@ const { toSarif, formatFlag } = require('./to-sarif');
 let config = {};
 let allowlist = [];
 
-const TEST_FILE_RE = /\.(spec|test)\.(ts|js|tsx|jsx|py|java|feature)$/;
+// Matches *.spec.*, *.test.*, *.cy.{js,ts} (Cypress), and Python test_*/#*_test files
+const TEST_FILE_RE = /\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$/;
 const LOCATOR_FILE_RE = /locators?\//i;
 
 function findMatches(content, pattern, filePath = '') {
@@ -84,7 +85,12 @@ function isTagIgnored(content, line, tag) {
   let match = INLINE_IGNORE_RE.exec(context);
   while (match) {
     const spec = match[1];
-    if (!spec || spec === '*') {
+    if (!spec) {
+      // Bare gavel-ignore is the exact pattern the ignore-no-reason rule
+      // reports; letting it suppress itself would hide accountability gaps.
+      return tag !== 'ignore-no-reason';
+    }
+    if (spec === '*') {
       return true;
     }
     if (spec.split(',').some((entry) => entry.trim() === tag)) {
@@ -162,7 +168,7 @@ const RULES = [
     remediation: 'Move assertions into spec files; locator, action, and page classes stay assertion-free (AGENTS.md: Page Object Discipline).',
     test: (filePath, content) => {
       if (LOCATOR_FILE_RE.test(filePath) || /pages?\//i.test(filePath) || /actions?\//i.test(filePath)) {
-        return findMatches(content, /\b(expect|assert|assertEquals|assertThat)\s*\(/g, filePath);
+        return findMatches(content, /\b(expect|assertEquals|assertThat)\s*\(|\bassert\s*\(|\bassert\s+[a-zA-Z(]/g, filePath);
       }
       return [];
     },
@@ -183,7 +189,7 @@ const RULES = [
       }
       return findMatches(
         content,
-        /\.(getByRole|getByText|getByLabel|getByPlaceholder|getByTestId|locator|findElement(s)?|find_element(s)?)\s*\(|querySelector(All)?\s*\(|\.closest\s*\(|\.matches\s*\(/g,
+        /\.(getByRole|getByText|getByLabel|getByPlaceholder|getByTestId|locator|findElement(s)?|find_element(s)?)\s*\(|querySelector(All)?\s*\(|\.closest\s*\(|\.matches\s*\(|\$\$\s*\(|page\.\$\s*\(|\$\s*\(/g,
         filePath,
       );
     },
@@ -198,7 +204,7 @@ const RULES = [
     test: (filePath, content) =>
       findMatches(
         content,
-        /waitForTimeout\s*\(|page\.waitForTimeout|time\.sleep\s*\(|Thread\.sleep\s*\(|cy\.wait\s*\(\s*\d+/g,
+        /waitForTimeout\s*\(|page\.waitForTimeout|time\.sleep\s*\(|Thread\.sleep\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(/g,
         filePath,
       ),
   },
@@ -227,7 +233,7 @@ const RULES = [
       if (!TEST_FILE_RE.test(filePath) || filePath.endsWith('.feature')) {
         return [];
       }
-      const testCount = (content.match(/\btest\s*\(/g) || []).length;
+      const testCount = (content.match(/\b(?:test|it)\s*\(/g) || []).length;
       const stepCount = (content.match(/test\.step\s*\(/g) || []).length;
       if (testCount >= 2 && stepCount === 0 && content.split('\n').length > 80) {
         return [{ line: 1, text: 'spec has multiple tests and no test.step() grouping' }];
@@ -308,12 +314,54 @@ const RULES = [
       const lines = content.split('\n');
       for (let i = 0; i < lines.length; i += 1) {
         const line = lines[i];
-        if (!/\btest\.skip\s*\(|\btest\.fixme\s*\(|\bit\.skip\s*\(|\b@wip\b|\b@quarantine\b|\b@flaky\b/.test(line)) {
+        if (!/\btest\.skip\s*\(|\btest\.fixme\s*\(|\bit\.skip\s*\(|\b@wip\b|\b@quarantine\b|\b@flaky\b|@pytest\.mark\.skip\b/.test(line)) {
           continue;
         }
         const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
         if (!/reason:|\/\/|\/\*|because|ticket|[A-Z][A-Z0-9]+-\d+/.test(context)) {
           hits.push({ line: i + 1, text: line.trim() });
+        }
+      }
+      return hits;
+    },
+  },
+  {
+    id: 'ignore-no-reason',
+    severity: 'info',
+    envelopeSeverity: 'report',
+    class: 'workflow',
+    message: 'Bare gavel-ignore without tag or reason',
+    remediation: 'Use gavel-ignore: <tag> with a reason comment, or remove the suppression (AGENTS.md: Expected-Failure Expiry Policy).',
+    test: (filePath, content) => {
+      const hits = [];
+      const lines = content.split('\n');
+      const reasonRe = /reason|because|ticket|TODO|FIXME|[A-Z][A-Z0-9]+-\d+|explain/i;
+      const bareIgnoreRe = /\bgavel-ignore\b(?!\s*:)/g;
+
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        bareIgnoreRe.lastIndex = 0;
+        const match = bareIgnoreRe.exec(line);
+        if (!match) {
+          continue;
+        }
+
+        // Deterministic: ignore must live inside a comment on this line.
+        const slashIdx = line.indexOf('//');
+        const hashIdx = line.indexOf('#');
+        const commentStart = Math.min(
+          slashIdx >= 0 ? slashIdx : Infinity,
+          hashIdx >= 0 ? hashIdx : Infinity,
+        );
+        if (commentStart === Infinity || match.index < commentStart) {
+          continue;
+        }
+
+        const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
+        if (!reasonRe.test(context)) {
+          hits.push({ line: i + 1, text: trimmed });
         }
       }
       return hits;

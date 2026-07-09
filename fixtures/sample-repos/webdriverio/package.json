@@ -1,0 +1,10 @@
+{
+  "name": "gavel-webdriverio-sample",
+  "private": true,
+  "devDependencies": {
+    "@wdio/cli": "9.18.0",
+    "@wdio/mocha-framework": "9.18.0",
+    "@wdio/spec-reporter": "9.18.0",
+    "expect-webdriverio": "5.3.5"
+  }
+}

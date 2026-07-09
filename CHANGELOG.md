@@ -10,10 +10,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Tag-scoped `gavel-ignore: <tag>` suppression — suppresses only the named tag(s); comma-separated lists suppress several tags at once; bare `gavel-ignore` stays a wildcard for back-compat
+- Golden fixtures for expanded scanner patterns: `WdioShorthandPage.ts` (selector-leak `$/$$/page.$`), `mocha-large-spec.cy.ts` (no-step `it()`), `test_unreasoned_skip.py` (skip-marker `@pytest.mark.skip`), `wdio-pause.spec.ts` (manual-wait `browser.pause()`), `bad_python_actions.py` (expect-in-action `assert <expr>`), `test_missing_ticket_xfail.py` (bare-test-fail `@pytest.mark.xfail`); matching clean fixtures for false-positive guards
 
 ### Changed
 
 - `scripts/self-check.js` — suppression moved from detection-time line skipping to finding-filter time, so a scoped ignore can no longer hide an unrelated tag's finding on the same line; `gavel-allow: <tag>` is now a deprecated alias for `gavel-ignore: <tag>`
+- `scripts/self-check.js` — `TEST_FILE_RE` expanded to match Cypress `*.cy.{js,ts}` and Python `test_*.py` / `*_test.py` files; `selector-leak` now detects WebdriverIO/Cypress `$()`/`$$()` and Playwright `page.$()` shorthand; `no-step` counts `it()` alongside `test()`; `skip-marker` detects `@pytest.mark.skip`; `manual-wait` detects `browser.pause()`; `expect-in-action` detects Python `assert <expr>` (space-separated, no parens); `bare-test-fail` `@pytest.mark.xfail` already present (no change)
+- Sample repos updated: WebdriverIO bad spec now exercises `browser.pause()`, `$$()`, and exceeds 80 lines for `no-step`; all sample README coverage tables updated to reflect new rule firings
 
 ## [0.6.0] - 2026-07-04
 

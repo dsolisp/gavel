@@ -163,8 +163,9 @@ test('tag-scoped gavel-ignore suppresses only the named tag; bare ignore is wild
   // `no-di` must not hide the unrelated selector-leak finding on that line.
   assert.deepEqual(tagsFor('tag-scoped.spec.ts'), ['selector-leak']);
 
-  // Bare `gavel-ignore` (no tag) stays a wildcard for back-compat: both tags suppressed.
-  assert.deepEqual(tagsFor('bare-wildcard.spec.ts'), []);
+  // Bare `gavel-ignore` (no tag) stays a wildcard for back-compat: both tags suppressed,
+  // but the bare ignore itself is reported by the `ignore-no-reason` accountability rule.
+  assert.deepEqual(tagsFor('bare-wildcard.spec.ts'), ['ignore-no-reason']);
 
   // Deprecated `gavel-allow: <tag>` alias behaves exactly like scoped `gavel-ignore`.
   assert.deepEqual(tagsFor('deprecated-allow.spec.ts'), ['selector-leak']);

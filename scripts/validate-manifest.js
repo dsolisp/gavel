@@ -167,6 +167,71 @@ for (const [label, filePath] of adapterTargets) {
   }
 }
 
+// ── Skill-copy sync ──────────────────────────────────────────────────
+// Check that AI workspace mirror directories stay in sync with skills/.
+// Mirrors live one level above the gavel repo (e.g. ../.cursor/skills/).
+
+const MIRROR_DIRS = [
+  ['.cursor/skills', path.join(root, '..', '.cursor', 'skills')],
+  ['.qoder/skills', path.join(root, '..', '.qoder', 'skills')],
+];
+
+function readSkillVersion(skillDir) {
+  const skillMd = path.join(skillDir, 'SKILL.md');
+  if (!fs.existsSync(skillMd)) return null;
+  return fs.readFileSync(skillMd, 'utf8').replace(/\r\n/g, '\n');
+}
+
+for (const [label, mirrorDir] of MIRROR_DIRS) {
+  if (!fs.existsSync(mirrorDir)) continue; // mirror not installed — skip
+
+  const mirrorEntries = fs
+    .readdirSync(mirrorDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
+
+  // All known source skills (core + companion) for "extra in mirror" check
+  const allSourceSkills = new Set([...skillDirs, ...companionSkillDirs]);
+
+  const mirrorGavelSkills = mirrorEntries.filter(
+    (name) => name === 'gavel' || name.startsWith('gavel-'),
+  );
+
+  // Skills in source but missing from mirror
+  for (const skill of skillDirs) {
+    if (!mirrorEntries.includes(skill)) {
+      fail(`SKILL-SYNC: ${skill} present in skills/ but missing from ${label}/`);
+    }
+  }
+
+  // Skills in mirror but missing from source (core or companion)
+  for (const skill of mirrorGavelSkills) {
+    if (!allSourceSkills.has(skill)) {
+      fail(`SKILL-SYNC: ${skill} present in ${label}/ but missing from skills/ and companion/skills/`);
+    }
+  }
+
+  // Version / content mismatches (core skills)
+  for (const skill of skillDirs) {
+    if (!mirrorEntries.includes(skill)) continue;
+    const sourceContent = readSkillVersion(path.join(root, 'skills', skill));
+    const mirrorContent = readSkillVersion(path.join(mirrorDir, skill));
+    if (sourceContent && mirrorContent && sourceContent !== mirrorContent) {
+      fail(`SKILL-SYNC: ${skill} content differs between skills/ and ${label}/`);
+    }
+  }
+
+  // Version / content mismatches (companion skills)
+  for (const skill of companionSkillDirs) {
+    if (!mirrorEntries.includes(skill)) continue;
+    const sourceContent = readSkillVersion(path.join(root, 'companion', 'skills', skill));
+    const mirrorContent = readSkillVersion(path.join(mirrorDir, skill));
+    if (sourceContent && mirrorContent && sourceContent !== mirrorContent) {
+      fail(`SKILL-SYNC: ${skill} content differs between companion/skills/ and ${label}/`);
+    }
+  }
+}
+
 if (failed) {
   process.exit(1);
 }

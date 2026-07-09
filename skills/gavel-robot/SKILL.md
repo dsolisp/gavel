@@ -84,3 +84,88 @@ No hardcoded credentials in `.robot` test cases.
 - **Browser library** → treat like Playwright semantics (`gavel-playwright` for assertion style)
 - **SeleniumLibrary** → treat like Selenium semantics (`gavel-selenium`)
 - No dedicated Robot POM class pattern — use Resource keywords as the locator/action layer
+
+## Anti-Patterns
+
+### Polling Trap
+
+**Wrong:** Manual polling with `Sleep`.
+
+```robot
+# BAD — manual polling
+*** Keywords ***
+Wait For Alert
+    FOR    ${i}    IN RANGE    20
+        ${visible}=    Run Keyword And Return Status    Element Should Be Visible    role=alert
+        IF    ${visible}    RETURN
+        Sleep    0.5s
+    END
+    Fail    Alert not displayed
+```
+
+**Right:** Use `Wait Until Keyword Succeeds` or Browser library auto-wait.
+
+```robot
+# GOOD — native retry
+*** Keywords ***
+Wait For Alert
+    Wait Until Keyword Succeeds    10s    500ms    Element Should Be Visible    role=alert
+```
+
+*Reference:* AGENTS.md — QA Ladder rung 3 (native waits), Test Constitution rule 6 (native retrying assertions).
+
+### Manual Waits
+
+**Wrong:** Fixed sleep.
+
+```robot
+# BAD
+*** Test Cases ***
+Submit Form
+    Click    role=button[name="Submit"]
+    Sleep    3s
+    Element Should Be Visible    role=alert
+```
+
+**Right:** Wait for element state explicitly.
+
+```robot
+# GOOD
+*** Test Cases ***
+Submit Form
+    Click    role=button[name="Submit"]
+    Wait Until Keyword Succeeds    10s    500ms    Element Should Be Visible    role=alert
+```
+
+*Reference:* AGENTS.md — Test Constitution (WON'T DO) #2: no `Sleep`.
+
+### Selector Leaks
+
+**Wrong:** Raw selectors in test cases.
+
+```robot
+# BAD — selector in test
+*** Test Cases ***
+Submit Form
+    Click    css=[data-testid="submit"]
+    Element Should Be Visible    css=[role="alert"]
+```
+
+**Right:** Resource keywords own selectors; tests call named keywords.
+
+```robot
+# GOOD
+*** Keywords ***
+Click Submit Button
+    Click    css=[data-testid="submit"]
+
+Alert Should Be Visible
+    Element Should Be Visible    css=[role="alert"]
+
+*** Test Cases ***
+Submit Form
+    Click Submit Button
+    Alert Should Be Visible
+```
+
+*Reference:* AGENTS.md — Selector Boundary Rule, Page Object Discipline.

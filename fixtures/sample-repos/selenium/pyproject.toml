@@ -1,0 +1,8 @@
+[project]
+name = "gavel-selenium-sample"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "selenium>=4.45.0",
+    "pytest>=8.0.0",
+]

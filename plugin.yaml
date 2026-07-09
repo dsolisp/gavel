@@ -44,3 +44,6 @@ provides_skills:
   - gavel-webdriverio
   - gavel-cucumber
   - gavel-robot
+  - gavel-ci-check
+  - gavel-oms
+  - gavel-pr-prep
