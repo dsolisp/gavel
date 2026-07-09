@@ -14,9 +14,7 @@ const { RULES } = require('./self-check');
 const { ENVELOPE_SCHEMA_VERSION } = require('./ci-analysis-envelope');
 const { validateEnvelope } = require('./validate-envelope');
 
-const RULE_CONFIDENCE = Object.fromEntries(
-  RULES.filter((rule) => rule.confidence).map((rule) => [rule.id, rule.confidence]),
-);
+const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
 
 function runSelfCheck(repoRoot, configPath = null) {
   const script = path.join(__dirname, 'self-check.js');
@@ -38,24 +36,18 @@ function runSelfCheck(repoRoot, configPath = null) {
   }
 }
 
-const TAG_META = {
-  'expect-in-action': { severity: 'blocker', autofix: 'review' },
-  'manual-wait': { severity: 'blocker', autofix: 'review' },
-  'no-di': { severity: 'blocker', autofix: 'review' },
-  'selector-leak': { severity: 'fix', autofix: 'review' },
-  'no-step': { severity: 'fix', autofix: 'review' },
-  'bare-test-fail': { severity: 'fix', autofix: 'review' },
-  'test-fail-order': { severity: 'fix', autofix: 'review' },
-  'skip-marker': { severity: 'fix', autofix: 'report-only' },
-  'test-id-duplicate': { severity: 'fix', autofix: 'report-only' },
-  'test-id-gap': { severity: 'fix', autofix: 'report-only' },
+// Envelope severity comes from the RULES registry (rule.envelopeSeverity).
+// Default 'fix' covers config-driven scans outside the registry (test-id-*).
+const TAG_AUTOFIX = {
+  'skip-marker': 'report-only',
+  'test-id-duplicate': 'report-only',
+  'test-id-gap': 'report-only',
 };
 
 function mapSelfCheckFinding(finding) {
-  const meta = TAG_META[finding.tag] || { severity: 'fix', autofix: 'review' };
   return {
-    severity: meta.severity,
-    autofix: meta.autofix,
+    severity: RULE_META[finding.tag]?.envelopeSeverity || 'fix',
+    autofix: TAG_AUTOFIX[finding.tag] || 'review',
     tag: finding.tag,
     message: finding.description,
     file: finding.file,
@@ -113,7 +105,7 @@ function buildAuditEnvelope(report, ranked) {
       file: item.file,
       ...(item.line ? { line: item.line } : {}),
       ...(item.message ? { message: item.message } : {}),
-      ...(RULE_CONFIDENCE[item.tag] ? { confidence: RULE_CONFIDENCE[item.tag] } : {}),
+      ...(RULE_META[item.tag]?.confidence ? { confidence: RULE_META[item.tag].confidence } : {}),
     })),
   };
 }

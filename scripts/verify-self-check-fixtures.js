@@ -12,6 +12,18 @@ const cleanDir = path.join(root, 'fixtures', 'self-check', 'clean');
 
 const EXPECTED_TAGS = RULES.map((rule) => rule.id);
 
+// RULES contract gate: every rule maps to an envelope severity; confidence, when set, is valid
+for (const rule of RULES) {
+  if (!['blocker', 'fix', 'cleanup', 'delete', 'report'].includes(rule.envelopeSeverity)) {
+    console.error(`Rule ${rule.id} has invalid envelopeSeverity: ${rule.envelopeSeverity}`);
+    process.exit(1);
+  }
+  if (rule.confidence !== undefined && !['high', 'medium', 'low'].includes(rule.confidence)) {
+    console.error(`Rule ${rule.id} has invalid confidence: ${rule.confidence}`);
+    process.exit(1);
+  }
+}
+
 if (!fs.existsSync(fixturesDir)) {
   console.error(`MISSING fixtures directory: ${fixturesDir}`);
   process.exit(1);

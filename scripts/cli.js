@@ -73,6 +73,8 @@ function selfCheckExit(report, config) {
   }) ? 1 : 0;
 }
 
+// Exit contract: report-only exclusion applies to audit autofix findings only;
+// the RULES registry has no report severity, so self-check has no report-only concept.
 function auditExit(report, config) {
   const failAt = threshold(config);
   if (failAt === 'off') return 0;

@@ -136,12 +136,11 @@ The examples below are embedded from the schema's `examples` array
       "message": "page object never imported"
     },
     {
-      "tag": "brittle-assert",
-      "severity": "report",
+      "tag": "skip-marker",
+      "severity": "fix",
       "file": "tests/e2e/checkout.spec.ts",
       "line": 57,
-      "message": "Equality assertion on externally-owned prose",
-      "confidence": "medium"
+      "message": "Skip, quarantine, or WIP marker without reason"
     }
   ],
   "note": "confidence appears only when the RULES registry defines it (heuristic rules)."

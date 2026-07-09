@@ -99,7 +99,7 @@ for (const skill of companionSkills) {
 
 const envelopeSchema = readJson('schemas/result-envelope.schema.json');
 const envelopeDoc = readText('templates/result-envelope.md');
-const embedded = [...envelopeDoc.matchAll(/```json\n([\s\S]*?)```/g)].map((match) => JSON.parse(match[1]));
+const embedded = [...envelopeDoc.matchAll(/```json\r?\n([\s\S]*?)```/g)].map((match) => JSON.parse(match[1]));
 if (embedded.length !== envelopeSchema.examples.length) {
   fail(`templates/result-envelope.md must embed all ${envelopeSchema.examples.length} schema examples (found ${embedded.length} json blocks)`);
 } else {

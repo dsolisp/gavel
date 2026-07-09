@@ -120,10 +120,20 @@ function splitTestBlocks(content) {
   return blocks;
 }
 
+// RULES contract (irreversible — frozen at v1.0):
+//   id — rule tag (string)
+//   severity — self-check/failThreshold vocabulary: blocker | error | warning | info
+//   envelopeSeverity — audit envelope vocabulary: blocker | fix | cleanup | delete | report
+//   class — constitution | locator | assertion | data | workflow
+//   message — one-line finding description
+//   remediation — how to fix, referencing AGENTS.md
+//   test — detection function
+//   confidence (optional) — high | medium | low, heuristic rules only; deterministic rules omit it
 const RULES = [
   {
     id: 'expect-in-action',
     severity: 'error',
+    envelopeSeverity: 'blocker',
     class: 'assertion',
     message: 'Assertion APIs in action/page/locator files',
     remediation: 'Move assertions into spec files; locator, action, and page classes stay assertion-free (AGENTS.md: Page Object Discipline).',
@@ -137,6 +147,7 @@ const RULES = [
   {
     id: 'selector-leak',
     severity: 'error',
+    envelopeSeverity: 'fix',
     class: 'locator',
     message: 'Raw selector chains outside locator classes',
     remediation: 'Expose the element as a named locator in a locator class and call it by name (AGENTS.md: Selector Boundary Rule).',
@@ -157,6 +168,7 @@ const RULES = [
   {
     id: 'manual-wait',
     severity: 'error',
+    envelopeSeverity: 'blocker',
     class: 'assertion',
     message: 'Manual sleeps or arbitrary polling',
     remediation: 'Replace manual waits with the framework\'s native retrying/eventual assertions (AGENTS.md: Assertion Discipline).',
@@ -170,6 +182,7 @@ const RULES = [
   {
     id: 'no-di',
     severity: 'error',
+    envelopeSeverity: 'blocker',
     class: 'constitution',
     message: 'Direct page object construction in specs',
     remediation: 'Inject page objects through the runner\'s fixture/DI mechanism (AGENTS.md: Test Constitution MUST DO #1).',
@@ -183,6 +196,7 @@ const RULES = [
   {
     id: 'no-step',
     severity: 'warning',
+    envelopeSeverity: 'fix',
     class: 'workflow',
     message: 'Large specs without step grouping',
     remediation: 'Group multi-test specs with the runner\'s native step primitive, e.g. test.step() (AGENTS.md: Test Constitution MUST DO #4).',
@@ -201,6 +215,7 @@ const RULES = [
   {
     id: 'bare-test-fail',
     severity: 'warning',
+    envelopeSeverity: 'fix',
     class: 'workflow',
     message: 'test.fail() without issue tracker reference',
     remediation: 'Add a bug/ticket reference next to the expected-failure marker (AGENTS.md: Expected-Failure Expiry Policy).',
@@ -226,6 +241,7 @@ const RULES = [
   {
     id: 'test-fail-order',
     severity: 'error',
+    envelopeSeverity: 'fix',
     class: 'workflow',
     message: 'test.fail() must precede assertions in the same test',
     remediation: 'Move the expected-failure marker above the first assertion in the test block (AGENTS.md: Test Constitution MUST DO #7).',
@@ -257,6 +273,7 @@ const RULES = [
   {
     id: 'skip-marker',
     severity: 'warning',
+    envelopeSeverity: 'fix',
     class: 'workflow',
     message: 'Skip, quarantine, or WIP marker without reason',
     remediation: 'Add a reason and ticket reference to the skip/quarantine/WIP marker (AGENTS.md: Expected-Failure Expiry Policy).',

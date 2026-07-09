@@ -171,19 +171,18 @@ function main() {
     commitLimit,
   });
 
-  if (envelopeOutput) {
-    console.log(formatCiAnalysisEnvelope(analysis, { project }));
-    return;
-  }
-
-  if (jsonEnvelopeOutput) {
+  if (envelopeOutput || jsonEnvelopeOutput) {
     const envelope = buildJsonEnvelope(analysis, { project });
     const errors = validateEnvelope(envelope);
     if (errors.length > 0) {
       console.error(`Invalid result envelope:\n${errors.join('\n')}`);
       process.exit(2);
     }
-    console.log(JSON.stringify(envelope, null, 2));
+    if (jsonEnvelopeOutput) {
+      console.log(JSON.stringify(envelope, null, 2));
+    } else {
+      console.log(formatCiAnalysisEnvelope(analysis, { project }));
+    }
     return;
   }
 
