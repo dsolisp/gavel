@@ -94,7 +94,13 @@ test('unified CLI exit codes, hidden companion help, and alias path work', () =>
 
   const aliasDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-alias-'));
   const alias = path.join(aliasDir, 'gavel-self-check');
-  fs.symlinkSync(path.join(root, 'scripts/cli.js'), alias);
+  // Windows without Developer Mode cannot create symlinks (EPERM); skip the alias assertion there.
+  try {
+    fs.symlinkSync(path.join(root, 'scripts/cli.js'), alias);
+  } catch (e) {
+    if (e.code === 'EPERM' || e.code === 'ENOSYS') return;
+    throw e;
+  }
   const aliasResult = spawnSync(alias, ['fixtures/self-check/clean', '--json'], { cwd: root, encoding: 'utf8' });
   assert.equal(aliasResult.status, 0);
 });
