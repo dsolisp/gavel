@@ -5,7 +5,9 @@
 //   MAJOR (x.0.0) — breaking shape changes; consumers must update
 //   MINOR (1.x.0) — new optional fields; consumers can ignore
 //   PATCH (1.0.x) — doc/typo fixes only
-const ENVELOPE_SCHEMA_VERSION = '1.0.0';
+// Source of truth: schemas/result-envelope.schema.json
+// 1.1.0 — optional findings[].confidence for heuristic rules (RULES registry)
+const ENVELOPE_SCHEMA_VERSION = '1.1.0';
 
 function primaryClassification(clusters) {
   if (!clusters || clusters.length === 0) {

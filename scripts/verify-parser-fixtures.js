@@ -4,6 +4,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { buildJsonEnvelope } = require('./ci-analysis-envelope');
+const { validateEnvelope } = require('./validate-envelope');
 
 const root = path.join(__dirname, '..');
 
@@ -122,6 +123,20 @@ if (htmlEnvelope.status !== 0 || !htmlEnvelope.stdout.includes('## Gavel Result'
   process.exit(1);
 }
 
+const jsonEnvelope = runJson(process.execPath, [
+  path.join(root, 'scripts/analyze-ci.js'),
+  path.join(root, 'fixtures/reports/playwright/sample-report.json'),
+  '--json-envelope',
+  '--project',
+  'fixture-suite',
+]);
+
+const jsonEnvelopeErrors = validateEnvelope(jsonEnvelope);
+if (jsonEnvelopeErrors.length > 0 || jsonEnvelope.schema !== 'gavel-result-envelope/1.1.0') {
+  console.error(`--json-envelope output failed schema validation:\n${jsonEnvelopeErrors.join('\n')}`);
+  process.exit(1);
+}
+
 const greenEnvelope = buildJsonEnvelope(
   {
     summary: { format: 'fixture', total: 3, passed: 3, failed: 0, skipped: 0, passRate: 100 },
@@ -131,9 +146,9 @@ const greenEnvelope = buildJsonEnvelope(
   { project: 'green-suite' },
 );
 
-if (greenEnvelope.status !== 'DONE') {
-  console.error('JSON envelope should report DONE for a parsed green run.');
+if (greenEnvelope.status !== 'DONE' || validateEnvelope(greenEnvelope).length > 0) {
+  console.error('JSON envelope should report DONE and validate for a parsed green run.');
   process.exit(1);
 }
 
-console.log('Parser fixtures OK: junit, allure, playwright, playwright-html, cypress, cucumber, cluster, analyze-ci, envelope, html one-shot, green json envelope.');
+console.log('Parser fixtures OK: junit, allure, playwright, playwright-html, cypress, cucumber, cluster, analyze-ci, envelope, html one-shot, schema-valid json envelopes.');

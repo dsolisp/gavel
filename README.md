@@ -47,7 +47,7 @@ Install into your IDE (Cursor, Claude Code, OpenCode, etc.) using [QUICKSTART.md
 | Track deferred test decisions | `/gavel-debt` | Ledger of `gavel:` comments |
 | See suite health at a glance | `/gavel-gain` | Pass rate, flake count, LOC per test |
 
-**Companion workflows** (optional, not in default install): [companion/README.md](companion/README.md) — CI migration, env setup, hub credentials, issue closure.
+Run `gavel companion --help` for optional companion workflows (CI migration, env setup, hub credentials, issue closure — not in default install).
 
 ## Core commands
 

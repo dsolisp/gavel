@@ -119,3 +119,83 @@ Read `UPGRADING.md#1300` before upgrading:
 - Steps orchestrate; they do not own selectors (call locator/action layer)
 - No assertions in step helpers — assert in Then steps or delegate to spec-style checks per active UI profile
 - Feature files describe behavior, not implementation selectors
+
+## Anti-Patterns
+
+### Polling Trap
+
+**Wrong:** Manual polling in step definitions.
+
+```python
+# BAD — manual polling
+@then('I should see the metrics card')
+def step_check_metrics(context):
+    for _ in range(20):
+        try:
+            el = context.driver.find_element(By.CSS_SELECTOR, "[data-testid='metrics']")
+            if el.is_displayed():
+                return
+        except NoSuchElementException:
+            pass
+        time.sleep(0.5)
+    raise AssertionError("Metrics card not found")
+```
+
+**Right:** Delegate to POM with native waits.
+
+```python
+# GOOD — native retry via POM
+@then('I should see the metrics card')
+def step_check_metrics(context):
+    context.admin_page.metrics_card().should_be_visible()
+```
+
+*Reference:* AGENTS.md — QA Ladder rung 3 (native waits), Test Constitution rule 6 (native retrying assertions).
+
+### Manual Waits
+
+**Wrong:** Fixed sleep in steps.
+
+```python
+# BAD
+@when('I navigate to the dashboard')
+def step_navigate_dashboard(context):
+    context.driver.get('/dashboard')
+    time.sleep(3)
+```
+
+**Right:** Wait for specific element or condition.
+
+```python
+# GOOD
+@when('I navigate to the dashboard')
+def step_navigate_dashboard(context):
+    context.driver.get('/dashboard')
+    WebDriverWait(context.driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='dashboard']"))
+    )
+```
+
+*Reference:* AGENTS.md — Test Constitution (WON'T DO) #2: no `time.sleep()`.
+
+### Selector Leaks
+
+**Wrong:** Raw selectors in step definitions.
+
+```python
+# BAD — selector in step
+@when('I click the submit button')
+def step_click_submit(context):
+    context.driver.find_element(By.CSS_SELECTOR, "[data-testid='submit']").click()
+```
+
+**Right:** Steps call named POM methods.
+
+```python
+# GOOD
+@when('I click the submit button')
+def step_click_submit(context):
+    context.admin_page.submit_button().click()
+```
+
+*Reference:* AGENTS.md — Selector Boundary Rule, Page Object Discipline.

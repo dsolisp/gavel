@@ -51,7 +51,7 @@ Before writing any test, stop at the first rung that holds:
 2. Semantic locators first — accessibility role/label/name > stable test ID > structural selector > XPath only when no alternative exists.
 3. External test data via factories — `EntityFactory.create()`, never hardcoded strings, IDs, URLs, or credentials in test bodies.
 4. Logical grouping — use the runner's native step/subtest/grouping primitive for all logical groupings.
-5. Explore live app before writing locators — no guessing at DOM or API shapes.
+5. Use provided live-app evidence before writing locators — no guessing at DOM or API shapes. Core Gavel consumes traces, DOM snapshots, screenshots, or planning envelopes; Bailiff/live workflow performs browser exploration.
 6. Native retrying/eventual assertions — never manual waits + manual checks.
 7. Every test must pass or be a bug — no workarounds for broken app behavior. If the app is broken, use the suite's expected-failure marker with a bug reference.
 8. Write test by test — generate one, run it, verify it, then proceed.
@@ -69,7 +69,7 @@ Before writing any test, stop at the first rung that holds:
 
 ## Expected-Failure Expiry Policy
 
-Expected-failure markers are valid for **7 days**. After that, `gavel-fail-audit` escalates them: the test either becomes a real bug ticket, gets fixed, or gets deleted. A marker without a bug reference or expiry is a code smell. Run `gavel-fail-audit` weekly to clear the rot.
+Expected-failure markers are valid for **7 days**. Gavel reports missing reasons, missing bug references, and provided expiry metadata statically; Bailiff or a human handles ticket filing, SLA escalation, fixing, or deletion. A marker without a bug reference or expiry is a code smell.
 
 ## Page Object Discipline
 
@@ -120,7 +120,7 @@ Never: manual wait + manual check. Always: native retrying/eventual assertion ti
 | Refactoring | refactor -> heal (verify) |
 | Test planning | plan |
 | Post-run analysis | analyze |
-| Env not ready | env |
+| Env not ready | Bailiff/env companion (not core Gavel) |
 
 ## Verification Gate
 

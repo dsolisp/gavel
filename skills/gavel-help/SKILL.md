@@ -46,7 +46,7 @@ write flag files, or persist anything.
 
 ## Companion skills (optional)
 
-See `companion/README.md`. Not in default plugin manifest.
+Run `gavel companion --help`. Not in default plugin manifest.
 
 | Skill | What it does |
 |-------|--------------|

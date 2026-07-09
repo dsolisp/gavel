@@ -5,14 +5,26 @@
 //   node scripts/audit-report.js <target-repo-root> [--json]
 //   node scripts/audit-report.js <target-repo-root> --with-self-check
 
+const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { findAutofixCandidates, formatAuditLine } = require('./audit-autofix');
 const { buildSuiteHealthSummary, formatSuiteHealth, scoreFinding } = require('./suite-health');
+const { loadGavelConfig, parseConfigFlag } = require('./load-gavel-config');
+const { RULES } = require('./self-check');
+const { ENVELOPE_SCHEMA_VERSION } = require('./ci-analysis-envelope');
+const { validateEnvelope } = require('./validate-envelope');
+const { toSarif, formatFlag } = require('./to-sarif');
 
-function runSelfCheck(repoRoot) {
+const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
+
+function runSelfCheck(repoRoot, configPath = null) {
   const script = path.join(__dirname, 'self-check.js');
-  const result = spawnSync(process.execPath, [script, repoRoot, '--json'], {
+  const args = [script, repoRoot, '--json'];
+  if (configPath) {
+    args.push('--config', configPath);
+  }
+  const result = spawnSync(process.execPath, args, {
     encoding: 'utf8',
   });
   if (!result.stdout) {
@@ -26,28 +38,23 @@ function runSelfCheck(repoRoot) {
   }
 }
 
-const TAG_META = {
-  'expect-in-action': { severity: 'blocker', autofix: 'review' },
-  'manual-wait': { severity: 'blocker', autofix: 'review' },
-  'no-di': { severity: 'blocker', autofix: 'review' },
-  'selector-leak': { severity: 'fix', autofix: 'review' },
-  'no-step': { severity: 'fix', autofix: 'review' },
-  'bare-test-fail': { severity: 'fix', autofix: 'review' },
-  'test-fail-order': { severity: 'fix', autofix: 'review' },
-  'skip-marker': { severity: 'fix', autofix: 'report-only' },
-  'test-id-duplicate': { severity: 'fix', autofix: 'report-only' },
-  'test-id-gap': { severity: 'fix', autofix: 'report-only' },
+// Envelope severity comes from the RULES registry (rule.envelopeSeverity).
+// Default 'fix' covers config-driven scans outside the registry (test-id-*).
+const TAG_AUTOFIX = {
+  'skip-marker': 'report-only',
+  'test-id-duplicate': 'report-only',
+  'test-id-gap': 'report-only',
 };
 
 function mapSelfCheckFinding(finding) {
-  const meta = TAG_META[finding.tag] || { severity: 'fix', autofix: 'review' };
   return {
-    severity: meta.severity,
-    autofix: meta.autofix,
+    severity: RULE_META[finding.tag]?.envelopeSeverity || 'fix',
+    autofix: TAG_AUTOFIX[finding.tag] || 'review',
     tag: finding.tag,
     message: finding.description,
     file: finding.file,
     line: finding.line,
+    snippet: finding.text,
   };
 }
 
@@ -57,7 +64,7 @@ function formatSelfCheckLine(finding) {
   return `${prefix}${finding.severity} ${finding.autofix} ${finding.tag} ${finding.message}. [${location}]`;
 }
 
-function rankFindings(autofixFindings, selfCheckFindings, repoRoot) {
+function rankFindings(autofixFindings, selfCheckFindings, repoRoot, config = loadGavelConfig(repoRoot)) {
   const severityRank = { blocker: 0, fix: 1, cleanup: 2, delete: 3 };
   const autofixRank = { safe: 0, review: 1, 'report-only': 2 };
 
@@ -71,8 +78,8 @@ function rankFindings(autofixFindings, selfCheckFindings, repoRoot) {
   ];
 
   combined.sort((a, b) => {
-    const aScore = scoreFinding(a.item, repoRoot).impactScore;
-    const bScore = scoreFinding(b.item, repoRoot).impactScore;
+    const aScore = scoreFinding(a.item, repoRoot, config).impactScore;
+    const bScore = scoreFinding(b.item, repoRoot, config).impactScore;
     if (aScore !== bScore) {
       return aScore - bScore;
     }
@@ -89,24 +96,55 @@ function rankFindings(autofixFindings, selfCheckFindings, repoRoot) {
   return combined;
 }
 
+function buildAuditEnvelope(report, ranked) {
+  return {
+    schema: `gavel-result-envelope/${ENVELOPE_SCHEMA_VERSION}`,
+    generatedAt: new Date().toISOString(),
+    status: 'DONE',
+    project: path.basename(report.repo),
+    findings: ranked.map(({ item }) => ({
+      tag: item.tag,
+      severity: item.severity,
+      file: item.file,
+      ...(item.line ? { line: item.line } : {}),
+      ...(item.message ? { message: item.message } : {}),
+      ...(item.snippet ? { snippet: item.snippet } : {}),
+      ...(RULE_META[item.tag]?.confidence ? { confidence: RULE_META[item.tag].confidence } : {}),
+    })),
+  };
+}
+
 function main() {
-  const args = process.argv.slice(2);
+  const { args, configPath } = parseConfigFlag(process.argv.slice(2));
   const jsonOutput = args.includes('--json');
+  const jsonEnvelope = args.includes('--json-envelope');
   const auditFormat = args.includes('--audit-format');
   const withSelfCheck = args.includes('--with-self-check');
-  const repoRoot = args.find((arg) => !arg.startsWith('--'));
+  const format = formatFlag(args);
+  if (format && format !== 'sarif') {
+    console.error('Usage: --format supports only "sarif"');
+    process.exit(2);
+  }
+  const repoRoot = args.find((arg) => !arg.startsWith('--') && arg !== 'sarif');
 
   if (!repoRoot) {
-    console.error('Usage: node scripts/audit-report.js <target-repo-root> [--with-self-check] [--json] [--audit-format]');
+    console.error('Usage: node scripts/audit-report.js <target-repo-root> [--with-self-check] [--json] [--json-envelope] [--audit-format]');
     process.exit(2);
   }
 
   const resolved = path.resolve(repoRoot);
+  let config = {};
+  try {
+    config = loadGavelConfig(resolved, { configPath, cwd: process.cwd() });
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
   const autofixCandidates = findAutofixCandidates(resolved);
-  const selfCheckFindings = withSelfCheck ? runSelfCheck(resolved) : [];
-  const scoredSelfCheck = selfCheckFindings.map((finding) => scoreFinding(finding, resolved));
-  const ranked = rankFindings(autofixCandidates, scoredSelfCheck, resolved);
-  const health = buildSuiteHealthSummary(autofixCandidates, scoredSelfCheck, resolved);
+  const selfCheckFindings = withSelfCheck ? runSelfCheck(resolved, configPath) : [];
+  const scoredSelfCheck = selfCheckFindings.map((finding) => scoreFinding(finding, resolved, config));
+  const ranked = rankFindings(autofixCandidates, scoredSelfCheck, resolved, config);
+  const health = buildSuiteHealthSummary(autofixCandidates, scoredSelfCheck, resolved, config);
 
   const report = {
     repo: resolved,
@@ -119,7 +157,32 @@ function main() {
   };
 
   if (jsonOutput) {
-    console.log(JSON.stringify(report, null, 2));
+    // fs.writeSync (not console.log) so large payloads fully flush before process.exit.
+    fs.writeSync(1, `${JSON.stringify(report, null, 2)}\n`);
+    process.exit(0);
+  }
+
+  if (jsonEnvelope) {
+    const envelope = buildAuditEnvelope(report, ranked);
+    const errors = validateEnvelope(envelope);
+    if (errors.length > 0) {
+      console.error(`Invalid result envelope:\n${errors.join('\n')}`);
+      process.exit(2);
+    }
+    fs.writeSync(1, `${JSON.stringify(envelope, null, 2)}\n`);
+    process.exit(0);
+  }
+
+  if (format === 'sarif') {
+    const findings = ranked.map(({ item }) => ({
+      tag: item.tag,
+      severity: item.severity,
+      message: item.message || (item.symbol ? `${item.tag}: ${item.symbol}` : item.tag),
+      file: item.file,
+      line: item.line,
+      snippet: item.snippet || item.symbol,
+    }));
+    fs.writeSync(1, `${JSON.stringify(toSarif(findings, RULE_META), null, 2)}\n`);
     process.exit(0);
   }
 

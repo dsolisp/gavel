@@ -1,0 +1,7 @@
+{
+  "name": "gavel-cypress-sample",
+  "private": true,
+  "devDependencies": {
+    "cypress": "13.17.0"
+  }
+}

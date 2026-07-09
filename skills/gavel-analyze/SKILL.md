@@ -111,7 +111,8 @@ node scripts/analyze-ci.js path/to/report.json --app-repo ../app --area-map ./ar
 
 `analyze-ci.js --envelope` renders the standard **Gavel Result** block with
 Lead Summary (one-line scan) and Worker Handoff (full table). Use `--json-envelope`
-for machine-readable output with schema version `gavel-result-envelope/1.0.0`.
+for machine-readable output with schema version `gavel-result-envelope/1.1.0`,
+validated against `schemas/result-envelope.schema.json` (invalid output exits `2`).
 
 `analyze-ci.js` JSON includes per-cluster `classification`, `suspectCommits` (when
 `--app-repo` is set), and `nextAction`. Commit correlation runs for **every** cluster

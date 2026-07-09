@@ -60,6 +60,94 @@ When ingesting CI via `analyze-ci.js`, use `--envelope` or map JSON into this te
 Required sections: **Classification**, **CI Summary**, **Failure Clusters**,
 **Suspect Commits**, **Next Action**. See `scripts/ci-analysis-envelope.js`.
 
+## JSON Envelope (machine output)
+
+`schemas/result-envelope.schema.json` is the source of truth for the JSON envelope
+(`gavel-result-envelope/1.1.0`). Producers validate against it before printing;
+invalid machine output exits `2`:
+
+- `gavel analyze <report> --json-envelope` — CI verdict (`leadSummary` + `clusters`)
+- `gavel audit <repo> --json-envelope` — audit verdict (`findings`)
+
+`1.1.0` adds the optional `confidence` field (`high` | `medium` | `low`) on findings:
+heuristic rules carry the `confidence` declared in the `RULES` registry
+(`scripts/self-check.js`); deterministic rules omit it.
+
+The examples below are embedded from the schema's `examples` array
+(drift-checked by `verify-docs.js`).
+
+### CI analysis (`gavel-analyze`)
+
+```json
+{
+  "schema": "gavel-result-envelope/1.1.0",
+  "generatedAt": "2026-07-09T12:00:00.000Z",
+  "status": "DONE",
+  "project": "example-suite",
+  "date": "2026-07-09",
+  "leadSummary": {
+    "passRate": 92.5,
+    "failed": 3,
+    "total": 40,
+    "format": "playwright",
+    "rootCause": "test-maintenance-drift",
+    "nextAction": "gavel-impact → gavel-healer"
+  },
+  "clusters": [
+    {
+      "area": "catalog",
+      "pattern": "locator-timeout",
+      "count": 3,
+      "classification": "test-maintenance-drift",
+      "nextAction": "gavel-impact → gavel-healer",
+      "suspectCommits": [
+        {
+          "hash": "a1b2c3d",
+          "message": "renamed toolbar actions",
+          "searchPath": "src/catalog"
+        }
+      ]
+    }
+  ],
+  "note": "Suspect commits auto-correlated per cluster using area-map paths."
+}
+```
+
+### Audit verdict (`gavel-audit`)
+
+```json
+{
+  "schema": "gavel-result-envelope/1.1.0",
+  "generatedAt": "2026-07-09T12:00:00.000Z",
+  "status": "DONE",
+  "project": "example-suite",
+  "findings": [
+    {
+      "tag": "manual-wait",
+      "severity": "blocker",
+      "file": "tests/e2e/checkout.spec.ts",
+      "line": 42,
+      "message": "Manual sleeps or arbitrary polling"
+    },
+    {
+      "tag": "dead-pom",
+      "severity": "delete",
+      "file": "pages/UnusedPage.ts",
+      "message": "page object never imported"
+    },
+    {
+      "tag": "skip-marker",
+      "severity": "fix",
+      "file": "tests/e2e/checkout.spec.ts",
+      "line": 57,
+      "message": "Skip, quarantine, or WIP marker without reason"
+    }
+  ],
+  "note": "confidence appears only when the RULES registry defines it (heuristic rules)."
+}
+```
+
+
 ## Examples
 
 ### Complete (implementer)

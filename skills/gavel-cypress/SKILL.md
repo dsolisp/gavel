@@ -101,3 +101,77 @@ bun run cypress run    # Bun supported since 15.17
 
 - Linux: glibc 2.31+ (Ubuntu 20.04+)
 - macOS: Big Sur (11) or newer for Node 20+
+
+## Anti-Patterns
+
+### Polling Trap
+
+**Wrong:** Manual polling with `cy.wait(ms)`.
+
+```javascript
+// BAD — arbitrary wait
+cy.get('[role="alert"]').should('exist');
+cy.wait(3000);
+cy.get('[role="alert"]').should('contain.text', 'Success');
+```
+
+**Right:** Use Cypress auto-retry assertions.
+
+```javascript
+// GOOD — native retry
+cy.get('[role="alert"]').should('be.visible').and('contain.text', 'Success');
+```
+
+*Reference:* AGENTS.md — QA Ladder rung 3 (native assertions), Test Constitution rule 6 (native retrying assertions).
+
+### Manual Waits
+
+**Wrong:** Fixed millisecond wait.
+
+```javascript
+// BAD
+cy.wait(5000);
+cy.get('[data-testid="result"]').should('be.visible');
+```
+
+**Right:** Wait for specific network request or element state.
+
+```javascript
+// GOOD — network-aware
+cy.intercept('GET', '/api/data').as('data');
+cy.wait('@data');
+cy.get('[data-testid="result"]').should('be.visible');
+```
+
+*Reference:* AGENTS.md — Test Constitution (WON'T DO) #2: no `cy.wait(ms)`.
+
+### Selector Leaks
+
+**Wrong:** Raw selectors in spec bodies.
+
+```javascript
+// BAD — selector in spec
+it('shows success', () => {
+  cy.get('[data-testid="submit"]').click();
+  cy.get('[role="alert"]').should('contain.text', 'Success');
+});
+```
+
+**Right:** Page objects own selectors; specs call named methods.
+
+```javascript
+// GOOD
+class DashboardPage {
+  visit() { cy.visit('/dashboard'); }
+  submitButton() { return cy.get('[data-testid="submit"]'); }
+  alert() { return cy.get('[role="alert"]'); }
+}
+
+it('shows success', () => {
+  const page = new DashboardPage();
+  page.submitButton().click();
+  page.alert().should('contain.text', 'Success');
+});
+```
+
+*Reference:* AGENTS.md — Selector Boundary Rule, Page Object Discipline.

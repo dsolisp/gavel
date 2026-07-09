@@ -111,3 +111,85 @@ mvn test -Dtest=DashboardTest
 - **Chrome/Edge:** prefer built-in manager (`selenium-manager`) — no manual driver paths
 - **BiDi:** prefer WebDriver BiDi where supported over legacy JSON Wire Protocol
 - **Headless:** use `--headless=new` for Chromium
+
+## Anti-Patterns
+
+### Polling Trap
+
+**Wrong:** Manual polling loop with sleep.
+
+```python
+# BAD — manual polling
+for _ in range(20):
+    try:
+        el = driver.find_element(By.CSS_SELECTOR, "[role='alert']")
+        if el.is_displayed():
+            break
+    except NoSuchElementException:
+        pass
+    time.sleep(0.5)
+```
+
+**Right:** Use `WebDriverWait` with expected conditions.
+
+```python
+# GOOD — native retry
+wait = WebDriverWait(driver, 10)
+el = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "[role='alert']")))
+```
+
+*Reference:* AGENTS.md — QA Ladder rung 3 (native waits), Test Constitution rule 6 (native retrying assertions).
+
+### Manual Waits
+
+**Wrong:** Fixed sleep.
+
+```python
+# BAD
+time.sleep(3)
+assert "Success" in driver.find_element(By.CSS_SELECTOR, "[role='alert']").text
+```
+
+**Right:** Explicit wait with expected condition.
+
+```python
+# GOOD
+wait = WebDriverWait(driver, 10)
+el = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "[role='alert']")))
+assert "Success" in el.text
+```
+
+*Reference:* AGENTS.md — Test Constitution (WON'T DO) #2: no `time.sleep()`.
+
+### Selector Leaks
+
+**Wrong:** Raw selectors in specs/actions.
+
+```python
+# BAD — selector in spec
+def test_shows_success(driver):
+    driver.find_element(By.CSS_SELECTOR, "[data-testid='submit']").click()
+    assert "Success" in driver.find_element(By.CSS_SELECTOR, "[role='alert']").text
+```
+
+**Right:** Locators own selectors; specs call named properties.
+
+```python
+# GOOD
+class DashboardLocators:
+    def __init__(self, driver):
+        self.driver = driver
+    @property
+    def submit_button(self):
+        return self.driver.find_element(By.CSS_SELECTOR, "[data-testid='submit']")
+    @property
+    def alert(self):
+        return self.driver.find_element(By.CSS_SELECTOR, "[role='alert']")
+
+def test_shows_success(driver):
+    locators = DashboardLocators(driver)
+    locators.submit_button.click()
+    assert "Success" in locators.alert.text
+```
+
+*Reference:* AGENTS.md — Selector Boundary Rule, Page Object Discipline.

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dsolisp.github.io/gavel/schemas/gavel-config.schema.json",
+  "title": "Gavel config",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "failThreshold": {
+      "type": "string",
+      "enum": ["off", "info", "warning", "error", "blocker"],
+      "default": "warning"
+    },
+    "reportOnlyExits": { "type": "boolean", "default": false },
+    "allowlist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "tag"],
+        "properties": {
+          "file": { "type": "string" },
+          "tag": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "testIdPrefix": { "type": "string" },
+    "testIdPattern": { "type": "string" },
+    "enforceConsecutiveTestIds": { "type": "boolean", "default": false },
+    "criticalAreas": { "type": "array", "items": { "type": "string" } },
+    "criticalTags": { "type": "array", "items": { "type": "string" } },
+    "areaMap": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "object"] }
+    }
+  }
+}

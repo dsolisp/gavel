@@ -99,3 +99,81 @@ single-element matching. Do not target v10 APIs until released.
 ## Node.js
 
 v9 supports Node 18+. For new projects prefer Node 20 LTS or 22.
+
+## Anti-Patterns
+
+### Polling Trap
+
+**Wrong:** Manual polling with `browser.pause()`.
+
+```typescript
+// BAD — arbitrary pause
+await element.click();
+browser.pause(3000);
+await expect(resultElement).toBeDisplayed();
+```
+
+**Right:** Use `expect-webdriverio` auto-retry assertions.
+
+```typescript
+// GOOD — native retry
+await expect(resultElement).toBeDisplayed({ timeout: 10000 });
+```
+
+*Reference:* AGENTS.md — QA Ladder rung 3 (native assertions), Test Constitution rule 6 (native retrying assertions).
+
+### Manual Waits
+
+**Wrong:** Fixed pause.
+
+```typescript
+// BAD
+await browser.pause(5000);
+await expect(locators.alert).toBeDisplayed();
+```
+
+**Right:** Wait for element state or network response.
+
+```typescript
+// GOOD — explicit wait
+await locators.alert.waitForDisplayed({ timeout: 10_000 });
+// or network-aware (v9.27+)
+await browser.waitForResponse({ url: /\/api\/data/, statusCode: 200 });
+```
+
+*Reference:* AGENTS.md — Test Constitution (WON'T DO) #2: no `browser.pause()`.
+
+### Selector Leaks
+
+**Wrong:** Raw `$` / `$$` in specs/actions.
+
+```typescript
+// BAD — selector in spec
+it('shows success', async () => {
+  await $('[data-testid="submit"]').click();
+  await expect($('[role="alert"]')).toHaveText('Success');
+});
+```
+
+**Right:** Locator classes own `$` / `$$`; specs call named getters.
+
+```typescript
+// GOOD
+class DashboardLocators {
+  get submitButton() { return $('[data-testid="submit"]'); }
+  get alert() { return $('[role="alert"]'); }
+}
+
+class DashboardPage {
+  locators = new DashboardLocators();
+  async submit() { await this.locators.submitButton.click(); }
+}
+
+it('shows success', async () => {
+  const page = new DashboardPage();
+  await page.submit();
+  await expect(page.locators.alert).toHaveText('Success');
+});
+```
+
+*Reference:* AGENTS.md — Selector Boundary Rule, Page Object Discipline.
