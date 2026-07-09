@@ -19,7 +19,17 @@
   "main": "./.opencode/plugins/gavel.mjs",
   "exports": {
     ".": "./.opencode/plugins/gavel.mjs",
-    "./plugin": "./.opencode/plugins/gavel.mjs"
+    "./plugin": "./.opencode/plugins/gavel.mjs",
+    "./gavel-config.schema.json": "./schemas/gavel-config.schema.json"
+  },
+  "bin": {
+    "gavel": "./scripts/cli.js",
+    "gavel-audit": "./scripts/cli.js",
+    "gavel-review": "./scripts/cli.js",
+    "gavel-self-check": "./scripts/cli.js",
+    "gavel-analyze": "./scripts/cli.js",
+    "gavel-affected-tests": "./scripts/cli.js",
+    "gavel-detect": "./scripts/cli.js"
   },
   "files": [
     "AGENTS.md",
@@ -29,6 +39,7 @@
     "docs/",
     "hooks/",
     "skills/",
+    "schemas/",
     "companion/",
     "agents/",
     "scripts/",

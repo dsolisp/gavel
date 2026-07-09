@@ -7,25 +7,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadGavelConfig } = require('./load-gavel-config');
+const { loadGavelConfig, parseConfigFlag } = require('./load-gavel-config');
 
-const args = process.argv.slice(2);
-const jsonOutput = args.includes('--json');
-const targetRoot = args.find((arg) => !arg.startsWith('--'));
-
-if (!targetRoot) {
-  console.error('Usage: node scripts/self-check.js <target-repo-root> [--json]');
-  process.exit(2);
-}
-
-const resolvedRoot = path.resolve(targetRoot);
-if (!fs.existsSync(resolvedRoot)) {
-  console.error(`Target path does not exist: ${resolvedRoot}`);
-  process.exit(2);
-}
-
-const config = loadGavelConfig(resolvedRoot);
-const allowlist = Array.isArray(config.allowlist) ? config.allowlist : [];
+let config = {};
+let allowlist = [];
 
 const TEST_FILE_RE = /\.(spec|test)\.(ts|js|tsx|jsx|py|java|feature)$/;
 const LOCATOR_FILE_RE = /locators?\//i;
@@ -137,8 +122,11 @@ function splitTestBlocks(content) {
 
 const RULES = [
   {
-    tag: 'expect-in-action',
-    description: 'Assertion APIs in action/page/locator files',
+    id: 'expect-in-action',
+    severity: 'error',
+    class: 'assertion',
+    message: 'Assertion APIs in action/page/locator files',
+    remediation: 'Move assertions into spec files; locator, action, and page classes stay assertion-free (AGENTS.md: Page Object Discipline).',
     test: (filePath, content) => {
       if (LOCATOR_FILE_RE.test(filePath) || /pages?\//i.test(filePath) || /actions?\//i.test(filePath)) {
         return findMatches(content, /\b(expect|assert|assertEquals|assertThat)\s*\(/g, filePath);
@@ -147,8 +135,11 @@ const RULES = [
     },
   },
   {
-    tag: 'selector-leak',
-    description: 'Raw selector chains outside locator classes',
+    id: 'selector-leak',
+    severity: 'error',
+    class: 'locator',
+    message: 'Raw selector chains outside locator classes',
+    remediation: 'Expose the element as a named locator in a locator class and call it by name (AGENTS.md: Selector Boundary Rule).',
     test: (filePath, content) => {
       if (LOCATOR_FILE_RE.test(filePath)) {
         return [];
@@ -164,8 +155,11 @@ const RULES = [
     },
   },
   {
-    tag: 'manual-wait',
-    description: 'Manual sleeps or arbitrary polling',
+    id: 'manual-wait',
+    severity: 'error',
+    class: 'assertion',
+    message: 'Manual sleeps or arbitrary polling',
+    remediation: 'Replace manual waits with the framework\'s native retrying/eventual assertions (AGENTS.md: Assertion Discipline).',
     test: (filePath, content) =>
       findMatches(
         content,
@@ -174,8 +168,11 @@ const RULES = [
       ),
   },
   {
-    tag: 'no-di',
-    description: 'Direct page object construction in specs',
+    id: 'no-di',
+    severity: 'error',
+    class: 'constitution',
+    message: 'Direct page object construction in specs',
+    remediation: 'Inject page objects through the runner\'s fixture/DI mechanism (AGENTS.md: Test Constitution MUST DO #1).',
     test: (filePath, content) => {
       if (!TEST_FILE_RE.test(filePath)) {
         return [];
@@ -184,8 +181,11 @@ const RULES = [
     },
   },
   {
-    tag: 'no-step',
-    description: 'Large specs without step grouping',
+    id: 'no-step',
+    severity: 'warning',
+    class: 'workflow',
+    message: 'Large specs without step grouping',
+    remediation: 'Group multi-test specs with the runner\'s native step primitive, e.g. test.step() (AGENTS.md: Test Constitution MUST DO #4).',
     test: (filePath, content) => {
       if (!TEST_FILE_RE.test(filePath) || filePath.endsWith('.feature')) {
         return [];
@@ -199,8 +199,11 @@ const RULES = [
     },
   },
   {
-    tag: 'bare-test-fail',
-    description: 'test.fail() without issue tracker reference',
+    id: 'bare-test-fail',
+    severity: 'warning',
+    class: 'workflow',
+    message: 'test.fail() without issue tracker reference',
+    remediation: 'Add a bug/ticket reference next to the expected-failure marker (AGENTS.md: Expected-Failure Expiry Policy).',
     test: (filePath, content) => {
       if (!TEST_FILE_RE.test(filePath)) {
         return [];
@@ -221,8 +224,11 @@ const RULES = [
     },
   },
   {
-    tag: 'test-fail-order',
-    description: 'test.fail() must precede assertions in the same test',
+    id: 'test-fail-order',
+    severity: 'error',
+    class: 'workflow',
+    message: 'test.fail() must precede assertions in the same test',
+    remediation: 'Move the expected-failure marker above the first assertion in the test block (AGENTS.md: Test Constitution MUST DO #7).',
     test: (filePath, content) => {
       if (!TEST_FILE_RE.test(filePath)) {
         return [];
@@ -249,8 +255,11 @@ const RULES = [
     },
   },
   {
-    tag: 'skip-marker',
-    description: 'Skip, quarantine, or WIP marker without reason',
+    id: 'skip-marker',
+    severity: 'warning',
+    class: 'workflow',
+    message: 'Skip, quarantine, or WIP marker without reason',
+    remediation: 'Add a reason and ticket reference to the skip/quarantine/WIP marker (AGENTS.md: Expected-Failure Expiry Policy).',
     test: (filePath, content) => {
       if (!TEST_FILE_RE.test(filePath)) {
         return [];
@@ -376,67 +385,98 @@ function scanTestIds(files, repoRoot) {
   return findings;
 }
 
-const findings = [];
-const files = walkFiles(resolvedRoot);
+function main() {
+  const { args, configPath } = parseConfigFlag(process.argv.slice(2));
+  const jsonOutput = args.includes('--json');
+  const targetRoot = args.find((arg) => !arg.startsWith('--'));
 
-for (const filePath of files) {
-  const relPath = path.relative(resolvedRoot, filePath).replace(/\\/g, '/');
-  const content = fs.readFileSync(filePath, 'utf8');
+  if (!targetRoot) {
+    console.error('Usage: node scripts/self-check.js <target-repo-root> [--json]');
+    process.exit(2);
+  }
 
-  for (const rule of RULES) {
-    const hits = rule.test(relPath, content);
-    for (const hit of hits) {
-      if (isAllowlisted(relPath, rule.tag, hit.line) || hasInlineAllow(content, hit.line, rule.tag)) {
-        continue;
+  const resolvedRoot = path.resolve(targetRoot);
+  if (!fs.existsSync(resolvedRoot)) {
+    console.error(`Target path does not exist: ${resolvedRoot}`);
+    process.exit(2);
+  }
+
+  try {
+    config = loadGavelConfig(resolvedRoot, { configPath, cwd: process.cwd() });
+    allowlist = Array.isArray(config.allowlist) ? config.allowlist : [];
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
+
+  const findings = [];
+  const files = walkFiles(resolvedRoot);
+
+  for (const filePath of files) {
+    const relPath = path.relative(resolvedRoot, filePath).replace(/\\/g, '/');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    for (const rule of RULES) {
+      const hits = rule.test(relPath, content);
+      for (const hit of hits) {
+        if (isAllowlisted(relPath, rule.id, hit.line) || hasInlineAllow(content, hit.line, rule.id)) {
+          continue;
+        }
+        findings.push({
+          tag: rule.id,
+          description: rule.message,
+          file: relPath,
+          line: hit.line,
+          text: hit.text,
+        });
       }
-      findings.push({
-        tag: rule.tag,
-        description: rule.description,
-        file: relPath,
-        line: hit.line,
-        text: hit.text,
-      });
     }
   }
+
+  findings.push(...scanTestIds(files, resolvedRoot));
+
+  findings.sort((a, b) => a.tag.localeCompare(b.tag) || a.file.localeCompare(b.file));
+
+  const summary = findings.reduce((acc, finding) => {
+    acc[finding.tag] = (acc[finding.tag] || 0) + 1;
+    return acc;
+  }, {});
+
+  const report = {
+    target: resolvedRoot,
+    scannedFiles: files.length,
+    violationCount: findings.length,
+    summary,
+    findings,
+  };
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(report, null, 2));
+    process.exit(findings.length > 0 ? 1 : 0);
+  }
+
+  console.log(`Gavel self-check — ${resolvedRoot}`);
+  console.log(`Scanned ${files.length} files. Violations: ${findings.length}`);
+
+  if (findings.length === 0) {
+    console.log('No Constitution violations detected.');
+    process.exit(0);
+  }
+
+  for (const finding of findings) {
+    console.log(`${finding.tag} ${finding.file}:${finding.line} — ${finding.text}`);
+  }
+
+  console.log('\nSummary:');
+  for (const [tag, count] of Object.entries(summary)) {
+    console.log(`  ${tag}: ${count}`);
+  }
+
+  process.exit(1);
 }
 
-findings.push(...scanTestIds(files, resolvedRoot));
+module.exports = { RULES };
 
-findings.sort((a, b) => a.tag.localeCompare(b.tag) || a.file.localeCompare(b.file));
-
-const summary = findings.reduce((acc, finding) => {
-  acc[finding.tag] = (acc[finding.tag] || 0) + 1;
-  return acc;
-}, {});
-
-const report = {
-  target: resolvedRoot,
-  scannedFiles: files.length,
-  violationCount: findings.length,
-  summary,
-  findings,
-};
-
-if (jsonOutput) {
-  console.log(JSON.stringify(report, null, 2));
-  process.exit(findings.length > 0 ? 1 : 0);
+if (require.main === module) {
+  main();
 }
-
-console.log(`Gavel self-check — ${resolvedRoot}`);
-console.log(`Scanned ${files.length} files. Violations: ${findings.length}`);
-
-if (findings.length === 0) {
-  console.log('No Constitution violations detected.');
-  process.exit(0);
-}
-
-for (const finding of findings) {
-  console.log(`${finding.tag} ${finding.file}:${finding.line} — ${finding.text}`);
-}
-
-console.log('\nSummary:');
-for (const [tag, count] of Object.entries(summary)) {
-  console.log(`  ${tag}: ${count}`);
-}
-
-process.exit(1);

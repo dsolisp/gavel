@@ -49,8 +49,7 @@ function loadAreaMapFromConfig(repoRoot, config) {
   return null;
 }
 
-function scoreFinding(finding, repoRoot) {
-  const config = loadGavelConfig(repoRoot);
+function scoreFinding(finding, repoRoot, config = loadGavelConfig(repoRoot)) {
   const areaMap = loadAreaMapFromConfig(repoRoot, config);
   const area = areaForFile(finding.file, areaMap);
   const critical = isCriticalArea(area, config);
@@ -64,8 +63,7 @@ function scoreFinding(finding, repoRoot) {
   };
 }
 
-function buildSuiteHealthSummary(autofixFindings, selfCheckFindings, repoRoot) {
-  const config = loadGavelConfig(repoRoot);
+function buildSuiteHealthSummary(autofixFindings, selfCheckFindings, repoRoot, config = loadGavelConfig(repoRoot)) {
   const byTag = {};
   const byArea = {};
   let criticalCount = 0;

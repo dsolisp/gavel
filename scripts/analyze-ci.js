@@ -13,6 +13,7 @@ const { parseReport } = require('./parsers/index');
 const { clusterFailures } = require('./cluster-failures');
 const { loadAreaMap, resolveAppSearchPaths } = require('./area-map');
 const { formatCiAnalysisEnvelope, buildJsonEnvelope } = require('./ci-analysis-envelope');
+const { validateEnvelope } = require('./validate-envelope');
 
 function parseArgs(argv) {
   const jsonOutput = argv.includes('--json');
@@ -176,7 +177,13 @@ function main() {
   }
 
   if (jsonEnvelopeOutput) {
-    console.log(JSON.stringify(buildJsonEnvelope(analysis, { project }), null, 2));
+    const envelope = buildJsonEnvelope(analysis, { project });
+    const errors = validateEnvelope(envelope);
+    if (errors.length > 0) {
+      console.error(`Invalid result envelope:\n${errors.join('\n')}`);
+      process.exit(2);
+    }
+    console.log(JSON.stringify(envelope, null, 2));
     return;
   }
 

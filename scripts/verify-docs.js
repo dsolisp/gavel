@@ -97,6 +97,19 @@ for (const skill of companionSkills) {
   }
 }
 
+const envelopeSchema = readJson('schemas/result-envelope.schema.json');
+const envelopeDoc = readText('templates/result-envelope.md');
+const embedded = [...envelopeDoc.matchAll(/```json\n([\s\S]*?)```/g)].map((match) => JSON.parse(match[1]));
+if (embedded.length !== envelopeSchema.examples.length) {
+  fail(`templates/result-envelope.md must embed all ${envelopeSchema.examples.length} schema examples (found ${embedded.length} json blocks)`);
+} else {
+  envelopeSchema.examples.forEach((example, index) => {
+    if (JSON.stringify(example) !== JSON.stringify(embedded[index])) {
+      fail(`templates/result-envelope.md: embedded example ${index + 1} drifted from schemas/result-envelope.schema.json`);
+    }
+  });
+}
+
 if (failed) {
   process.exit(1);
 }

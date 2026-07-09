@@ -9,10 +9,22 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { findAutofixCandidates, formatAuditLine } = require('./audit-autofix');
 const { buildSuiteHealthSummary, formatSuiteHealth, scoreFinding } = require('./suite-health');
+const { loadGavelConfig, parseConfigFlag } = require('./load-gavel-config');
+const { RULES } = require('./self-check');
+const { ENVELOPE_SCHEMA_VERSION } = require('./ci-analysis-envelope');
+const { validateEnvelope } = require('./validate-envelope');
 
-function runSelfCheck(repoRoot) {
+const RULE_CONFIDENCE = Object.fromEntries(
+  RULES.filter((rule) => rule.confidence).map((rule) => [rule.id, rule.confidence]),
+);
+
+function runSelfCheck(repoRoot, configPath = null) {
   const script = path.join(__dirname, 'self-check.js');
-  const result = spawnSync(process.execPath, [script, repoRoot, '--json'], {
+  const args = [script, repoRoot, '--json'];
+  if (configPath) {
+    args.push('--config', configPath);
+  }
+  const result = spawnSync(process.execPath, args, {
     encoding: 'utf8',
   });
   if (!result.stdout) {
@@ -57,7 +69,7 @@ function formatSelfCheckLine(finding) {
   return `${prefix}${finding.severity} ${finding.autofix} ${finding.tag} ${finding.message}. [${location}]`;
 }
 
-function rankFindings(autofixFindings, selfCheckFindings, repoRoot) {
+function rankFindings(autofixFindings, selfCheckFindings, repoRoot, config = loadGavelConfig(repoRoot)) {
   const severityRank = { blocker: 0, fix: 1, cleanup: 2, delete: 3 };
   const autofixRank = { safe: 0, review: 1, 'report-only': 2 };
 
@@ -71,8 +83,8 @@ function rankFindings(autofixFindings, selfCheckFindings, repoRoot) {
   ];
 
   combined.sort((a, b) => {
-    const aScore = scoreFinding(a.item, repoRoot).impactScore;
-    const bScore = scoreFinding(b.item, repoRoot).impactScore;
+    const aScore = scoreFinding(a.item, repoRoot, config).impactScore;
+    const bScore = scoreFinding(b.item, repoRoot, config).impactScore;
     if (aScore !== bScore) {
       return aScore - bScore;
     }
@@ -89,24 +101,49 @@ function rankFindings(autofixFindings, selfCheckFindings, repoRoot) {
   return combined;
 }
 
+function buildAuditEnvelope(report, ranked) {
+  return {
+    schema: `gavel-result-envelope/${ENVELOPE_SCHEMA_VERSION}`,
+    generatedAt: new Date().toISOString(),
+    status: 'DONE',
+    project: path.basename(report.repo),
+    findings: ranked.map(({ item }) => ({
+      tag: item.tag,
+      severity: item.severity,
+      file: item.file,
+      ...(item.line ? { line: item.line } : {}),
+      ...(item.message ? { message: item.message } : {}),
+      ...(RULE_CONFIDENCE[item.tag] ? { confidence: RULE_CONFIDENCE[item.tag] } : {}),
+    })),
+  };
+}
+
 function main() {
-  const args = process.argv.slice(2);
+  const { args, configPath } = parseConfigFlag(process.argv.slice(2));
   const jsonOutput = args.includes('--json');
+  const jsonEnvelope = args.includes('--json-envelope');
   const auditFormat = args.includes('--audit-format');
   const withSelfCheck = args.includes('--with-self-check');
   const repoRoot = args.find((arg) => !arg.startsWith('--'));
 
   if (!repoRoot) {
-    console.error('Usage: node scripts/audit-report.js <target-repo-root> [--with-self-check] [--json] [--audit-format]');
+    console.error('Usage: node scripts/audit-report.js <target-repo-root> [--with-self-check] [--json] [--json-envelope] [--audit-format]');
     process.exit(2);
   }
 
   const resolved = path.resolve(repoRoot);
+  let config = {};
+  try {
+    config = loadGavelConfig(resolved, { configPath, cwd: process.cwd() });
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
   const autofixCandidates = findAutofixCandidates(resolved);
-  const selfCheckFindings = withSelfCheck ? runSelfCheck(resolved) : [];
-  const scoredSelfCheck = selfCheckFindings.map((finding) => scoreFinding(finding, resolved));
-  const ranked = rankFindings(autofixCandidates, scoredSelfCheck, resolved);
-  const health = buildSuiteHealthSummary(autofixCandidates, scoredSelfCheck, resolved);
+  const selfCheckFindings = withSelfCheck ? runSelfCheck(resolved, configPath) : [];
+  const scoredSelfCheck = selfCheckFindings.map((finding) => scoreFinding(finding, resolved, config));
+  const ranked = rankFindings(autofixCandidates, scoredSelfCheck, resolved, config);
+  const health = buildSuiteHealthSummary(autofixCandidates, scoredSelfCheck, resolved, config);
 
   const report = {
     repo: resolved,
@@ -120,6 +157,17 @@ function main() {
 
   if (jsonOutput) {
     console.log(JSON.stringify(report, null, 2));
+    process.exit(0);
+  }
+
+  if (jsonEnvelope) {
+    const envelope = buildAuditEnvelope(report, ranked);
+    const errors = validateEnvelope(envelope);
+    if (errors.length > 0) {
+      console.error(`Invalid result envelope:\n${errors.join('\n')}`);
+      process.exit(2);
+    }
+    console.log(JSON.stringify(envelope, null, 2));
     process.exit(0);
   }
 

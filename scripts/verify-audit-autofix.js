@@ -10,6 +10,7 @@ const {
   findUnusedFactories,
   findAutofixCandidates,
 } = require('./audit-autofix');
+const { validateEnvelope } = require('./validate-envelope');
 
 const root = path.join(__dirname, '..');
 const fixtureRoot = path.join(root, 'fixtures', 'audit-autofix');
@@ -170,6 +171,24 @@ if (reportAuditFormat.status !== 0 || !reportAuditFormat.stdout.includes('Suite 
   process.exit(1);
 }
 
+// audit-report --json-envelope must emit a schema-valid result envelope
+const envelopeJson = spawnSync(
+  process.execPath,
+  [path.join(root, 'scripts/audit-report.js'), fixtureRoot, '--with-self-check', '--json-envelope'],
+  { encoding: 'utf8' },
+);
+if (envelopeJson.status !== 0) {
+  console.error('audit-report --json-envelope exited non-zero.');
+  console.error(envelopeJson.stderr || envelopeJson.stdout);
+  process.exit(1);
+}
+const envelopePayload = JSON.parse(envelopeJson.stdout);
+const envelopeErrors = validateEnvelope(envelopePayload);
+if (envelopeErrors.length > 0 || envelopePayload.findings.length === 0) {
+  console.error(`audit-report envelope failed schema validation:\n${envelopeErrors.join('\n')}`);
+  process.exit(1);
+}
+
 restore(locatorFile, locatorBefore);
 restore(unusedPomFile, pomBefore);
 restore(unusedFactoryFile, factoryBefore);
@@ -181,4 +200,4 @@ if (remaining.length === 0) {
   process.exit(1);
 }
 
-console.log('Audit autofix OK: locators, POMs, multi-class POM, factories, audit-format, audit-report, JSON output verified.');
+console.log('Audit autofix OK: locators, POMs, multi-class POM, factories, audit-format, audit-report, JSON output, result envelope verified.');
