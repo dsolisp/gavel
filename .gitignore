@@ -15,3 +15,9 @@ changelog-*.png
 
 # Claude Code local settings (machine-specific permission grants)
 .claude/settings.local.json
+
+# Internal dev artifacts — not part of the product distribution
+GAVEL_ROADMAP.md
+v0.7.0-prompts.txt
+docs/v0.7.0-cross-review-1-remediation.md
+action.getXState()).toBe(expected)
