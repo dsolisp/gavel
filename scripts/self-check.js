@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadGavelConfig, parseConfigFlag } = require('./load-gavel-config');
+const { toSarif, formatFlag } = require('./to-sarif');
 
 let config = {};
 let allowlist = [];
@@ -54,7 +55,10 @@ function findMatches(content, pattern, filePath = '') {
       }
     }
 
-    if (!isComment && !trimmed.includes('gavel-ignore')) {
+    // Suppression is a finding-filter concern (see isTagIgnored), not a detection-time
+    // skip — a line can carry a scoped ignore for one tag while another rule's hit on
+    // the same line still needs to surface.
+    if (!isComment) {
       if (pattern.global) pattern.lastIndex = 0;
       if (pattern.test(line)) {
         hits.push({ line: i + 1, text: trimmed });
@@ -64,12 +68,31 @@ function findMatches(content, pattern, filePath = '') {
   return hits;
 }
 
-function hasInlineAllow(content, line, tag) {
+// Matches `gavel-ignore` / deprecated `gavel-allow`, bare or tag-scoped:
+//   gavel-ignore              — wildcard, suppresses every tag on the line (back-compat)
+//   gavel-ignore: *           — explicit wildcard
+//   gavel-ignore: no-di       — suppresses only that tag
+//   gavel-ignore: a, b        — suppresses only the listed tags
+const INLINE_IGNORE_RE = /gavel-(?:ignore|allow)(?:\s*:\s*(\*|[\w-]+(?:\s*,\s*[\w-]+)*))?/g;
+
+function isTagIgnored(content, line, tag) {
   const lines = content.split('\n');
   const index = line - 1;
   const context = [lines[index - 1] || '', lines[index] || '', lines[index + 1] || ''].join('\n');
-  const allowPattern = new RegExp(`gavel-allow:\\s*(\\*|${tag})`);
-  return allowPattern.test(context);
+
+  INLINE_IGNORE_RE.lastIndex = 0;
+  let match = INLINE_IGNORE_RE.exec(context);
+  while (match) {
+    const spec = match[1];
+    if (!spec || spec === '*') {
+      return true;
+    }
+    if (spec.split(',').some((entry) => entry.trim() === tag)) {
+      return true;
+    }
+    match = INLINE_IGNORE_RE.exec(context);
+  }
+  return false;
 }
 
 function isAllowlisted(file, tag, line) {
@@ -298,6 +321,9 @@ const RULES = [
   },
 ];
 
+const RULE_SEVERITY = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
+const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
+
 const EXCLUDED_DIRS = new Set([
   'node_modules',
   '.git',
@@ -405,7 +431,12 @@ function scanTestIds(files, repoRoot) {
 function main() {
   const { args, configPath } = parseConfigFlag(process.argv.slice(2));
   const jsonOutput = args.includes('--json');
-  const targetRoot = args.find((arg) => !arg.startsWith('--'));
+  const format = formatFlag(args);
+  if (format && format !== 'sarif') {
+    console.error('Usage: --format supports only "sarif"');
+    process.exit(2);
+  }
+  const targetRoot = args.find((arg) => !arg.startsWith('--') && arg !== 'sarif');
 
   if (!targetRoot) {
     console.error('Usage: node scripts/self-check.js <target-repo-root> [--json]');
@@ -436,7 +467,7 @@ function main() {
     for (const rule of RULES) {
       const hits = rule.test(relPath, content);
       for (const hit of hits) {
-        if (isAllowlisted(relPath, rule.id, hit.line) || hasInlineAllow(content, hit.line, rule.id)) {
+        if (isAllowlisted(relPath, rule.id, hit.line) || isTagIgnored(content, hit.line, rule.id)) {
           continue;
         }
         findings.push({
@@ -468,7 +499,21 @@ function main() {
   };
 
   if (jsonOutput) {
-    console.log(JSON.stringify(report, null, 2));
+    // fs.writeSync (not console.log) so large payloads fully flush before process.exit.
+    fs.writeSync(1, `${JSON.stringify(report, null, 2)}\n`);
+    process.exit(findings.length > 0 ? 1 : 0);
+  }
+
+  if (format === 'sarif') {
+    const sarif = toSarif(findings.map((finding) => ({
+      tag: finding.tag,
+      severity: RULE_SEVERITY[finding.tag] || 'warning',
+      message: finding.description,
+      file: finding.file,
+      line: finding.line,
+      snippet: finding.text,
+    })), RULE_META);
+    fs.writeSync(1, `${JSON.stringify(sarif, null, 2)}\n`);
     process.exit(findings.length > 0 ? 1 : 0);
   }
 

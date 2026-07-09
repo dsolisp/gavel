@@ -7,7 +7,7 @@ const { RULES } = require('./self-check');
 const { parseConfigFlag, resolveGavelConfig } = require('./load-gavel-config');
 
 const scripts = { audit: 'audit-report.js', review: 'self-check.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js' };
-const valueFlags = new Set(['--config', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework']);
+const valueFlags = new Set(['--config', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format']);
 const severityRank = { info: 0, warning: 1, error: 2, blocker: 3 };
 const ruleSeverity = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
 

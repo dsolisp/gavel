@@ -12,6 +12,7 @@ const { clusterFailures } = require('../cluster-failures');
 const { buildSuiteHealthSummary } = require('../suite-health');
 const { resolveGavelConfig } = require('../load-gavel-config');
 const { validateEnvelope, schema: envelopeSchema } = require('../validate-envelope');
+const { toSarif } = require('../to-sarif');
 
 const root = path.join(__dirname, '..', '..');
 
@@ -110,6 +111,78 @@ test('unified CLI core commands run', () => {
   assert.equal(runCli(['detect', '.', '--json']).status, 0);
   assert.equal(runCli(['affected-tests', 'fixtures/affected-tests', '--tag', 'smoke', '--json']).status, 0);
   assert.equal(runCli(['analyze', 'fixtures/reports/junit/sample-failures.xml', '--json']).status, 0);
+});
+
+
+test('toSarif emits conformant SARIF 2.1.0: rule ids = tags, level mapping, stable fingerprints, no helpUri', () => {
+  const findings = [
+    { tag: 'no-di', severity: 'blocker', message: 'Direct page object construction', file: 'tests/a.spec.ts', line: 12, snippet: 'new LoginPage()' },
+    { tag: 'no-di', severity: 'blocker', message: 'Direct page object construction', file: 'tests/b.spec.ts', line: 3, snippet: 'new HomePage()' },
+    { tag: 'dead-locator', severity: 'cleanup', message: 'dead-locator: unusedButton', file: 'locators/Login.ts' },
+  ];
+  const sarif = toSarif(findings);
+
+  assert.equal(sarif.version, '2.1.0');
+  const driver = sarif.runs[0].tool.driver;
+  assert.equal(driver.name, 'Gavel');
+
+  const rules = driver.rules;
+  assert.deepEqual(rules.map((rule) => rule.id), ['no-di', 'dead-locator']);
+  assert.ok(rules.every((rule) => rule.id === rule.name));
+  assert.ok(rules.every((rule) => rule.helpUri === undefined));
+  // Without registry metadata the rule dictionary stays static (id/name only) —
+  // per-finding messages (e.g. 'dead-locator: unusedButton') never leak into it.
+  assert.ok(rules.every((rule) => rule.shortDescription === undefined));
+  const withMeta = toSarif(findings, { 'dead-locator': { message: 'Unused locator declaration' } });
+  const metaRules = withMeta.runs[0].tool.driver.rules;
+  assert.equal(metaRules[0].shortDescription, undefined);
+  assert.equal(metaRules[1].shortDescription.text, 'Unused locator declaration');
+  assert.equal(sarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uriBaseId, 'SRCROOT');
+
+  const results = sarif.runs[0].results;
+  assert.equal(results.length, 3);
+  assert.equal(results[0].ruleId, 'no-di');
+  assert.equal(results[0].ruleIndex, 0);
+  assert.equal(results[0].level, 'error');
+  assert.equal(results[2].level, 'warning');
+  assert.equal(results[0].locations[0].physicalLocation.region.startLine, 12);
+  assert.equal(results[2].locations[0].physicalLocation.region, undefined);
+
+  const fp = (result) => result.partialFingerprints['gavelSnippetHash/v1'];
+  assert.match(fp(results[0]), /^[0-9a-f]{64}$/);
+  assert.notEqual(fp(results[0]), fp(results[1]));
+  assert.equal(fp(results[0]), fp(toSarif(findings).runs[0].results[0]));
+});
+
+test('tag-scoped gavel-ignore suppresses only the named tag; bare ignore is wildcard; gavel-allow works as deprecated alias', () => {
+  const result = runCli(['self-check', 'fixtures/self-check/suppression', '--json']);
+  const report = JSON.parse(result.stdout);
+  const tagsFor = (file) => report.findings.filter((f) => f.file.endsWith(file)).map((f) => f.tag).sort();
+
+  // Same line has both a no-di and a selector-leak violation. Scoping the ignore to
+  // `no-di` must not hide the unrelated selector-leak finding on that line.
+  assert.deepEqual(tagsFor('tag-scoped.spec.ts'), ['selector-leak']);
+
+  // Bare `gavel-ignore` (no tag) stays a wildcard for back-compat: both tags suppressed.
+  assert.deepEqual(tagsFor('bare-wildcard.spec.ts'), []);
+
+  // Deprecated `gavel-allow: <tag>` alias behaves exactly like scoped `gavel-ignore`.
+  assert.deepEqual(tagsFor('deprecated-allow.spec.ts'), ['selector-leak']);
+
+  assert.equal(report.findings.some((f) => f.tag === 'no-di'), false);
+});
+
+test('--format sarif produces parseable SARIF for self-check and audit', () => {
+  const runScript = (script, args) => spawnSync(process.execPath, [path.join(root, 'scripts', script), ...args], { cwd: root, encoding: 'utf8' });
+  for (const [script, target] of [['self-check.js', 'fixtures/self-check/violations'], ['audit-report.js', 'fixtures/audit-autofix']]) {
+    const run = runScript(script, [target, '--format', 'sarif']);
+    assert.ok([0, 1].includes(run.status));
+    const sarif = JSON.parse(run.stdout);
+    assert.equal(sarif.version, '2.1.0');
+    assert.equal(sarif.runs[0].tool.driver.name, 'Gavel');
+    assert.ok(sarif.runs[0].results.every((result) => result.ruleId && result.partialFingerprints['gavelSnippetHash/v1']));
+  }
+  assert.equal(runScript('self-check.js', ['fixtures/self-check/clean', '--format', 'xml']).status, 2);
 });
 
 test('result envelope schema examples validate; invalid envelopes report errors', () => {

@@ -7,6 +7,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Tag-scoped `gavel-ignore: <tag>` suppression — suppresses only the named tag(s); comma-separated lists suppress several tags at once; bare `gavel-ignore` stays a wildcard for back-compat
+
+### Changed
+
+- `scripts/self-check.js` — suppression moved from detection-time line skipping to finding-filter time, so a scoped ignore can no longer hide an unrelated tag's finding on the same line; `gavel-allow: <tag>` is now a deprecated alias for `gavel-ignore: <tag>`
+
 ## [0.6.0] - 2026-07-04
 
 ### Added

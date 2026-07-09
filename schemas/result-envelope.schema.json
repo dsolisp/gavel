@@ -65,6 +65,7 @@
           "file": { "type": "string" },
           "line": { "type": "integer", "minimum": 1 },
           "message": { "type": "string" },
+          "snippet": { "type": "string" },
           "confidence": { "enum": ["high", "medium", "low"] }
         }
       }

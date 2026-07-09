@@ -44,7 +44,7 @@ Exit code `0` = no violations. Exit code `1` = violations found.
 | `test-id-duplicate` | Duplicate test IDs (when `gavel.config.json` defines pattern) |
 | `test-id-gap` | Gap in consecutive test IDs (when `enforceConsecutiveTestIds: true`) |
 
-Inline allow: `// gavel-allow: manual-wait` on the line above a finding.
+Inline suppression: `// gavel-ignore: manual-wait` suppresses only that tag on the line (context: line before/on/after the comment); a comma-separated list (`gavel-ignore: a, b`) suppresses several tags. Bare `// gavel-ignore` (no tag) is a wildcard that suppresses every tag on the line — kept for back-compat, but scoping to a tag is preferred so one ignore can't mask an unrelated finding on the same line. `gavel-allow: <tag>` is a deprecated alias for `gavel-ignore: <tag>` with identical scoping rules.
 Repo allowlist: `gavel.config.json` → `"allowlist": [{ "file": "...", "tag": "..." }]`.
 
 ## Output

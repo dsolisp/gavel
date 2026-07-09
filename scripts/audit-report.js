@@ -5,6 +5,7 @@
 //   node scripts/audit-report.js <target-repo-root> [--json]
 //   node scripts/audit-report.js <target-repo-root> --with-self-check
 
+const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { findAutofixCandidates, formatAuditLine } = require('./audit-autofix');
@@ -13,6 +14,7 @@ const { loadGavelConfig, parseConfigFlag } = require('./load-gavel-config');
 const { RULES } = require('./self-check');
 const { ENVELOPE_SCHEMA_VERSION } = require('./ci-analysis-envelope');
 const { validateEnvelope } = require('./validate-envelope');
+const { toSarif, formatFlag } = require('./to-sarif');
 
 const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
 
@@ -52,6 +54,7 @@ function mapSelfCheckFinding(finding) {
     message: finding.description,
     file: finding.file,
     line: finding.line,
+    snippet: finding.text,
   };
 }
 
@@ -105,6 +108,7 @@ function buildAuditEnvelope(report, ranked) {
       file: item.file,
       ...(item.line ? { line: item.line } : {}),
       ...(item.message ? { message: item.message } : {}),
+      ...(item.snippet ? { snippet: item.snippet } : {}),
       ...(RULE_META[item.tag]?.confidence ? { confidence: RULE_META[item.tag].confidence } : {}),
     })),
   };
@@ -116,7 +120,12 @@ function main() {
   const jsonEnvelope = args.includes('--json-envelope');
   const auditFormat = args.includes('--audit-format');
   const withSelfCheck = args.includes('--with-self-check');
-  const repoRoot = args.find((arg) => !arg.startsWith('--'));
+  const format = formatFlag(args);
+  if (format && format !== 'sarif') {
+    console.error('Usage: --format supports only "sarif"');
+    process.exit(2);
+  }
+  const repoRoot = args.find((arg) => !arg.startsWith('--') && arg !== 'sarif');
 
   if (!repoRoot) {
     console.error('Usage: node scripts/audit-report.js <target-repo-root> [--with-self-check] [--json] [--json-envelope] [--audit-format]');
@@ -148,7 +157,8 @@ function main() {
   };
 
   if (jsonOutput) {
-    console.log(JSON.stringify(report, null, 2));
+    // fs.writeSync (not console.log) so large payloads fully flush before process.exit.
+    fs.writeSync(1, `${JSON.stringify(report, null, 2)}\n`);
     process.exit(0);
   }
 
@@ -159,7 +169,20 @@ function main() {
       console.error(`Invalid result envelope:\n${errors.join('\n')}`);
       process.exit(2);
     }
-    console.log(JSON.stringify(envelope, null, 2));
+    fs.writeSync(1, `${JSON.stringify(envelope, null, 2)}\n`);
+    process.exit(0);
+  }
+
+  if (format === 'sarif') {
+    const findings = ranked.map(({ item }) => ({
+      tag: item.tag,
+      severity: item.severity,
+      message: item.message || (item.symbol ? `${item.tag}: ${item.symbol}` : item.tag),
+      file: item.file,
+      line: item.line,
+      snippet: item.snippet || item.symbol,
+    }));
+    fs.writeSync(1, `${JSON.stringify(toSarif(findings, RULE_META), null, 2)}\n`);
     process.exit(0);
   }
 
