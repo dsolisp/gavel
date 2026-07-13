@@ -1,6 +1,6 @@
 {
   "name": "@dsolisp/gavel",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Minimalism + QA discipline for AI agents. Framework-adaptive test quality enforcement with YAGNI at the core.",
   "keywords": ["opencode-plugin", "opencode", "gavel", "qa", "testing", "playwright", "selenium", "cypress", "webdriverio", "pytest", "junit", "cucumber", "skills", "test-constitution", "page-object-model"],
   "license": "MIT",
