@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.8.0** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.8.1** (see [CHANGELOG.md](../CHANGELOG.md))
 
 Index for scripts, templates, and companion workflows. For install and first run, start at [README.md](../README.md).
 
@@ -19,7 +19,6 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [fixtures/corpus/README.md](../fixtures/corpus/README.md) | Corpus label + precision contract (v0.8) | Contributors |
 | [rules/brittle-assert.md](rules/brittle-assert.md) | Heuristic contract: prose equality assertions | Contributors / Tier-R |
 | [rules/assert-drop.md](rules/assert-drop.md) | Diff harness: assertion deletion / early-return / strength downgrade | Contributors / Tier-B |
-| [GAVEL_ROADMAP.md](../GAVEL_ROADMAP.md) | Trust → Freeze release narrative | Product / contributors |
 | [companion/README.md](../companion/README.md) | Optional CI/env/hub/closure skills | Teams needing extras |
 
 ## Scripts

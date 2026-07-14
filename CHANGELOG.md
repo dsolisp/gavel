@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-07-13
+
+### Changed
+
+- Removed `GAVEL_ROADMAP.md` and `v0.8.0-prompts.txt` from published package (internal dev documents)
+- Removed graduation evidence docs (`docs/graduation*`) from distribution
+- Removed all public references to private planning documents from `docs/README.md`, `docs/ENTERPRISE.md`, `docs/CONTRIBUTING.md`
+- Added `.gitignore` entries for internal dev artifacts
+- All seven version manifests bumped to 0.8.1
+
 ## [0.8.0] - 2026-07-13
 
 ### Added
@@ -189,7 +199,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/dsolisp/gavel/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/dsolisp/gavel/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/dsolisp/gavel/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/dsolisp/gavel/compare/v0.6.0...v0.7.0

@@ -40,7 +40,7 @@ Platform teams wire Gavel as a **static CLI gate** — pin the npm package, emit
 
 ```bash
 # Pin the version in regulated orgs (matches templates/github-actions/gavel-audit-sarif.yml)
-npx --yes @dsolisp/gavel@0.8.0 audit --format sarif > gavel.sarif
+npx --yes @dsolisp/gavel@0.8.1 audit --format sarif > gavel.sarif
 ```
 
 `gavel audit` runs constitution self-check by default. A separate `gavel self-check --format sarif` step is optional when you want SARIF split by category.
@@ -55,7 +55,7 @@ See [CLI_MATRIX.md](CLI_MATRIX.md) for which README commands are real binaries v
 
 1. Copy [templates/github-actions/gavel-audit-sarif.yml](../templates/github-actions/gavel-audit-sarif.yml) into your automation repo as `.github/workflows/gavel-audit.yml`.
 2. Ensure the workflow has `security-events: write` (required for Code Scanning upload).
-3. The template pins `@dsolisp/gavel@0.8.0`, runs `audit --format sarif`, uploads via `github/codeql-action/upload-sarif@v3`, then fails the job when the audit step exits non-zero.
+3. The template pins `@dsolisp/gavel@0.8.1`, runs `audit --format sarif`, uploads via `github/codeql-action/upload-sarif@v3`, then fails the job when the audit step exits non-zero.
 4. Findings appear under **Security → Code scanning alerts** with category `gavel`. Rule IDs match Gavel tags (`selector-leak`, `manual-wait`, …).
 
 Prefer a locked `package.json` dependency over floating `npx` when your change-control policy requires it; keep the semver pin aligned with [package.json](../package.json).
@@ -67,7 +67,7 @@ Gavel ships **SARIF 2.1.0** only — there is no Sonar plugin. Import the file a
 1. **Produce SARIF in CI** (before `sonar-scanner`):
 
    ```bash
-   npx --yes @dsolisp/gavel@0.8.0 audit --format sarif > gavel.sarif
+   npx --yes @dsolisp/gavel@0.8.1 audit --format sarif > gavel.sarif
    ```
 
 2. **Point Sonar at the file** — add to `sonar-project.properties` or pass as a scanner parameter:
@@ -120,5 +120,3 @@ See [BAILIFF.md](BAILIFF.md). Short form: **test-code artifacts → Gavel; ticke
 | Skills / agents | Optional human or IDE workflows |
 | Companion skills | Optional; not default install |
 | Bailiff | Future sibling; planning only until bootstrap |
-
-For product sequencing see [GAVEL_ROADMAP.md](../GAVEL_ROADMAP.md).

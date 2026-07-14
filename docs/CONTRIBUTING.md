@@ -12,13 +12,11 @@ Green verify is required before any release commit. See [RELEASE_CHECKLIST.md](.
 
 ## Implementation Contract
 
-Non-negotiables for rules, envelopes, and boundaries live in [GAVEL_ROADMAP.md](../GAVEL_ROADMAP.md) → **Implementation Contract**. Read that before adding a rule tag or public interface.
+Non-negotiables for rules, envelopes, and boundaries live in [AGENTS.md](../AGENTS.md). Read that before adding a rule tag or public interface.
 
 ## Model tiers and working protocol
 
 Roadmap items are implemented **one item per session, one model per item**. Finish the item, get `npm run verify` green, commit, then switch model if the next item is a different tier.
-
-Per-release item prompts (example): [v0.8.0-prompts.txt](../v0.8.0-prompts.txt).
 
 | Tier | Use for |
 |------|---------|
