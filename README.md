@@ -30,11 +30,13 @@ node scripts/cli.js self-check ../your-automation-repo
 node scripts/cli.js audit ../your-automation-repo --with-self-check --audit-format
 ```
 
-Or use the **SARIF 2.1.0** output for GitHub Code Scanning:
+Or gate CI with **SARIF 2.1.0** (no LLM required):
 
 ```bash
-node scripts/to-sarif.js ../your-automation-repo > results.sarif
+npx --yes @dsolisp/gavel@0.8.0 audit --format sarif > gavel.sarif
 ```
+
+Copy the GitHub Actions recipe from [templates/github-actions/gavel-audit-sarif.yml](templates/github-actions/gavel-audit-sarif.yml). Enterprise trust criteria, Sonar import, and exit codes: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
 
 Install into your IDE (Cursor, Claude Code, OpenCode, Windsurf, and 16+ more) using [QUICKSTART.md](QUICKSTART.md), then invoke `/gavel-audit` or `/gavel-review` on your test repo.
 
@@ -152,6 +154,7 @@ See [QUICKSTART.md](QUICKSTART.md) for IDE-specific paths. OpenCode npm package:
 | Doc | Audience |
 |-----|----------|
 | [QUICKSTART.md](QUICKSTART.md) | First session — audit, heal, write (7 end-to-end flows) |
+| [docs/ENTERPRISE.md](docs/ENTERPRISE.md) | CI gate, SARIF recipes, trust criteria (platform teams) |
 | [docs/README.md](docs/README.md) | Script reference and CI templates |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Two-repo architecture (Gavel + Bailiff) |
 | [AGENTS.md](AGENTS.md) | Universal QA rules for all adapters |

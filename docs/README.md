@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.7.1** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.8.0** (see [CHANGELOG.md](../CHANGELOG.md))
 
 Index for scripts, templates, and companion workflows. For install and first run, start at [README.md](../README.md).
 
@@ -16,6 +16,9 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Two-repo design, browser-first authoring principle | Contributors, architects |
 | [BAILIFF.md](BAILIFF.md) | Sibling QA-workflow repo (planning only) | Architects |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Verify gate, model tiers, budgets | Contributors |
+| [fixtures/corpus/README.md](../fixtures/corpus/README.md) | Corpus label + precision contract (v0.8) | Contributors |
+| [rules/brittle-assert.md](rules/brittle-assert.md) | Heuristic contract: prose equality assertions | Contributors / Tier-R |
+| [rules/assert-drop.md](rules/assert-drop.md) | Diff harness: assertion deletion / early-return / strength downgrade | Contributors / Tier-B |
 | [GAVEL_ROADMAP.md](../GAVEL_ROADMAP.md) | Trust → Freeze release narrative | Product / contributors |
 | [companion/README.md](../companion/README.md) | Optional CI/env/hub/closure skills | Teams needing extras |
 
@@ -33,6 +36,8 @@ Index for scripts, templates, and companion workflows. For install and first run
 | `scripts/analyze-ci.js` | Parse CI report, cluster, correlate commits |
 | `scripts/audit-autofix.js` | Safe dead code removal (dry-run default) |
 | `scripts/verify-docs.js` | Doc drift guardrail (runs in `npm run verify`) |
+| `scripts/verify-corpus-precision.js` | Heuristic corpus precision (`fixtures/corpus/`) |
+| `scripts/verify-diff-corpus-precision.js` | Diff-corpus precision (`fixtures/self-check/diff/`) |
 
 ### Report parsers
 

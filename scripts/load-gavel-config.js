@@ -40,7 +40,7 @@ function validateGavelConfig(config, source = CONFIG_NAME) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error(`${source}: config must be an object`);
   }
-  const stringArrays = ['criticalAreas', 'criticalTags'];
+  const stringArrays = ['criticalAreas', 'criticalTags', 'fixturePaths', 'factoryPaths'];
   for (const key of stringArrays) {
     if (config[key] && (!Array.isArray(config[key]) || config[key].some((item) => typeof item !== 'string'))) {
       throw new Error(`${source}: ${key} must be an array of strings`);
@@ -55,11 +55,25 @@ function validateGavelConfig(config, source = CONFIG_NAME) {
   if (config.reportOnlyExits !== undefined && typeof config.reportOnlyExits !== 'boolean') {
     throw new Error(`${source}: reportOnlyExits must be boolean`);
   }
+  if (config.selectorAllowlist !== undefined) {
+    const allowlist = config.selectorAllowlist;
+    if (!allowlist || typeof allowlist !== 'object' || Array.isArray(allowlist)) {
+      throw new Error(`${source}: selectorAllowlist must be an object`);
+    }
+    if (allowlist.componentPrefixes && (!Array.isArray(allowlist.componentPrefixes)
+      || allowlist.componentPrefixes.some((prefix) => typeof prefix !== 'string'))) {
+      throw new Error(`${source}: selectorAllowlist.componentPrefixes must be an array of strings`);
+    }
+    if (allowlist.customElements !== undefined && typeof allowlist.customElements !== 'boolean') {
+      throw new Error(`${source}: selectorAllowlist.customElements must be boolean`);
+    }
+  }
   return config;
 }
 
 function loadGavelConfig(repoRoot, options = {}) {
-  const cwd = path.resolve(options.cwd || process.cwd());
+  const root = path.resolve(repoRoot || options.cwd || process.cwd());
+  const cwd = path.resolve(options.cwd || root);
   if (options.configPath) {
     const configPath = path.resolve(cwd, options.configPath);
     if (!fs.existsSync(configPath)) {
@@ -68,12 +82,12 @@ function loadGavelConfig(repoRoot, options = {}) {
     return validateGavelConfig(readJson(configPath, configPath), configPath);
   }
 
-  const cwdConfig = path.join(cwd, CONFIG_NAME);
-  if (fs.existsSync(cwdConfig)) {
-    return validateGavelConfig(readJson(cwdConfig, CONFIG_NAME), CONFIG_NAME);
+  const repoConfig = path.join(root, CONFIG_NAME);
+  if (fs.existsSync(repoConfig)) {
+    return validateGavelConfig(readJson(repoConfig, CONFIG_NAME), CONFIG_NAME);
   }
 
-  const packagePath = path.join(cwd, 'package.json');
+  const packagePath = path.join(root, 'package.json');
   if (fs.existsSync(packagePath)) {
     const pkg = readJson(packagePath, 'package.json');
     if (pkg.gavel !== undefined) {

@@ -1,0 +1,173 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "hardcoded-env",
+  "samples": [
+    {
+      "file": "violating/localhost-fetch.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "fetch() call with hardcoded localhost URL",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/staging-request.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "request.get() with staging environment URL",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/dev-url.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "request.get() with dev environment URL",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/raw-ip.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Raw IP address 192.168.1.100 in URL",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/explicit-port.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "URL with explicit port :8080",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/absolute-path.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Hardcoded absolute Unix path /home/user/",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/credential-password.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "password variable assigned a string literal",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/credential-apikey.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "api_key variable assigned a string literal",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/test_localhost.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "requests.get() with localhost URL",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/test_ip.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "requests.get() with raw IP address 10.0.0.1",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/test_port.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "requests.get() with explicit port :9090",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/LocalhostRequest.test.java",
+      "label": "violating",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "URI.create() with localhost URL containing explicit port",
+      "expectedFindings": [{ "line": 10, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "clean/env-url.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "URL read from process.env, no hardcoded value"
+    },
+    {
+      "file": "clean/env-credential.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Credential read from process.env, no string literal"
+    },
+    {
+      "file": "clean/config-url.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "URL built from process.env template literal"
+    },
+    {
+      "file": "clean/relative-path.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Relative path, not an absolute filesystem path"
+    },
+    {
+      "file": "clean/non-credential-var.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Variable named 'username' is not a credential-shaped name"
+    },
+    {
+      "file": "clean/test_env_url.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "URL read from os.environ, no hardcoded value"
+    },
+    {
+      "file": "clean/test_env_credential.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "Credential read from os.environ, no string literal"
+    },
+    {
+      "file": "clean/test_relative_path.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "Relative path, not an absolute filesystem path"
+    },
+    {
+      "file": "clean/test_non_credential_var.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "Variable named 'username' is not a credential-shaped name"
+    },
+    {
+      "file": "clean/EnvUrl.test.java",
+      "label": "clean",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "URL read from System.getenv, no hardcoded value"
+    }
+  ]
+}

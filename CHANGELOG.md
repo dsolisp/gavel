@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-13
+
+### Added
+
+- **5 resilience rule tags:** `brittle-assert`, `hardcoded-env`, `complex-locator`, `no-teardown`, `assert-drop`
+- Corpus label schema (`schemas/corpus-labels.schema.json`) + precision report schema (`schemas/corpus-precision-report.schema.json`)
+- `scripts/verify-corpus-precision.js` — measures heuristic precision from `fixtures/corpus/<tag>/labels.json`
+- `scripts/verify-diff-corpus-precision.js` — measures diff-rule precision from `fixtures/self-check/diff/<tag>/` pairs
+- `fixtures/corpus/brittle-assert/` — 11 violating + 11 clean labeled samples (`ts` / `py` / `java`)
+- `fixtures/corpus/hardcoded-env/` — 12 violating + 10 clean labeled samples (`ts` / `py` / `java`)
+- `docs/rules/brittle-assert.md` — heuristic contract (inputs, FPs, SARIF, suppression) before scanner
+- `docs/rules/assert-drop.md` — diff harness contract: assertion deletion / early-return / strength downgrade
+- Baseline ratchet schema (`schemas/gavel-baseline.schema.json`) + verify samples (`fixtures/baseline/`)
+- `scripts/verify-baseline-schema.js` — baseline schema validation in verify gate
+
+### Changed
+
+- `brittle-assert` graduated: severity `info` → `warning`, envelopeSeverity `report` → `fix` (corpus precision 100%, 11 TP, 0 FP, 0 FN)
+- `hardcoded-env` graduated: severity `warning` → `error`, envelopeSeverity `fix` → `blocker` (corpus precision 100%, 12 TP, 0 FP, 0 FN; real-repo trial 70 findings, 0 FP)
+- `assert-drop` strength-downgrade graduated: severity `info` → `warning`, envelopeSeverity `report` → `fix` (diff-corpus precision 100%, 3 TP, 0 FP, 0 FN)
+- `npm run verify` now includes corpus precision, diff-corpus precision, and baseline schema validation runners
+- All seven version manifests bumped to 0.8.0
+
 ## [0.7.1] - 2026-07-13
 
 ### Added
@@ -166,7 +189,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/dsolisp/gavel/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/dsolisp/gavel/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/dsolisp/gavel/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/dsolisp/gavel/compare/v0.5.0...v0.6.0

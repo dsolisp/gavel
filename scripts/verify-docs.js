@@ -77,6 +77,29 @@ if (readme.includes('fork of ponytail') || readme.includes('git fetch upstream')
   fail('README.md still contains ponytail fork/upstream sync language');
 }
 
+const enterpriseDoc = readText('docs/ENTERPRISE.md');
+const sarifTemplate = readText('templates/github-actions/gavel-audit-sarif.yml');
+const expectedPin = `@dsolisp/gavel@${version}`;
+if (!sarifTemplate.includes(expectedPin)) {
+  fail(`templates/github-actions/gavel-audit-sarif.yml must pin ${expectedPin}`);
+}
+if (!sarifTemplate.includes('upload-sarif@v3')) {
+  fail('templates/github-actions/gavel-audit-sarif.yml must upload SARIF via github/codeql-action/upload-sarif@v3');
+}
+if (!sarifTemplate.includes('steps.gavel.outcome')) {
+  fail('templates/github-actions/gavel-audit-sarif.yml must fail the job when the audit step fails');
+}
+for (const [doc, needle] of [
+  [readme, 'docs/ENTERPRISE.md'],
+  [readme, 'templates/github-actions/gavel-audit-sarif.yml'],
+  [enterpriseDoc, 'templates/github-actions/gavel-audit-sarif.yml'],
+  [enterpriseDoc, 'sonar.sarifReportPaths'],
+]) {
+  if (!doc.includes(needle)) {
+    fail(`missing enterprise CI link or recipe reference: ${needle}`);
+  }
+}
+
 for (const parser of parsers) {
   const stem = parser.replace('.js', '');
   if (!readme.includes(stem) && !docsReadme.includes(stem)) {

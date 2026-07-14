@@ -1,6 +1,6 @@
 {
   "name": "@dsolisp/gavel",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Minimalism + QA discipline for AI agents. Framework-adaptive test quality enforcement with YAGNI at the core.",
   "keywords": ["opencode-plugin", "opencode", "gavel", "qa", "testing", "playwright", "selenium", "cypress", "webdriverio", "pytest", "junit", "cucumber", "skills", "test-constitution", "page-object-model"],
   "license": "MIT",
@@ -51,7 +51,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/validate-manifest.js && node scripts/check-versions.js && node scripts/verify-self-check-fixtures.js && node scripts/verify-parser-fixtures.js && node scripts/verify-affected-tests-fixtures.js && node scripts/verify-profile-fixtures.js && node scripts/verify-area-map.js && node scripts/verify-audit-autofix.js && node scripts/verify-docs.js && node scripts/verify-boundary.js && node --test scripts/test/unit.test.js",
+    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/validate-manifest.js && node scripts/check-versions.js && node scripts/verify-self-check-fixtures.js && node scripts/verify-parser-fixtures.js && node scripts/verify-affected-tests-fixtures.js && node scripts/verify-profile-fixtures.js && node scripts/verify-area-map.js && node scripts/verify-audit-autofix.js && node scripts/verify-docs.js && node scripts/verify-boundary.js && node scripts/verify-corpus-precision.js && node scripts/verify-diff-corpus-precision.js && node scripts/verify-baseline-schema.js && node --test scripts/test/unit.test.js",
     "self-check": "node scripts/self-check.js",
     "affected-tests": "node scripts/affected-tests.js",
     "test": "npm run verify"

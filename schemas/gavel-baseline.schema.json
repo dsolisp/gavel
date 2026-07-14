@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dsolisp.github.io/gavel/schemas/gavel-baseline.schema.json",
+  "title": "Gavel baseline",
+  "description": "Baseline ratchet file (gavel-baseline.json). Irreversible interface (v0.8). Composite finding key = path + rule + snippetHash (same as v0.7 SARIF fingerprint; severity excluded so rule graduation does not invalidate baselines). No write CLI in v0.8 — schema + verify only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "findings"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": {
+      "type": "string",
+      "enum": ["1.0.0"],
+      "description": "Baseline format version. Bump only with a documented migration."
+    },
+    "generatedAt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO-8601 timestamp when this baseline file was produced."
+    },
+    "findings": {
+      "type": "array",
+      "description": "Baselined findings. Identity key per item: path + rule + snippetHash.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "rule", "snippetHash", "createdAt"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\\\]+$",
+            "description": "Normalized repo-relative file path (posix separators)."
+          },
+          "rule": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Gavel rule tag (SARIF ruleId / finding.tag)."
+          },
+          "snippetHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "sha256 hex of the violating code snippet (stable; line numbers excluded). With path + rule forms the v0.7 SARIF fingerprint identity."
+          },
+          "createdAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 timestamp when this finding was first baselined."
+          }
+        }
+      }
+    }
+  }
+}

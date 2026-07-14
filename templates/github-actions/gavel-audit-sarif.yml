@@ -1,9 +1,12 @@
-# Gavel audit → SARIF (GitHub Actions recipe)
+# Gavel audit → SARIF → GitHub Code Scanning (consumer recipe)
+#
+# Copy the YAML block below into your automation repo as:
+#   .github/workflows/gavel-audit.yml
+#
+# No LLM, no IDE skills, no Bailiff — only the pinned npm CLI.
+# `gavel audit` includes self-check by default (see docs/CLI_MATRIX.md).
+# Baseline ratchet (`gavel baseline`) is v0.9; until then gate on failThreshold.
 
-Copy into a consumer automation repo as `.github/workflows/gavel-audit.yml`.
-Pin the Gavel package version. CI must not invoke LLM agents.
-
-```yaml
 name: gavel-audit
 
 on:
@@ -26,9 +29,9 @@ jobs:
           node-version: '22'
 
       - name: Run Gavel audit (SARIF)
-        run: npx --yes @dsolisp/gavel@0.7.1 audit --format sarif > gavel.sarif
-        continue-on-error: true
         id: gavel
+        continue-on-error: true
+        run: npx --yes @dsolisp/gavel@0.8.0 audit --format sarif > gavel.sarif
 
       - name: Upload SARIF to Code Scanning
         if: always() && hashFiles('gavel.sarif') != ''
@@ -39,11 +42,6 @@ jobs:
 
       - name: Fail job on Gavel findings
         if: steps.gavel.outcome == 'failure'
-        run: exit 1
-```
-
-Notes:
-
-- Prefer a locked `package.json` / `package-lock.json` dep over floating `npx` in regulated orgs.
-- Baseline ratchet (`gavel baseline`) is roadmap **v0.9**; until then gate on full-suite threshold or diff-scoped self-check.
-- Official composite GitHub Action + Azure DevOps task ship in the **v1.0** integration pack; this template is the v0.8 enterprise CI recipe.
+        run: |
+          echo "Gavel audit exited non-zero (findings at/above failThreshold or usage error)."
+          exit 1

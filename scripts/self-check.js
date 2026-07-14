@@ -12,6 +12,7 @@ const { toSarif, formatFlag } = require('./to-sarif');
 
 let config = {};
 let allowlist = [];
+let scanRoot = '';
 
 // Matches *.spec.*, *.test.*, *.cy.{js,ts} (Cypress), and Python test_*/#*_test files
 const TEST_FILE_RE = /\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$/;
@@ -67,6 +68,195 @@ function findMatches(content, pattern, filePath = '') {
     }
   }
   return hits;
+}
+
+function isConfiguredPath(filePath, paths = []) {
+  return paths.some((entry) => filePath === entry || filePath.startsWith(`${entry.replace(/\/+$/, '')}/`));
+}
+
+function findHardcodedEnvMatches(filePath, content) {
+  if (
+    !TEST_FILE_RE.test(filePath)
+    || LOCATOR_FILE_RE.test(filePath)
+    || /(^|\/)(?:config|configs|settings|docs?|snapshots?|__snapshots__|generated)(\/|$)/i.test(filePath)
+    || isConfiguredPath(filePath, config.fixturePaths)
+    || isConfiguredPath(filePath, config.factoryPaths)
+    || scanRoot.replace(/\\/g, '/').includes('/fixtures/sample-repos/')
+  ) {
+    return [];
+  }
+
+  const patterns = [
+    /\b(?:fetch|request(?:\.(?:get|post|put|patch|delete))?)\s*\(\s*['"]https?:\/\/(?:[^/'"\s]+\.)?(?:localhost|staging|dev)(?:[.:/]|['"])/i,
+    /\b(?:\d{1,3}\.){3}\d{1,3}\b/,
+    /https?:\/\/[^'"\s]+:\d{2,5}(?:\/|['"])/,
+    /['"](?:\/(?:home|Users)\/|[A-Za-z]:\\+(?:Users|home)\\+)/,
+    /\b(?:password|token|secret|api[_-]?key)\s*[:=]\s*['"][^'"]+/i,
+  ];
+  const hits = new Map();
+  for (const pattern of patterns) {
+    for (const hit of findMatches(content, pattern, filePath)) {
+      hits.set(hit.line, { line: hit.line, text: 'hardcoded environment value' });
+    }
+  }
+  return [...hits.values()];
+}
+
+function findDescribeBlocks(content) {
+  const lines = content.split('\n');
+  const blocks = [];
+
+  for (let start = 0; start < lines.length; start += 1) {
+    if (!/\b(?:test\.)?describe\s*\(/.test(lines[start])) {
+      continue;
+    }
+    let depth = 0;
+    for (let end = start; end < lines.length; end += 1) {
+      depth += (lines[end].match(/\{/g) || []).length;
+      depth -= (lines[end].match(/\}/g) || []).length;
+      if (depth <= 0 && end > start) {
+        blocks.push({ start: start + 1, end: end + 1 });
+        break;
+      }
+    }
+  }
+  return blocks;
+}
+
+function findPostYieldCleanup(content, filePath) {
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length - 1; i += 1) {
+    if (!findMatches(lines[i], /\byield\b/, filePath).length) {
+      continue;
+    }
+    for (let line = i + 1; line < lines.length; line += 1) {
+      if (lines[line].trim() && !lines[line].trim().startsWith('#')) {
+        return [{ line: line + 1 }];
+      }
+    }
+  }
+  return [];
+}
+
+function findStateCreationSignals(content, filePath) {
+  const patterns = [
+    /\bINSERT\s+INTO\b/i,
+    /\bfetch\s*\([^,\n]+,\s*\{[^}\n]*\bmethod\s*:\s*['"](?:POST|PUT)['"]/i,
+    /\b(?:axios|request|supertest)(?:\s*\([^)]*\))?\s*\.\s*(?:post|put)\s*\(/i,
+  ];
+  return patterns.flatMap((pattern) => findMatches(content, pattern, filePath));
+}
+
+function cleanupSignals(content, filePath) {
+  const hits = findMatches(content, /\b(?:afterEach|tearDown|addfinalizer)\s*\(|\b@AfterEach\b/, filePath);
+  return [...hits, ...findPostYieldCleanup(content, filePath)];
+}
+
+function blockForLine(blocks, line, end) {
+  return blocks.filter((block) => line >= block.start && line <= block.end)
+    .sort((a, b) => (a.end - a.start) - (b.end - b.start))[0] || { start: 1, end };
+}
+
+function findNoTeardownMatches(filePath, content) {
+  if (!TEST_FILE_RE.test(filePath)) return [];
+  const blocks = findDescribeBlocks(content);
+  const teardown = cleanupSignals(content, filePath);
+  return findStateCreationSignals(content, filePath)
+    .filter((creation) => {
+      const block = blockForLine(blocks, creation.line, content.split('\n').length);
+      return !teardown.some(({ line }) => line >= block.start && line <= block.end);
+    })
+    .map(({ line }) => ({
+      line,
+      text: 'inline state creation without teardown; misses cross-file fixtures and cannot prove runtime orphaning',
+    }));
+}
+
+function literalSelector(line) {
+  const match = line.match(/(?:\.\s*locator|querySelector(?:All)?|\$(?:\$)?)\s*\(\s*(?:'([^']*)'|"([^"]*)"|`([^`]*)`)/);
+  return match && match.slice(1).find((value) => value !== undefined);
+}
+
+function locatorExpressions(content, filePath) {
+  const lines = content.split('\n');
+  return findMatches(content, /(?:\.\s*locator|querySelector(?:All)?|\$(?:\$)?)\s*\(\s*['"`]/, filePath)
+    .map(({ line }) => ({ line, selector: literalSelector(lines[line - 1]) }))
+    .filter(({ selector }) => selector !== undefined);
+}
+
+function combinatorHops(selector) {
+  if (selector.startsWith('xpath=')) return 0;
+  const simplified = selector.replace(/\[[^\]]*]|:[\w-]+\([^)]*\)/g, '').trim();
+  return simplified ? simplified.split(/\s*>\s*|\s+/).filter(Boolean).length - 1 : 0;
+}
+
+function selectorFragility(selector) {
+  const contributions = [];
+  const add = (label, points) => contributions.push(`${label} ${points > 0 ? '+' : ''}${points}`);
+  if (/\b[\w-]+::/.test(selector)) add('XPath axis', 3);
+  if (/\[\s*\d+\s*\]|:nth-child\s*\(/.test(selector)) add('positional index', 2);
+  if (/\[class[*^$]?=['"][^'"]*(?:sc-|css-)/.test(selector)) add('generated class', 3);
+  if (/\btext=|:has-text\s*\(/.test(selector)) add('broad text', 2);
+  const hops = combinatorHops(selector);
+  if (hops > 2) add('deep combinators', hops - 2);
+
+  const allowlist = config.selectorAllowlist || {};
+  if ((allowlist.componentPrefixes || []).some((prefix) => selector.trim().startsWith(prefix))) add('component prefix', -3);
+  if (allowlist.customElements && /(?:^|[\s>])[a-z][\w-]*-[\w-]+/.test(selector)) add('custom element', -2);
+  const score = Math.max(0, contributions.reduce((total, entry) => total + Number(entry.match(/-?\d+$/)[0]), 0));
+  return { contributions, score };
+}
+
+function findComplexLocatorMatches(filePath, content) {
+  if (!LOCATOR_FILE_RE.test(filePath)) return [];
+  return locatorExpressions(content, filePath)
+    .map(({ line, selector }) => ({ line, ...selectorFragility(selector) }))
+    .filter(({ score }) => score >= 5)
+    .map(({ line, contributions, score }) => ({ line, text: `${contributions.join(', ')} → ${score}` }));
+}
+
+function proseLiteral(line) {
+  const match = line.match(/(['"])(.*?)\1/);
+  return match && (/\s/.test(match[2]) || /[.!?]$/.test(match[2]));
+}
+
+function importedConstants(content) {
+  const names = new Set();
+  for (const match of content.matchAll(/import\s+\{([^}]+)\}|from\s+\S+\s+import\s+([A-Z][A-Z0-9_]*)|import\s+static\s+\S+\.([A-Z][A-Z0-9_]*)/g)) {
+    for (const group of match.slice(1)) {
+      if (!group) continue;
+      for (const name of group.match(/[A-Z][A-Z0-9_]*/g) || []) names.add(name);
+    }
+  }
+  return names;
+}
+
+function sameFileConstants(content) {
+  const names = new Set();
+  for (const match of content.matchAll(/(?:const|final\s+\w+|static\s+final\s+\w+)\s+([A-Z][A-Z0-9_]*)|^([A-Z][A-Z0-9_]*)\s*=/gm)) {
+    names.add(match[1] || match[2]);
+  }
+  return names;
+}
+
+function isEqualityAssertion(line) {
+  return /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s/.test(line);
+}
+
+function importedConstantAssertion(line, imported, constants) {
+  return (line.match(/\b[A-Z][A-Z0-9_]*\b/g) || [])
+    .some((name) => imported.has(name) && !constants.has(name));
+}
+
+function findBrittleAssertMatches(filePath, content) {
+  if (!TEST_FILE_RE.test(filePath)) return [];
+  const lines = content.split('\n');
+  const imported = importedConstants(content);
+  const constants = sameFileConstants(content);
+  return findMatches(content, /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s/, filePath)
+    .filter(({ line }) => isEqualityAssertion(lines[line - 1]))
+    .filter(({ line }) => proseLiteral(lines[line - 1]) || importedConstantAssertion(lines[line - 1], imported, constants))
+    .map(({ line }) => ({ line, text: lines[line - 1].trim() }));
 }
 
 // Matches `gavel-ignore` / deprecated `gavel-allow`, bare or tag-scoped:
@@ -367,6 +557,45 @@ const RULES = [
       return hits;
     },
   },
+  {
+    id: 'hardcoded-env',
+    severity: 'error',
+    envelopeSeverity: 'blocker',
+    class: 'data',
+    message: 'Hardcoded environment value in a test spec',
+    remediation: 'Use environment variables, .env files, or config modules instead of hardcoded URLs, paths, IPs, ports, or credentials (AGENTS.md: Test Constitution WON\'T DO #3).',
+    test: findHardcodedEnvMatches,
+  },
+  {
+    id: 'no-teardown',
+    severity: 'info',
+    envelopeSeverity: 'report',
+    class: 'data',
+    confidence: 'low',
+    message: 'Inline state creation without file-local teardown; misses cross-file fixtures and cannot prove runtime orphaning',
+    remediation: 'Add cleanup in the same file or suite with afterEach, tearDown, addfinalizer, post-yield teardown, or @AfterEach. This static rule cannot assess cross-file fixtures or runtime orphaning.',
+    test: findNoTeardownMatches,
+  },
+  {
+    id: 'complex-locator',
+    severity: 'info',
+    envelopeSeverity: 'report',
+    class: 'locator',
+    confidence: 'low',
+    message: 'Fragile locator expression scored at least 5',
+    remediation: 'Use Locator Priority rung 1 accessibility locators before stable test IDs, structural selectors, or XPath (AGENTS.md: Locator Priority).',
+    test: findComplexLocatorMatches,
+  },
+  {
+    id: 'brittle-assert',
+    severity: 'warning',
+    envelopeSeverity: 'fix',
+    class: 'assertion',
+    confidence: 'medium',
+    message: 'Equality assertion against prose likely to drift with product copy',
+    remediation: 'Use a native partial matcher: Playwright toContain() or expect(locator).toHaveText(/partial/); pytest assert "substring" in value; JUnit assertThat(actual).contains(expected); Cypress should(\'contain\', \'partial\').',
+    test: findBrittleAssertMatches,
+  },
 ];
 
 const RULE_SEVERITY = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
@@ -500,6 +729,7 @@ function main() {
   try {
     config = loadGavelConfig(resolvedRoot, { configPath, cwd: process.cwd() });
     allowlist = Array.isArray(config.allowlist) ? config.allowlist : [];
+    scanRoot = resolvedRoot;
   } catch (error) {
     console.error(error.message);
     process.exit(2);
@@ -585,7 +815,7 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { RULES };
+module.exports = { RULES, findMatches };
 
 if (require.main === module) {
   main();

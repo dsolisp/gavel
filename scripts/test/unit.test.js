@@ -69,6 +69,84 @@ test('gavel config resolution prefers --config, cwd config, package metadata, de
   assert.equal(resolveGavelConfig({ cwd: dir, configPath: 'explicit.json' }).config.failThreshold, 'blocker');
 });
 
+test('hardcoded-env detects spec values without exposing credentials', () => {
+  const violations = runCli(['self-check', 'fixtures/self-check/violations', '--json']);
+  const report = JSON.parse(violations.stdout);
+  const findings = report.findings.filter((finding) => finding.tag === 'hardcoded-env');
+
+  assert.deepEqual(findings.map((finding) => finding.line), [4, 5, 6, 7, 8, 9, 10]);
+  assert.ok(findings.every((finding) => finding.text === 'hardcoded environment value'));
+  assert.doesNotMatch(violations.stdout, /do-not-report-this-value/);
+
+  const clean = runCli(['self-check', 'fixtures/self-check/clean', '--json']);
+  assert.equal(JSON.parse(clean.stdout).findings.some((finding) => finding.tag === 'hardcoded-env'), false);
+});
+
+test('hardcoded-env excludes configured fixture paths and sample repos', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-hardcoded-env-'));
+  fs.mkdirSync(path.join(repo, 'tests', 'fixtures'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, 'tests', 'fixtures', 'credentials.spec.ts'),
+    'const secret = "fixture-only";\n',
+  );
+  const configPath = path.join(repo, 'gavel.config.json');
+  fs.writeFileSync(configPath, JSON.stringify({ fixturePaths: ['tests/fixtures'] }));
+
+  const configured = runCli(['self-check', repo, '--config', configPath, '--json']);
+  assert.equal(JSON.parse(configured.stdout).findings.some((finding) => finding.tag === 'hardcoded-env'), false);
+
+  for (const framework of ['playwright', 'cypress', 'selenium', 'webdriverio']) {
+    const sample = runCli(['self-check', `fixtures/sample-repos/${framework}`, '--json']);
+    assert.equal(JSON.parse(sample.stdout).findings.some((finding) => finding.tag === 'hardcoded-env'), false);
+  }
+});
+
+test('no-teardown requires cleanup in the same describe block', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-no-teardown-'));
+  const specPath = path.join(repo, 'orders.spec.ts');
+  fs.writeFileSync(specPath, [
+    "import { test } from '@playwright/test';",
+    "test.describe('clean orders', () => {",
+    '  test.afterEach(async () => {});',
+    '});',
+    "test.describe('unclean orders', () => {",
+    "  test('creates an order', async ({ request }) => {",
+    "    await request.post('/orders', { data: {} });",
+    '  });',
+    '});',
+  ].join('\n'));
+
+  const report = JSON.parse(runCli(['self-check', repo, '--json']).stdout);
+  const findings = report.findings.filter((finding) => finding.tag === 'no-teardown');
+  assert.deepEqual(findings.map((finding) => finding.line), [7]);
+  assert.match(findings[0].text, /misses cross-file fixtures/);
+});
+
+test('complex-locator itemizes fragility and honors selector allowlists', () => {
+  const violations = JSON.parse(runCli(['self-check', 'fixtures/self-check/violations', '--json']).stdout);
+  const findings = violations.findings.filter((finding) => finding.tag === 'complex-locator');
+  assert.deepEqual(findings.map((finding) => finding.text), [
+    'generated class +3, broad text +2 → 5',
+    'XPath axis +3, positional index +2 → 5',
+  ]);
+
+  const clean = runCli(['self-check', 'fixtures/self-check/clean', '--json']);
+  assert.equal(JSON.parse(clean.stdout).findings.some((finding) => finding.tag === 'complex-locator'), false);
+});
+
+test('gavel-review applies assert-drop severities and scoped suppression', () => {
+  const diffRoot = 'fixtures/self-check/diff/assert-drop';
+  assert.equal(runCli(['review', `${diffRoot}/assertion-deleted/before.spec.ts`, `${diffRoot}/assertion-deleted/after.spec.ts`, '--json']).status, 1);
+  assert.equal(runCli(['review', `${diffRoot}/strength-downgrade/before.spec.ts`, `${diffRoot}/strength-downgrade/after.spec.ts`, '--json']).status, 0);
+
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-assert-drop-'));
+  const before = path.join(repo, 'before.spec.ts');
+  const after = path.join(repo, 'after.spec.ts');
+  fs.writeFileSync(before, "test('keeps title', () => {\n  expect(value).toBe('ok');\n});\n");
+  fs.writeFileSync(after, "test('keeps title', () => {\n  // gavel-ignore: assert-drop — intentional refactor\n});\n");
+  assert.equal(runCli(['review', before, after, '--json']).status, 0);
+});
+
 test('package publishes unified gavel bins and config schema', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   for (const name of ['gavel', 'gavel-audit', 'gavel-review', 'gavel-self-check', 'gavel-analyze', 'gavel-affected-tests', 'gavel-detect']) {
@@ -76,6 +154,10 @@ test('package publishes unified gavel bins and config schema', () => {
   }
   const schema = JSON.parse(fs.readFileSync(path.join(root, 'schemas/gavel-config.schema.json'), 'utf8'));
   assert.ok(schema.properties.failThreshold.enum.includes('warning'));
+  assert.equal(schema.properties.fixturePaths.items.type, 'string');
+  assert.equal(schema.properties.factoryPaths.items.type, 'string');
+  assert.equal(schema.properties.selectorAllowlist.properties.componentPrefixes.items.type, 'string');
+  assert.equal(schema.properties.selectorAllowlist.properties.customElements.type, 'boolean');
 });
 
 test('unified CLI exit codes, hidden companion help, and alias path work', () => {
@@ -112,7 +194,7 @@ test('unified CLI exit codes, hidden companion help, and alias path work', () =>
 });
 
 test('unified CLI core commands run', () => {
-  assert.equal(runCli(['review', 'fixtures/self-check/clean', '--json']).status, 0);
+  assert.equal(runCli(['review', 'fixtures/self-check/diff/assert-drop/consolidated/before.spec.ts', 'fixtures/self-check/diff/assert-drop/consolidated/after.spec.ts', '--json']).status, 0);
   assert.equal(runCli(['detect', '.', '--json']).status, 0);
   assert.equal(runCli(['affected-tests', 'fixtures/affected-tests', '--tag', 'smoke', '--json']).status, 0);
   assert.equal(runCli(['analyze', 'fixtures/reports/junit/sample-failures.xml', '--json']).status, 0);
@@ -205,4 +287,37 @@ test('result envelope schema examples validate; invalid envelopes report errors'
   const errors = validateEnvelope(bad);
   assert.ok(errors.some((error) => error.includes('confidence')));
   assert.ok(errors.some((error) => error.includes('unknown field "extra"')));
+});
+
+test('corpus labels schema accepts valid docs and rejects unknown fields', () => {
+  const { validateLabels, GRADUATION, listTagDirs } = require('../verify-corpus-precision');
+  assert.equal(GRADUATION['report-to-warning'], 0.9);
+  assert.equal(GRADUATION['warning-to-blocker'], 0.95);
+  assert.ok(Array.isArray(listTagDirs()));
+  assert.ok(listTagDirs().includes('brittle-assert'));
+
+  const valid = {
+    schemaVersion: '1.0.0',
+    tag: 'brittle-assert',
+    samples: [
+      {
+        file: 'violating/a.spec.ts',
+        label: 'violating',
+        language: 'ts',
+        framework: 'playwright',
+        rationale: 'prose equality',
+        expectedFindings: [{ line: 4, tag: 'brittle-assert' }],
+      },
+      {
+        file: 'clean/b.py',
+        label: 'clean',
+        language: 'py',
+        framework: 'pytest',
+        rationale: 'contains matcher',
+      },
+    ],
+  };
+  assert.deepEqual(validateLabels(valid), []);
+  assert.ok(validateLabels({}).some((error) => error.includes('missing required field')));
+  assert.ok(validateLabels({ ...valid, extra: true }).some((error) => error.includes('unknown field')));
 });

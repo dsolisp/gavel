@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dsolisp.github.io/gavel/schemas/corpus-labels.schema.json",
+  "title": "Gavel corpus labels",
+  "description": "Labeled samples for heuristic precision measurement under fixtures/corpus/<tag>/labels.json. Internal corpus tooling format (not a public irreversible interface); public precision contract is corpus-precision-report.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "tag", "samples"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": {
+      "type": "string",
+      "enum": ["1.0.0"],
+      "description": "Corpus labels format version. Bump only with a documented migration."
+    },
+    "tag": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Self-check / review rule id this corpus measures (must match directory name)."
+    },
+    "samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "label", "language", "framework", "rationale"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Path relative to fixtures/corpus/<tag>/ (posix separators)."
+          },
+          "label": {
+            "type": "string",
+            "enum": ["violating", "clean"]
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Programming language id (ts, js, py, java, …)."
+          },
+          "framework": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Test framework id (playwright, cypress, selenium, pytest, …)."
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One-line reason this sample is labeled violating or clean."
+          },
+          "expectedFindings": {
+            "type": "array",
+            "description": "Required for violating samples; must be empty or omitted for clean.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["line", "tag"],
+              "properties": {
+                "line": { "type": "integer", "minimum": 1 },
+                "tag": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

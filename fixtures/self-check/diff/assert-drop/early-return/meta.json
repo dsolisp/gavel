@@ -1,0 +1,12 @@
+{
+  "tag": "assert-drop",
+  "label": "violating",
+  "subCase": "early-return",
+  "expectedFindings": [
+    {
+      "file": "after.spec.ts",
+      "line": 6,
+      "subCase": "early-return"
+    }
+  ]
+}

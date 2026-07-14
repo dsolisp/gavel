@@ -28,6 +28,16 @@
     "testIdPrefix": { "type": "string" },
     "testIdPattern": { "type": "string" },
     "enforceConsecutiveTestIds": { "type": "boolean", "default": false },
+    "fixturePaths": { "type": "array", "items": { "type": "string" } },
+    "factoryPaths": { "type": "array", "items": { "type": "string" } },
+    "selectorAllowlist": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "componentPrefixes": { "type": "array", "items": { "type": "string" } },
+        "customElements": { "type": "boolean", "default": false }
+      }
+    },
     "criticalAreas": { "type": "array", "items": { "type": "string" } },
     "criticalTags": { "type": "array", "items": { "type": "string" } },
     "areaMap": {
