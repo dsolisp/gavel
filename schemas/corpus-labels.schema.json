@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dsolisp.github.io/gavel/schemas/corpus-labels.schema.json",
   "title": "Gavel corpus labels",
-  "description": "Labeled samples for heuristic precision measurement under fixtures/corpus/<tag>/labels.json. Irreversible interface (v0.8).",
+  "description": "Labeled samples for heuristic precision measurement under fixtures/corpus/<tag>/labels.json. Internal corpus tooling format (not a public irreversible interface); public precision contract is corpus-precision-report.schema.json.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "tag", "samples"],

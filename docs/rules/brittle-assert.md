@@ -149,4 +149,4 @@ Produced via `scripts/to-sarif.js` when self-check/audit emit `--format sarif`:
 | `results[].partialFingerprints['gavelSnippetHash/v1']` | SHA-256 of `file + tag + snippet` (line excluded — baseline identity) |
 | `helpUri` | Deferred until per-rule explain pages (roadmap v1.0); contract lives at `docs/rules/brittle-assert.md` until then |
 
-Baseline key (v0.8 schema): `path + rule + snippetHash + severity`.
+Baseline key (v0.8 schema): `path + rule + snippetHash` (severity excluded — graduation must not invalidate baselines).

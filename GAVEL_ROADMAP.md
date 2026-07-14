@@ -132,7 +132,7 @@ Contributor / multi-model protocol: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
 **Goal:** Catch brittle tests before CI *and* give platform teams a deterministic SARIF gate with a reviewed baseline schema.  
 **Scope:** Test-code quality only. Heuristics stay `report` until corpus graduation.  
 **Rule budget:** exactly 5 tags — `brittle-assert`, `hardcoded-env`, `complex-locator`, `no-teardown`, `assert-drop`.  
-**Interface budget:** two irreversible interfaces — `gavel-baseline.json` schema + corpus label/precision-report format.  
+**Interface budget:** two irreversible interfaces — `gavel-baseline.json` schema + corpus precision-report format (corpus `labels.json` is internal tooling, not counted).  
 **Enterprise DoD add-ons (same release):** official-ready **GitHub Action template** + **SARIF CI recipe** (already seeded under `templates/github-actions/gavel-audit-sarif.yml` and [docs/ENTERPRISE.md](docs/ENTERPRISE.md); pin + Code Scanning upload must be documented and verify-referenced).
 
 **Shared scanner constraints:** read only repo files, diffs, local git metadata, prior envelopes by path. Never run tests to reproduce flakes, query CI, inspect live env, sweep data, or print credential values.
@@ -159,7 +159,7 @@ Contributor / multi-model protocol: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
 
 **Heal governance:** repair as reviewable diffs; never delete/weaken asserts (`assert-drop` blocks that). Evidence loop per contract #8.
 
-**Adoption aid — baseline schema (promote to DoD):** design `gavel-baseline.json` (schema version, path, rule, snippet hash, severity, created-at). Identity = v0.7 SARIF fingerprint + severity. Ship schema-validation verify script + golden samples. **No baseline write CLI in v0.8** — that is v0.9.
+**Adoption aid — baseline schema (promote to DoD):** design `gavel-baseline.json` (schema version, path, rule, snippet hash, created-at). Identity = v0.7 SARIF fingerprint (`path + rule + snippetHash`); severity is **not** part of the key (CR Session 1 — graduation must not invalidate baselines). Ship schema-validation verify script + golden samples. **No baseline write CLI in v0.8** — that is v0.9.
 
 **Enterprise CI surfaces (DoD):**
 
@@ -173,7 +173,7 @@ Contributor / multi-model protocol: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
 
 | Order | Item | Tier | Notes |
 |-------|------|------|-------|
-| 1 | Corpus label format + precision runner | **A** + R | Irreversible interface |
+| 1 | Corpus label format + precision runner | **A** + R | Labels internal; precision-report is the public interface |
 | 2 | Baseline ratchet schema + verify samples | **A** + R | Irreversible; no write flag |
 | 3 | `brittle-assert` contract + corpus population | **A** + R | Contract #9 before scanner |
 | 4 | `hardcoded-env` | B | |

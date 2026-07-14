@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dsolisp.github.io/gavel/schemas/gavel-baseline.schema.json",
   "title": "Gavel baseline",
-  "description": "Baseline ratchet file (gavel-baseline.json). Irreversible interface (v0.8). Composite finding key = path + rule + snippetHash + severity (extends v0.7 SARIF fingerprint path + rule + snippetHash with severity). No write CLI in v0.8 — schema + verify only.",
+  "description": "Baseline ratchet file (gavel-baseline.json). Irreversible interface (v0.8). Composite finding key = path + rule + snippetHash (same as v0.7 SARIF fingerprint; severity excluded so rule graduation does not invalidate baselines). No write CLI in v0.8 — schema + verify only.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "generatedAt", "findings"],
@@ -20,11 +20,11 @@
     },
     "findings": {
       "type": "array",
-      "description": "Baselined findings. Identity key per item: path + rule + snippetHash + severity.",
+      "description": "Baselined findings. Identity key per item: path + rule + snippetHash.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "rule", "snippetHash", "severity", "createdAt"],
+        "required": ["path", "rule", "snippetHash", "createdAt"],
         "properties": {
           "path": {
             "type": "string",
@@ -41,20 +41,6 @@
             "type": "string",
             "pattern": "^[a-f0-9]{64}$",
             "description": "sha256 hex of the violating code snippet (stable; line numbers excluded). With path + rule forms the v0.7 SARIF fingerprint identity."
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "blocker",
-              "error",
-              "fix",
-              "warning",
-              "cleanup",
-              "info",
-              "report",
-              "delete"
-            ],
-            "description": "Rule severity at baselining time (self-check + audit vocabularies). Part of the composite key."
           },
           "createdAt": {
             "type": "string",
