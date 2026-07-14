@@ -25,6 +25,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `scripts/verify-boundary.js` — allowlist `docs/BAILIFF.md` as planning-only (still blocks Bailiff code)
 - `v0.8.0-prompts.txt` — Item #9 for enterprise CI DoD (SARIF recipe + Action template)
 - `RELEASE_CHECKLIST.md` — version/enterprise trust gates
+- `.gitattributes` — force LF for scripts/docs so Linux shebang CI does not break
+- Unit test for `gavel-*` alias invokes via `node` (still asserts basename command routing)
+
+### Fixed
+
+- Scripts committed as CRLF broke the Linux alias/shebang path in `npm run verify` (unit test suite 10/11)
 
 ## [0.7.0] - 2026-07-13
 

@@ -102,7 +102,12 @@ test('unified CLI exit codes, hidden companion help, and alias path work', () =>
     if (e.code === 'EPERM' || e.code === 'ENOSYS') return;
     throw e;
   }
-  const aliasResult = spawnSync(alias, ['fixtures/self-check/clean', '--json'], { cwd: root, encoding: 'utf8' });
+  // Invoke via node so the assertion does not depend on shebang + execute bit
+  // (CI still exercises publicCommandName via basename of argv[1] = gavel-self-check).
+  const aliasResult = spawnSync(process.execPath, [alias, 'fixtures/self-check/clean', '--json'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
   assert.equal(aliasResult.status, 0);
 });
 
