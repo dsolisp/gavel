@@ -588,8 +588,8 @@ const RULES = [
   },
   {
     id: 'brittle-assert',
-    severity: 'info',
-    envelopeSeverity: 'report',
+    severity: 'warning',
+    envelopeSeverity: 'fix',
     class: 'assertion',
     confidence: 'medium',
     message: 'Equality assertion against prose likely to drift with product copy',
