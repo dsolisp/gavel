@@ -40,7 +40,7 @@ function validateGavelConfig(config, source = CONFIG_NAME) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error(`${source}: config must be an object`);
   }
-  const stringArrays = ['criticalAreas', 'criticalTags'];
+  const stringArrays = ['criticalAreas', 'criticalTags', 'fixturePaths', 'factoryPaths'];
   for (const key of stringArrays) {
     if (config[key] && (!Array.isArray(config[key]) || config[key].some((item) => typeof item !== 'string'))) {
       throw new Error(`${source}: ${key} must be an array of strings`);

@@ -28,6 +28,8 @@
     "testIdPrefix": { "type": "string" },
     "testIdPattern": { "type": "string" },
     "enforceConsecutiveTestIds": { "type": "boolean", "default": false },
+    "fixturePaths": { "type": "array", "items": { "type": "string" } },
+    "factoryPaths": { "type": "array", "items": { "type": "string" } },
     "criticalAreas": { "type": "array", "items": { "type": "string" } },
     "criticalTags": { "type": "array", "items": { "type": "string" } },
     "areaMap": {

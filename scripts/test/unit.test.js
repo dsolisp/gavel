@@ -69,6 +69,38 @@ test('gavel config resolution prefers --config, cwd config, package metadata, de
   assert.equal(resolveGavelConfig({ cwd: dir, configPath: 'explicit.json' }).config.failThreshold, 'blocker');
 });
 
+test('hardcoded-env detects spec values without exposing credentials', () => {
+  const violations = runCli(['self-check', 'fixtures/self-check/violations', '--json']);
+  const report = JSON.parse(violations.stdout);
+  const findings = report.findings.filter((finding) => finding.tag === 'hardcoded-env');
+
+  assert.deepEqual(findings.map((finding) => finding.line), [4, 5, 6, 7, 8, 9, 10]);
+  assert.ok(findings.every((finding) => finding.text === 'hardcoded environment value'));
+  assert.doesNotMatch(violations.stdout, /do-not-report-this-value/);
+
+  const clean = runCli(['self-check', 'fixtures/self-check/clean', '--json']);
+  assert.equal(JSON.parse(clean.stdout).findings.some((finding) => finding.tag === 'hardcoded-env'), false);
+});
+
+test('hardcoded-env excludes configured fixture paths and sample repos', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-hardcoded-env-'));
+  fs.mkdirSync(path.join(repo, 'tests', 'fixtures'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, 'tests', 'fixtures', 'credentials.spec.ts'),
+    'const secret = "fixture-only";\n',
+  );
+  const configPath = path.join(repo, 'gavel.config.json');
+  fs.writeFileSync(configPath, JSON.stringify({ fixturePaths: ['tests/fixtures'] }));
+
+  const configured = runCli(['self-check', repo, '--config', configPath, '--json']);
+  assert.equal(JSON.parse(configured.stdout).findings.some((finding) => finding.tag === 'hardcoded-env'), false);
+
+  for (const framework of ['playwright', 'cypress', 'selenium', 'webdriverio']) {
+    const sample = runCli(['self-check', `fixtures/sample-repos/${framework}`, '--json']);
+    assert.equal(JSON.parse(sample.stdout).findings.some((finding) => finding.tag === 'hardcoded-env'), false);
+  }
+});
+
 test('package publishes unified gavel bins and config schema', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   for (const name of ['gavel', 'gavel-audit', 'gavel-review', 'gavel-self-check', 'gavel-analyze', 'gavel-affected-tests', 'gavel-detect']) {
@@ -76,6 +108,8 @@ test('package publishes unified gavel bins and config schema', () => {
   }
   const schema = JSON.parse(fs.readFileSync(path.join(root, 'schemas/gavel-config.schema.json'), 'utf8'));
   assert.ok(schema.properties.failThreshold.enum.includes('warning'));
+  assert.equal(schema.properties.fixturePaths.items.type, 'string');
+  assert.equal(schema.properties.factoryPaths.items.type, 'string');
 });
 
 test('unified CLI exit codes, hidden companion help, and alias path work', () => {

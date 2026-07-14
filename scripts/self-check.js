@@ -12,6 +12,7 @@ const { toSarif, formatFlag } = require('./to-sarif');
 
 let config = {};
 let allowlist = [];
+let scanRoot = '';
 
 // Matches *.spec.*, *.test.*, *.cy.{js,ts} (Cypress), and Python test_*/#*_test files
 const TEST_FILE_RE = /\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$/;
@@ -67,6 +68,38 @@ function findMatches(content, pattern, filePath = '') {
     }
   }
   return hits;
+}
+
+function isConfiguredPath(filePath, paths = []) {
+  return paths.some((entry) => filePath === entry || filePath.startsWith(`${entry.replace(/\/+$/, '')}/`));
+}
+
+function findHardcodedEnvMatches(filePath, content) {
+  if (
+    !TEST_FILE_RE.test(filePath)
+    || LOCATOR_FILE_RE.test(filePath)
+    || /(^|\/)(?:config|configs|settings|docs?|snapshots?|__snapshots__|generated)(\/|$)/i.test(filePath)
+    || isConfiguredPath(filePath, config.fixturePaths)
+    || isConfiguredPath(filePath, config.factoryPaths)
+    || scanRoot.replace(/\\/g, '/').includes('/fixtures/sample-repos/')
+  ) {
+    return [];
+  }
+
+  const patterns = [
+    /\b(?:fetch|request(?:\.(?:get|post|put|patch|delete))?)\s*\(\s*['"]https?:\/\/(?:[^/'"\s]+\.)?(?:localhost|staging|dev)(?:[.:/]|['"])/i,
+    /\b(?:\d{1,3}\.){3}\d{1,3}\b/,
+    /https?:\/\/[^'"\s]+:\d{2,5}(?:\/|['"])/,
+    /['"](?:\/(?:home|Users)\/|[A-Za-z]:\\+(?:Users|home)\\+)/,
+    /\b(?:password|token|secret|api[_-]?key)\s*[:=]\s*['"][^'"]+/i,
+  ];
+  const hits = new Map();
+  for (const pattern of patterns) {
+    for (const hit of findMatches(content, pattern, filePath)) {
+      hits.set(hit.line, { line: hit.line, text: 'hardcoded environment value' });
+    }
+  }
+  return [...hits.values()];
 }
 
 // Matches `gavel-ignore` / deprecated `gavel-allow`, bare or tag-scoped:
@@ -367,6 +400,15 @@ const RULES = [
       return hits;
     },
   },
+  {
+    id: 'hardcoded-env',
+    severity: 'warning',
+    envelopeSeverity: 'fix',
+    class: 'data',
+    message: 'Hardcoded environment value in a test spec',
+    remediation: 'Use environment variables, .env files, or config modules instead of hardcoded URLs, paths, IPs, ports, or credentials (AGENTS.md: Test Constitution WON\'T DO #3).',
+    test: findHardcodedEnvMatches,
+  },
 ];
 
 const RULE_SEVERITY = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
@@ -500,6 +542,7 @@ function main() {
   try {
     config = loadGavelConfig(resolvedRoot, { configPath, cwd: process.cwd() });
     allowlist = Array.isArray(config.allowlist) ? config.allowlist : [];
+    scanRoot = resolvedRoot;
   } catch (error) {
     console.error(error.message);
     process.exit(2);
