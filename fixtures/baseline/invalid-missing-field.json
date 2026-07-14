@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-07-13T18:00:00.000Z",
+  "findings": [
+    {
+      "path": "tests/checkout.spec.ts",
+      "rule": "hardcoded-env",
+      "severity": "warning",
+      "createdAt": "2026-07-01T12:00:00.000Z"
+    }
+  ]
+}

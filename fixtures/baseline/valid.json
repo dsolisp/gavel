@@ -1,0 +1,28 @@
+{
+  "$schema": "../../schemas/gavel-baseline.schema.json",
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-07-13T18:00:00.000Z",
+  "findings": [
+    {
+      "path": "tests/checkout.spec.ts",
+      "rule": "hardcoded-env",
+      "snippetHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "severity": "warning",
+      "createdAt": "2026-07-01T12:00:00.000Z"
+    },
+    {
+      "path": "tests/checkout.spec.ts",
+      "rule": "brittle-assert",
+      "snippetHash": "2c624232cdd221771294dfbb310aca000a0df6ac8b66b696d90ef06fdefb64a3",
+      "severity": "report",
+      "createdAt": "2026-07-10T09:30:00.000Z"
+    },
+    {
+      "path": "pages/actions/LoginActions.ts",
+      "rule": "expect-in-action",
+      "snippetHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+      "severity": "blocker",
+      "createdAt": "2026-07-13T18:00:00.000Z"
+    }
+  ]
+}
