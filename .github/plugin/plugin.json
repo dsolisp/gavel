@@ -1,7 +1,7 @@
 {
   "name": "gavel",
   "description": "The judge's hammer for test quality. Minimalism + QA discipline — one test, one verdict, move on.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "author": {
     "name": "Daniel Solis",
     "url": "https://github.com/dsolisp"

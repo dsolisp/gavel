@@ -71,12 +71,18 @@ function coreSkillFiles() {
 }
 
 // ============================================================
-// Check 1: No bailiff* files exist in the repo
+// Check 1: No Bailiff *code* — planning docs may live under docs/
 // ============================================================
 console.log('1. Bailiff file check...');
+const BAILIFF_DOC_ALLOWLIST = new Set([
+  path.normalize('docs/BAILIFF.md'),
+]);
 const bailiffFiles = walkDir(root, (name) => /bailiff/i.test(name));
-if (bailiffFiles.length > 0) {
-  bailiffFiles.forEach((f) => fail(`Boundary violation: bailiff file found: ${f}`));
+const disallowed = bailiffFiles.filter((f) => !BAILIFF_DOC_ALLOWLIST.has(path.normalize(f)));
+if (disallowed.length > 0) {
+  disallowed.forEach((f) => fail(`Boundary violation: bailiff file found: ${f}`));
+} else if (bailiffFiles.length > 0) {
+  ok(`No bailiff code; planning docs allowed: ${[...BAILIFF_DOC_ALLOWLIST].join(', ')}`);
 } else {
   ok('No bailiff* files in repo');
 }

@@ -1,0 +1,49 @@
+# Gavel audit → SARIF (GitHub Actions recipe)
+
+Copy into a consumer automation repo as `.github/workflows/gavel-audit.yml`.
+Pin the Gavel package version. CI must not invoke LLM agents.
+
+```yaml
+name: gavel-audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run Gavel audit (SARIF)
+        run: npx --yes @dsolisp/gavel@0.7.1 audit --format sarif > gavel.sarif
+        continue-on-error: true
+        id: gavel
+
+      - name: Upload SARIF to Code Scanning
+        if: always() && hashFiles('gavel.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gavel.sarif
+          category: gavel
+
+      - name: Fail job on Gavel findings
+        if: steps.gavel.outcome == 'failure'
+        run: exit 1
+```
+
+Notes:
+
+- Prefer a locked `package.json` / `package-lock.json` dep over floating `npx` in regulated orgs.
+- Baseline ratchet (`gavel baseline`) is roadmap **v0.9**; until then gate on full-suite threshold or diff-scoped self-check.
+- Official composite GitHub Action + Azure DevOps task ship in the **v1.0** integration pack; this template is the v0.8 enterprise CI recipe.

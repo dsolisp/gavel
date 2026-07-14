@@ -48,7 +48,8 @@ node scripts/verify-profile-fixtures.js
 - [ ] `validate-area-map.js` passes on example map
 - [ ] `analyze-ci.js --envelope` renders Gavel Result block (JSON and `playwright-report/` dir)
 - [ ] `audit-autofix.js` covers locators, POMs, factories; `audit-report.js` ranks output
-- [ ] `templates/apply-safe-workflow.md` and `templates/github-actions/gavel-verify.yml` present
+- [ ] `templates/apply-safe-workflow.md`, `templates/github-actions/gavel-verify.yml`, and `templates/github-actions/gavel-audit-sarif.yml` present
+- [ ] `docs/ENTERPRISE.md` and `docs/CLI_MATRIX.md` version/links coherent with README
 
 ## 5. Agent / Skill Contract
 
@@ -74,9 +75,16 @@ node scripts/affected-tests.js <known-automation-repo> --git --framework playwri
 
 ## 8. Version Bump
 
-- [ ] `package.json` version updated
-- [ ] `plugin.yaml` version updated
-- [ ] `check-versions.js` passes after bump
+- [ ] All 7 version files match (`node scripts/check-versions.js`)
+- [ ] `CHANGELOG.md` has a section for the release version
+- [ ] `docs/README.md` version line matches `package.json`
+- [ ] Git tag `vX.Y.Z` will match package version (maintainer creates/pushes tag)
+
+## 9. Enterprise trust surface (from v0.7.1+)
+
+- [ ] [docs/ENTERPRISE.md](docs/ENTERPRISE.md) describes exit codes, SARIF recipe, Bailiff boundary
+- [ ] [docs/CLI_MATRIX.md](docs/CLI_MATRIX.md) lists every default-help CLI command as implemented
+- [ ] Roadmap current-release line matches package version
 
 ## Release Decision
 
@@ -87,6 +95,7 @@ node scripts/affected-tests.js <known-automation-repo> --git --framework playwri
 | Self-check fixtures | Yes |
 | Parser fixtures | Yes |
 | Result envelope docs | Yes |
+| Version/CHANGELOG/docs alignment | Yes |
 | Manual smoke on real repo | Recommended |
 
 **Do not tag** if any required gate fails.

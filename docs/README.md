@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.7.0** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.7.1** (see [CHANGELOG.md](../CHANGELOG.md))
 
 Index for scripts, templates, and companion workflows. For install and first run, start at [README.md](../README.md).
 
@@ -10,16 +10,23 @@ Index for scripts, templates, and companion workflows. For install and first run
 |-----|---------|----------|
 | [README.md](../README.md) | Install, core commands, feature grid | New users |
 | [QUICKSTART.md](../QUICKSTART.md) | First session: audit → heal → write | QA engineers |
+| [ENTERPRISE.md](ENTERPRISE.md) | CI gate, SARIF, trust criteria, data handling | Platform / staff eng |
+| [CLI_MATRIX.md](CLI_MATRIX.md) | Which commands are real CLI vs agent-only | Platform / contributors |
 | [AGENTS.md](../AGENTS.md) | Universal QA rules | All IDE adapters |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Two-repo design, browser-first authoring principle | Contributors, architects |
+| [BAILIFF.md](BAILIFF.md) | Sibling QA-workflow repo (planning only) | Architects |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Verify gate, model tiers, budgets | Contributors |
+| [GAVEL_ROADMAP.md](../GAVEL_ROADMAP.md) | Trust → Freeze release narrative | Product / contributors |
 | [companion/README.md](../companion/README.md) | Optional CI/env/hub/closure skills | Teams needing extras |
 
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/self-check.js` | Constitution violation scan (`--json`) |
+| `scripts/cli.js` | Unified CLI (`gavel <command>`) |
+| `scripts/self-check.js` | Constitution violation scan (`--json`, `--format sarif`) |
 | `scripts/audit-report.js` | Ranked audit + suite health (`--with-self-check`, `--audit-format`) |
+| `scripts/to-sarif.js` | SARIF 2.1.0 serialization |
 | `scripts/refactor-score.js` | Before/after line count + violation delta |
 | `scripts/affected-tests.js` | Affected spec discovery + `--tag` |
 | `scripts/extract-tags.js` | Multi-framework tag extraction |
@@ -44,12 +51,15 @@ Index for scripts, templates, and companion workflows. For install and first run
 | Template | Purpose |
 |----------|---------|
 | [templates/github-actions/gavel-verify.yml](../templates/github-actions/gavel-verify.yml) | Verify gate for adapter forks |
+| [templates/github-actions/gavel-audit-sarif.yml](../templates/github-actions/gavel-audit-sarif.yml) | Consumer audit → SARIF → Code Scanning |
 | [templates/gitlab-ci/gavel-self-check.yml](../templates/gitlab-ci/gavel-self-check.yml) | Self-check on target automation repo |
 | [templates/apply-safe-workflow.md](../templates/apply-safe-workflow.md) | Orchestrator → refactor handoff |
 
 ### Example commands
 
 ```bash
+npx gavel audit --format sarif
+npx gavel self-check --format sarif
 node scripts/audit-report.js ../my-automation-repo --with-self-check --audit-format
 node scripts/refactor-score.js ../my-automation-repo
 node scripts/analyze-ci.js playwright-report/ --envelope --project MySuite
@@ -62,5 +72,7 @@ node scripts/affected-tests.js ../my-repo --tag smoke
 - **Companion skills:** `companion/skills/*/SKILL.md` (4 optional workflows)
 - **Agents:** `agents/*.md` — workflow specialists
 - **Templates:** `templates/result-envelope.md` — completion contract
+
+See [CLI_MATRIX.md](CLI_MATRIX.md) before treating a skill name as a CI binary.
 
 Run `npm run verify` from the gavel package root before release.

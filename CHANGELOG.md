@@ -5,18 +5,50 @@ All notable changes to the gavel package are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.7.1] - 2026-07-13
+
+### Added
+
+- `docs/ENTERPRISE.md` — enterprise trust page (CI gate, SARIF, Bailiff boundary, recommendation criteria)
+- `docs/CLI_MATRIX.md` — CLI vs agent-only completeness matrix
+- `docs/BAILIFF.md` — Bailiff planning extracted from the product roadmap
+- `docs/CONTRIBUTING.md` — model-tier protocol and contributor budgets
+- `templates/github-actions/gavel-audit-sarif.yml` — SARIF → GitHub Code Scanning recipe for consumer repos
+
+### Changed
+
+- All seven version manifests aligned to `0.7.1`
+- `GAVEL_ROADMAP.md` rewritten around Trust → Resilience → Adoption → Remediation → Freeze; enterprise criteria; v0.8–v1.0 enterprise DoD (baseline schema + Action/SARIF, policy packs, monorepo, ROI export, integration pack)
+- `docs/README.md` indexes enterprise and Bailiff docs
+- `scripts/verify-boundary.js` — allowlist `docs/BAILIFF.md` as planning-only (still blocks Bailiff code)
+- `v0.8.0-prompts.txt` — Item #9 for enterprise CI DoD (SARIF recipe + Action template)
+- `RELEASE_CHECKLIST.md` — version/enterprise trust gates
+
 ## [0.7.0] - 2026-07-13
 
 ### Added
 
-- Tag-scoped `gavel-ignore: <tag>` suppression — suppresses only the named tag(s); comma-separated lists suppress several tags at once; bare `gavel-ignore` stays a wildcard for back-compat
-- Golden fixtures for expanded scanner patterns: `WdioShorthandPage.ts` (selector-leak `$/$$/page.$`), `mocha-large-spec.cy.ts` (no-step `it()`), `test_unreasoned_skip.py` (skip-marker `@pytest.mark.skip`), `wdio-pause.spec.ts` (manual-wait `browser.pause()`), `bad_python_actions.py` (expect-in-action `assert <expr>`), `test_missing_ticket_xfail.py` (bare-test-fail `@pytest.mark.xfail`); matching clean fixtures for false-positive guards
+- Unified CLI (`npx gavel <command>`) — `audit`, `review`, `self-check`, `analyze`, `affected-tests`, `detect`, `explain`
+- RULES metadata registry consumed by SARIF and `gavel explain`
+- SARIF 2.1.0 export (`--format sarif`)
+- Envelope schema `1.1.0` with `confidence`; schema validation for machine output
+- Auto-generated area map tooling
+- Tag-scoped `gavel-ignore: <tag>` suppression — comma-separated lists; bare `gavel-ignore` stays wildcard for back-compat
+- `ignore-no-reason` self-check rule
+- Boundary guard in verify (`verify-boundary.js`)
+- Sample projects under `fixtures/sample-repos/`
+- JSON Schema for `gavel.config.json`
+- `docs/ARCHITECTURE.md`
+- Golden fixtures for expanded scanner patterns: `WdioShorthandPage.ts`, `mocha-large-spec.cy.ts`, `test_unreasoned_skip.py`, `wdio-pause.spec.ts`, `bad_python_actions.py`, `test_missing_ticket_xfail.py`; matching clean fixtures
 
 ### Changed
 
-- `scripts/self-check.js` — suppression moved from detection-time line skipping to finding-filter time, so a scoped ignore can no longer hide an unrelated tag's finding on the same line; `gavel-allow: <tag>` is now a deprecated alias for `gavel-ignore: <tag>`
-- `scripts/self-check.js` — `TEST_FILE_RE` expanded to match Cypress `*.cy.{js,ts}` and Python `test_*.py` / `*_test.py` files; `selector-leak` now detects WebdriverIO/Cypress `$()`/`$$()` and Playwright `page.$()` shorthand; `no-step` counts `it()` alongside `test()`; `skip-marker` detects `@pytest.mark.skip`; `manual-wait` detects `browser.pause()`; `expect-in-action` detects Python `assert <expr>` (space-separated, no parens); `bare-test-fail` `@pytest.mark.xfail` already present (no change)
-- Sample repos updated: WebdriverIO bad spec now exercises `browser.pause()`, `$$()`, and exceeds 80 lines for `no-step`; all sample README coverage tables updated to reflect new rule firings
+- `scripts/self-check.js` — suppression at finding-filter time; `gavel-allow` deprecated alias for `gavel-ignore`
+- `scripts/self-check.js` — Cypress/Python file globs; wdio/Cypress `$`/`$$` and `page.$` in `selector-leak`; `it()` in `no-step`; `browser.pause` in `manual-wait`; pytest skip/xfail and Python `assert` patterns
+- Sample repos updated for new rule firings
+- All manifest versions bumped to 0.7.0
 
 ## [0.6.0] - 2026-07-04
 
@@ -78,85 +110,49 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Tag discovery (`extract-tags.js`, `affected-tests.js --tag`) now matches real-world test
   file naming, not just literal `.spec./.test.` — pytest (`test_*.py`, `*_test.py`), JUnit
   (`*Test.java`, `Test*.java`, `*Tests.java`, `*IT.java`), and bare Cucumber `*.feature` files
-  were previously invisible to tag discovery
-- `errorPattern()` no longer misclassifies Playwright/Cypress web-first assertion timeouts as
-  `flake` — bare `retry` is not a flake signal since retrying is normal web-first assertion
-  behavior; flake now requires explicit vocabulary (`flaky`, `intermittent`, `race condition`)
-- Removed bare `@decorator` pytest tag pattern — pytest markers are always `@pytest.mark.*`,
-  so the old pattern produced false-positive tags from unrelated decorators
-- Removed product-specific example names from docs and skills in favor of generic placeholders
-  (`MySuite`, `../my-automation-repo`, `PROJ-123`)
-- Cucumber tag discovery now handles multi-tag lines like `@smoke @regression`
-- JUnit tag discovery now handles hyphenated and dotted tags like `@Tag("e2e-smoke")`
-  and `@Tag("ci.fast")`
-- `affected-tests.js --tag-framework <framework>` now infers the matching recommended
-  command when `--framework` is omitted
-- JSON and markdown envelopes now report parsed green runs as `DONE` instead of `INCOMPLETE`
+- Cypress flake classification no longer treats bare `retry` as flake evidence
+- Product-neutral placeholders in docs and fixtures
 
 ## [0.4.0] - 2026-06-18
 
 ### Added
 
-- `audit-autofix.js` — dead POM and unused factory detection; `--audit-format` output
-- `scripts/audit-report.js` — ranked gavel-audit lines from autofix (+ optional self-check)
-- `templates/apply-safe-workflow.md` — orchestrator → refactor handoff for `safe` findings
-- `templates/github-actions/gavel-verify.yml` — adapter CI template
-- Audit-autofix fixtures for POMs, factories, and specs
-
-### Changed
-
-- `gavel-audit` documents `audit-report.js` and `unused-factory` / safe `dead-pom` tags
-- `gavel-orchestrator` and `gavel-refactor` document apply-safe routing
-- `audit-report.js` now supports `--audit-format` (consistent with `audit-autofix.js`)
-- `audit-autofix.js` uses O(n) content cache for reference counting (was O(n²))
-- Verify script tests `--json` output for both `audit-autofix.js` and `audit-report.js`
-- Multi-class POM fixture (`MixedPage.ts`) verifies partial-usage detection
+- Dead POM + unused factory detection in audit autofix
+- `scripts/audit-report.js` ranked audit output
+- Orchestrator → refactor apply-safe handoff (`templates/apply-safe-workflow.md`)
+- Adapter CI template (`templates/github-actions/gavel-verify.yml`)
+- Audit-autofix fixtures and O(n) content cache
 
 ## [0.3.0] - 2026-06-11
 
 ### Added
 
-- Autofix eligibility in `gavel-review` (`safe` / `review` / `report-only`) for diff-scoped audits
-- `gavel-robot` framework profile skill
-- `scripts/audit-autofix.js` — safe-only dead locator deletion (dry-run default, `--apply` optional)
-- `scripts/verify-audit-autofix.js` and `fixtures/audit-autofix/`
-- Playwright HTML report one-shot: `analyze-ci.js playwright-report/ --envelope`
-
-### Changed
-
-- `gavel-detect` activates `gavel-robot` for Robot Framework projects
-- `gavel-audit` documents `audit-autofix.js` for safe dead-locator removal
+- `scripts/audit-autofix.js` (dead locators, dry-run default)
+- `gavel-robot` framework profile
+- Autofix eligibility in `gavel-review`
+- Playwright HTML report one-shot (`playwright-report/` → `--envelope`)
 
 ## [0.2.0] - 2026-06-04
 
 ### Added
 
-- Autofix eligibility in `gavel-audit` (`safe`, `review`, `report-only`)
-- `scripts/validate-area-map.js` and `verify-area-map.js`
-- `scripts/ci-analysis-envelope.js` and `analyze-ci.js --envelope` for `gavel-analyze`
-- pytest-playwright and Robot Framework detection in `gavel-detect`
-- Python freshness for `pytest-playwright` and `robotframework`
-- Profile fixtures for pytest-playwright and Robot Framework
-
-### Changed
-
-- `gavel-analyze` documents envelope output from `analyze-ci.js`
-- `templates/result-envelope.md` includes CI analysis mapping
+- Playwright HTML parser
+- Area-map + commit correlation
+- Audit/review severity
+- Python profile freshness (Behave, pytest, pytest-playwright, Robot)
+- `analyze-ci --envelope`
+- Autofix eligibility in `gavel-audit`
+- `CHANGELOG.md`, `docs/README.md`
 
 ## [0.1.0] - 2026-05-28
 
 ### Added
 
-- Core gavel skill, QA ladder, and Test Constitution
-- Specialist agents: orchestrator, generator, healer, API specialist, impact, fail-audit, refactor
-- Framework profiles: Playwright, Selenium, Cypress, WebdriverIO, Cucumber
-- Workflow skills: plan, e2e, api, run, analyze, review, audit, heal, flake, init, and more
-- Standard result envelope (`templates/result-envelope.md`)
-- Manifest validation (`scripts/validate-manifest.js`)
-- Constitution self-check (`scripts/self-check.js`, `gavel-self-check` skill)
-- Affected test discovery with transitive import tracing (`scripts/affected-tests.js`)
-- CI report parsers: JUnit, Allure, Playwright JSON/HTML, Cypress JSON
-- Failure clustering and `analyze-ci.js` with optional commit correlation
+- Test Constitution, QA ladder, agents, framework profiles
+- Result envelope, manifest validation, self-check scanner
+- CI parsers (JUnit, Allure, Playwright JSON, Cypress)
+- Failure clustering, affected-test discovery v2 (import graph)
+- Golden fixtures, release checklist
 - Profile freshness checker (`scripts/check-profile-freshness.js`)
 - Golden fixtures for self-check, parsers, and profiles
 - Release checklist (`RELEASE_CHECKLIST.md`)
@@ -164,7 +160,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/dsolisp/gavel/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/dsolisp/gavel/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/dsolisp/gavel/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/dsolisp/gavel/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/dsolisp/gavel/compare/v0.3.0...v0.4.0
