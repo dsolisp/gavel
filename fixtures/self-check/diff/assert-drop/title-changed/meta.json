@@ -1,0 +1,6 @@
+{
+  "tag": "assert-drop",
+  "label": "clean",
+  "subCase": "title-changed",
+  "expectedFindings": []
+}
