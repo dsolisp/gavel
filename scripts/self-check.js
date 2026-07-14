@@ -215,6 +215,50 @@ function findComplexLocatorMatches(filePath, content) {
     .map(({ line, contributions, score }) => ({ line, text: `${contributions.join(', ')} → ${score}` }));
 }
 
+function proseLiteral(line) {
+  const match = line.match(/(['"])(.*?)\1/);
+  return match && (/\s/.test(match[2]) || /[.!?]$/.test(match[2]));
+}
+
+function importedConstants(content) {
+  const names = new Set();
+  for (const match of content.matchAll(/import\s+\{([^}]+)\}|from\s+\S+\s+import\s+([A-Z][A-Z0-9_]*)|import\s+static\s+\S+\.([A-Z][A-Z0-9_]*)/g)) {
+    for (const group of match.slice(1)) {
+      if (!group) continue;
+      for (const name of group.match(/[A-Z][A-Z0-9_]*/g) || []) names.add(name);
+    }
+  }
+  return names;
+}
+
+function sameFileConstants(content) {
+  const names = new Set();
+  for (const match of content.matchAll(/(?:const|final\s+\w+|static\s+final\s+\w+)\s+([A-Z][A-Z0-9_]*)|^([A-Z][A-Z0-9_]*)\s*=/gm)) {
+    names.add(match[1] || match[2]);
+  }
+  return names;
+}
+
+function isEqualityAssertion(line) {
+  return /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s/.test(line);
+}
+
+function importedConstantAssertion(line, imported, constants) {
+  return (line.match(/\b[A-Z][A-Z0-9_]*\b/g) || [])
+    .some((name) => imported.has(name) && !constants.has(name));
+}
+
+function findBrittleAssertMatches(filePath, content) {
+  if (!TEST_FILE_RE.test(filePath)) return [];
+  const lines = content.split('\n');
+  const imported = importedConstants(content);
+  const constants = sameFileConstants(content);
+  return findMatches(content, /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s/, filePath)
+    .filter(({ line }) => isEqualityAssertion(lines[line - 1]))
+    .filter(({ line }) => proseLiteral(lines[line - 1]) || importedConstantAssertion(lines[line - 1], imported, constants))
+    .map(({ line }) => ({ line, text: lines[line - 1].trim() }));
+}
+
 // Matches `gavel-ignore` / deprecated `gavel-allow`, bare or tag-scoped:
 //   gavel-ignore              — wildcard, suppresses every tag on the line (back-compat)
 //   gavel-ignore: *           — explicit wildcard
@@ -541,6 +585,16 @@ const RULES = [
     message: 'Fragile locator expression scored at least 5',
     remediation: 'Use Locator Priority rung 1 accessibility locators before stable test IDs, structural selectors, or XPath (AGENTS.md: Locator Priority).',
     test: findComplexLocatorMatches,
+  },
+  {
+    id: 'brittle-assert',
+    severity: 'info',
+    envelopeSeverity: 'report',
+    class: 'assertion',
+    confidence: 'medium',
+    message: 'Equality assertion against prose likely to drift with product copy',
+    remediation: 'Use a native partial matcher: Playwright toContain() or expect(locator).toHaveText(/partial/); pytest assert "substring" in value; JUnit assertThat(actual).contains(expected); Cypress should(\'contain\', \'partial\').',
+    test: findBrittleAssertMatches,
   },
 ];
 
