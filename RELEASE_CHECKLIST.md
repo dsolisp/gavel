@@ -19,6 +19,9 @@ This runs:
 - `verify-parser-fixtures.js` — JUnit, Allure, Playwright, Cypress, analyze-ci fixtures
 - `verify-profile-fixtures.js` — profile freshness + snippet checks
 - `verify-audit-autofix.js` — dead locator dry-run and apply on fixtures
+- `verify-corpus-precision.js` — heuristic corpus precision (fixtures/corpus/)
+- `verify-diff-corpus-precision.js` — diff-rule corpus precision (fixtures/self-check/diff/)
+- `verify-baseline-schema.js` — baseline ratchet schema validation
 
 ## 2. Manifest Completeness
 

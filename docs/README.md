@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.7.1** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.8.0** (see [CHANGELOG.md](../CHANGELOG.md))
 
 Index for scripts, templates, and companion workflows. For install and first run, start at [README.md](../README.md).
 
@@ -37,6 +37,7 @@ Index for scripts, templates, and companion workflows. For install and first run
 | `scripts/audit-autofix.js` | Safe dead code removal (dry-run default) |
 | `scripts/verify-docs.js` | Doc drift guardrail (runs in `npm run verify`) |
 | `scripts/verify-corpus-precision.js` | Heuristic corpus precision (`fixtures/corpus/`) |
+| `scripts/verify-diff-corpus-precision.js` | Diff-corpus precision (`fixtures/self-check/diff/`) |
 
 ### Report parsers
 

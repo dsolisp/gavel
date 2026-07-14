@@ -1,8 +1,8 @@
 # Gavel Roadmap
 
 **Status date:** 2026-07-13  
-**Current release:** `v0.7.1` (release-integrity hotfix)  
-**In progress:** `v0.8.0` — Trust + resilience (CI-ready baseline schema + guardrails)  
+**Current release:** `v0.8.0` (Trust + resilience)  
+**In progress:** `v0.9.0` — Enterprise adoption package  
 **Scope:** Framework-adaptive QA quality tool. Roadmap items are product-agnostic across Playwright, Selenium, Cypress, WebdriverIO, Cucumber, Robot, and pytest-playwright.
 
 **North star (v1.0):** *Add the Gavel GitHub Action. Fail PRs on new blocker findings against baseline. Import SARIF into Sonar. AI agents may use Gavel skills, but CI never depends on an LLM.*
@@ -82,6 +82,7 @@ v1.0 is “enterprise recommendable” when all of the following hold:
 | **v0.6.0** | Suite health & constitution | Scoreboard, self-check expansion, companion extraction, `verify-docs.js` |
 | **v0.7.0** | Packaging & onboarding | Unified CLI, RULES registry, SARIF 2.1.0, envelope `1.1.0`, area-map gen, tag-scoped ignore, `gavel explain`, boundary guard, sample repos, config schema |
 | **v0.7.1** | Release integrity hotfix | Version/CHANGELOG/docs alignment; [ENTERPRISE.md](docs/ENTERPRISE.md); [CLI_MATRIX.md](docs/CLI_MATRIX.md); Bailiff/contributing docs extracted; roadmap trust narrative; SARIF CI recipe template |
+| **v0.8.0** | Trust + resilience | 5 resilience tags (`brittle-assert`, `hardcoded-env`, `complex-locator`, `no-teardown`, `assert-drop`); corpus precision runner + diff-corpus harness; baseline ratchet schema; 3 rules graduated with 100% precision |
 
 **Verify gate:** `npm run verify`.
 
@@ -149,11 +150,11 @@ Contributor / multi-model protocol: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
 
 | Tag | Class | Severity | Detection summary |
 |-----|-------|----------|-------------------|
-| `brittle-assert` | Heuristic | `report` → graduate | Prose equality literals that drift with external copy |
-| `hardcoded-env` | Deterministic | `warning`; credentials → `blocker` after trial | Spec URLs/IPs/paths/credential-shaped assigns — **never print values** |
+| `brittle-assert` | Heuristic | `fix` (graduated) | Prose equality literals that drift with external copy |
+| `hardcoded-env` | Deterministic | `blocker` (graduated) | Spec URLs/IPs/paths/credential-shaped assigns — **never print values** |
 | `complex-locator` | Heuristic score | `report` | Fragility score in locator files; component-prefix allowlist |
 | `no-teardown` | Heuristic | `report` (never blocker in v0.8) | Create signals without cleanup in same lexical block |
-| `assert-drop` | Split | `blocker` / `report` | Diff-only: deleted asserts / early-return before asserts; strength downgrade heuristic |
+| `assert-drop` | Split | `blocker` / `fix` (graduated) | Diff-only: deleted asserts / early-return before asserts; strength downgrade heuristic |
 
 `assert-drop` lives in `REVIEW_RULES` (`gavel-review` only) with before/after diff fixtures.
 
