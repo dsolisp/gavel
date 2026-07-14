@@ -1,0 +1,6 @@
+{
+  "selectorAllowlist": {
+    "componentPrefixes": ["lib-"],
+    "customElements": true
+  }
+}

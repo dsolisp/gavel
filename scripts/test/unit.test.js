@@ -122,6 +122,18 @@ test('no-teardown requires cleanup in the same describe block', () => {
   assert.match(findings[0].text, /misses cross-file fixtures/);
 });
 
+test('complex-locator itemizes fragility and honors selector allowlists', () => {
+  const violations = JSON.parse(runCli(['self-check', 'fixtures/self-check/violations', '--json']).stdout);
+  const findings = violations.findings.filter((finding) => finding.tag === 'complex-locator');
+  assert.deepEqual(findings.map((finding) => finding.text), [
+    'generated class +3, broad text +2 → 5',
+    'XPath axis +3, positional index +2 → 5',
+  ]);
+
+  const clean = runCli(['self-check', 'fixtures/self-check/clean', '--json']);
+  assert.equal(JSON.parse(clean.stdout).findings.some((finding) => finding.tag === 'complex-locator'), false);
+});
+
 test('package publishes unified gavel bins and config schema', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   for (const name of ['gavel', 'gavel-audit', 'gavel-review', 'gavel-self-check', 'gavel-analyze', 'gavel-affected-tests', 'gavel-detect']) {
@@ -131,6 +143,8 @@ test('package publishes unified gavel bins and config schema', () => {
   assert.ok(schema.properties.failThreshold.enum.includes('warning'));
   assert.equal(schema.properties.fixturePaths.items.type, 'string');
   assert.equal(schema.properties.factoryPaths.items.type, 'string');
+  assert.equal(schema.properties.selectorAllowlist.properties.componentPrefixes.items.type, 'string');
+  assert.equal(schema.properties.selectorAllowlist.properties.customElements.type, 'boolean');
 });
 
 test('unified CLI exit codes, hidden companion help, and alias path work', () => {

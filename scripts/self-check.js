@@ -172,6 +172,49 @@ function findNoTeardownMatches(filePath, content) {
     }));
 }
 
+function literalSelector(line) {
+  const match = line.match(/(?:\.\s*locator|querySelector(?:All)?|\$(?:\$)?)\s*\(\s*(?:'([^']*)'|"([^"]*)"|`([^`]*)`)/);
+  return match && match.slice(1).find((value) => value !== undefined);
+}
+
+function locatorExpressions(content, filePath) {
+  const lines = content.split('\n');
+  return findMatches(content, /(?:\.\s*locator|querySelector(?:All)?|\$(?:\$)?)\s*\(\s*['"`]/, filePath)
+    .map(({ line }) => ({ line, selector: literalSelector(lines[line - 1]) }))
+    .filter(({ selector }) => selector !== undefined);
+}
+
+function combinatorHops(selector) {
+  if (selector.startsWith('xpath=')) return 0;
+  const simplified = selector.replace(/\[[^\]]*]|:[\w-]+\([^)]*\)/g, '').trim();
+  return simplified ? simplified.split(/\s*>\s*|\s+/).filter(Boolean).length - 1 : 0;
+}
+
+function selectorFragility(selector) {
+  const contributions = [];
+  const add = (label, points) => contributions.push(`${label} ${points > 0 ? '+' : ''}${points}`);
+  if (/\b[\w-]+::/.test(selector)) add('XPath axis', 3);
+  if (/\[\s*\d+\s*\]|:nth-child\s*\(/.test(selector)) add('positional index', 2);
+  if (/\[class[*^$]?=['"][^'"]*(?:sc-|css-)/.test(selector)) add('generated class', 3);
+  if (/\btext=|:has-text\s*\(/.test(selector)) add('broad text', 2);
+  const hops = combinatorHops(selector);
+  if (hops > 2) add('deep combinators', hops - 2);
+
+  const allowlist = config.selectorAllowlist || {};
+  if ((allowlist.componentPrefixes || []).some((prefix) => selector.trim().startsWith(prefix))) add('component prefix', -3);
+  if (allowlist.customElements && /(?:^|[\s>])[a-z][\w-]*-[\w-]+/.test(selector)) add('custom element', -2);
+  const score = Math.max(0, contributions.reduce((total, entry) => total + Number(entry.match(/-?\d+$/)[0]), 0));
+  return { contributions, score };
+}
+
+function findComplexLocatorMatches(filePath, content) {
+  if (!LOCATOR_FILE_RE.test(filePath)) return [];
+  return locatorExpressions(content, filePath)
+    .map(({ line, selector }) => ({ line, ...selectorFragility(selector) }))
+    .filter(({ score }) => score >= 5)
+    .map(({ line, contributions, score }) => ({ line, text: `${contributions.join(', ')} → ${score}` }));
+}
+
 // Matches `gavel-ignore` / deprecated `gavel-allow`, bare or tag-scoped:
 //   gavel-ignore              — wildcard, suppresses every tag on the line (back-compat)
 //   gavel-ignore: *           — explicit wildcard
@@ -488,6 +531,16 @@ const RULES = [
     message: 'Inline state creation without file-local teardown; misses cross-file fixtures and cannot prove runtime orphaning',
     remediation: 'Add cleanup in the same file or suite with afterEach, tearDown, addfinalizer, post-yield teardown, or @AfterEach. This static rule cannot assess cross-file fixtures or runtime orphaning.',
     test: findNoTeardownMatches,
+  },
+  {
+    id: 'complex-locator',
+    severity: 'info',
+    envelopeSeverity: 'report',
+    class: 'locator',
+    confidence: 'low',
+    message: 'Fragile locator expression scored at least 5',
+    remediation: 'Use Locator Priority rung 1 accessibility locators before stable test IDs, structural selectors, or XPath (AGENTS.md: Locator Priority).',
+    test: findComplexLocatorMatches,
   },
 ];
 
