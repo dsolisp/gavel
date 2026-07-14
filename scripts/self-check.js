@@ -102,6 +102,76 @@ function findHardcodedEnvMatches(filePath, content) {
   return [...hits.values()];
 }
 
+function findDescribeBlocks(content) {
+  const lines = content.split('\n');
+  const blocks = [];
+
+  for (let start = 0; start < lines.length; start += 1) {
+    if (!/\b(?:test\.)?describe\s*\(/.test(lines[start])) {
+      continue;
+    }
+    let depth = 0;
+    for (let end = start; end < lines.length; end += 1) {
+      depth += (lines[end].match(/\{/g) || []).length;
+      depth -= (lines[end].match(/\}/g) || []).length;
+      if (depth <= 0 && end > start) {
+        blocks.push({ start: start + 1, end: end + 1 });
+        break;
+      }
+    }
+  }
+  return blocks;
+}
+
+function findPostYieldCleanup(content, filePath) {
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length - 1; i += 1) {
+    if (!findMatches(lines[i], /\byield\b/, filePath).length) {
+      continue;
+    }
+    for (let line = i + 1; line < lines.length; line += 1) {
+      if (lines[line].trim() && !lines[line].trim().startsWith('#')) {
+        return [{ line: line + 1 }];
+      }
+    }
+  }
+  return [];
+}
+
+function findStateCreationSignals(content, filePath) {
+  const patterns = [
+    /\bINSERT\s+INTO\b/i,
+    /\bfetch\s*\([^,\n]+,\s*\{[^}\n]*\bmethod\s*:\s*['"](?:POST|PUT)['"]/i,
+    /\b(?:axios|request|supertest)(?:\s*\([^)]*\))?\s*\.\s*(?:post|put)\s*\(/i,
+  ];
+  return patterns.flatMap((pattern) => findMatches(content, pattern, filePath));
+}
+
+function cleanupSignals(content, filePath) {
+  const hits = findMatches(content, /\b(?:afterEach|tearDown|addfinalizer)\s*\(|\b@AfterEach\b/, filePath);
+  return [...hits, ...findPostYieldCleanup(content, filePath)];
+}
+
+function blockForLine(blocks, line, end) {
+  return blocks.filter((block) => line >= block.start && line <= block.end)
+    .sort((a, b) => (a.end - a.start) - (b.end - b.start))[0] || { start: 1, end };
+}
+
+function findNoTeardownMatches(filePath, content) {
+  if (!TEST_FILE_RE.test(filePath)) return [];
+  const blocks = findDescribeBlocks(content);
+  const teardown = cleanupSignals(content, filePath);
+  return findStateCreationSignals(content, filePath)
+    .filter((creation) => {
+      const block = blockForLine(blocks, creation.line, content.split('\n').length);
+      return !teardown.some(({ line }) => line >= block.start && line <= block.end);
+    })
+    .map(({ line }) => ({
+      line,
+      text: 'inline state creation without teardown; misses cross-file fixtures and cannot prove runtime orphaning',
+    }));
+}
+
 // Matches `gavel-ignore` / deprecated `gavel-allow`, bare or tag-scoped:
 //   gavel-ignore              — wildcard, suppresses every tag on the line (back-compat)
 //   gavel-ignore: *           — explicit wildcard
@@ -408,6 +478,16 @@ const RULES = [
     message: 'Hardcoded environment value in a test spec',
     remediation: 'Use environment variables, .env files, or config modules instead of hardcoded URLs, paths, IPs, ports, or credentials (AGENTS.md: Test Constitution WON\'T DO #3).',
     test: findHardcodedEnvMatches,
+  },
+  {
+    id: 'no-teardown',
+    severity: 'info',
+    envelopeSeverity: 'report',
+    class: 'data',
+    confidence: 'low',
+    message: 'Inline state creation without file-local teardown; misses cross-file fixtures and cannot prove runtime orphaning',
+    remediation: 'Add cleanup in the same file or suite with afterEach, tearDown, addfinalizer, post-yield teardown, or @AfterEach. This static rule cannot assess cross-file fixtures or runtime orphaning.',
+    test: findNoTeardownMatches,
   },
 ];
 

@@ -101,6 +101,27 @@ test('hardcoded-env excludes configured fixture paths and sample repos', () => {
   }
 });
 
+test('no-teardown requires cleanup in the same describe block', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-no-teardown-'));
+  const specPath = path.join(repo, 'orders.spec.ts');
+  fs.writeFileSync(specPath, [
+    "import { test } from '@playwright/test';",
+    "test.describe('clean orders', () => {",
+    '  test.afterEach(async () => {});',
+    '});',
+    "test.describe('unclean orders', () => {",
+    "  test('creates an order', async ({ request }) => {",
+    "    await request.post('/orders', { data: {} });",
+    '  });',
+    '});',
+  ].join('\n'));
+
+  const report = JSON.parse(runCli(['self-check', repo, '--json']).stdout);
+  const findings = report.findings.filter((finding) => finding.tag === 'no-teardown');
+  assert.deepEqual(findings.map((finding) => finding.line), [7]);
+  assert.match(findings[0].text, /misses cross-file fixtures/);
+});
+
 test('package publishes unified gavel bins and config schema', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   for (const name of ['gavel', 'gavel-audit', 'gavel-review', 'gavel-self-check', 'gavel-analyze', 'gavel-affected-tests', 'gavel-detect']) {
