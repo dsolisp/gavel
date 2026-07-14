@@ -54,8 +54,8 @@ function finding(subCase, block, afterPath, line = block.start) {
   return {
     tag: 'assert-drop',
     subCase,
-    severity: blocker ? 'blocker' : 'info',
-    envelopeSeverity: blocker ? 'blocker' : 'report',
+    severity: blocker ? 'blocker' : 'warning',
+    envelopeSeverity: blocker ? 'blocker' : 'fix',
     ...(blocker ? {} : { confidence: 'medium' }),
     file: afterPath,
     line,

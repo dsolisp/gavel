@@ -559,8 +559,8 @@ const RULES = [
   },
   {
     id: 'hardcoded-env',
-    severity: 'warning',
-    envelopeSeverity: 'fix',
+    severity: 'error',
+    envelopeSeverity: 'blocker',
     class: 'data',
     message: 'Hardcoded environment value in a test spec',
     remediation: 'Use environment variables, .env files, or config modules instead of hardcoded URLs, paths, IPs, ports, or credentials (AGENTS.md: Test Constitution WON\'T DO #3).',
