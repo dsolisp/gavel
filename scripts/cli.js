@@ -7,7 +7,7 @@ const { spawnSync } = require('child_process');
 const { RULES } = require('./self-check');
 const { parseConfigFlag, resolveGavelConfig } = require('./load-gavel-config');
 
-const scripts = { audit: 'audit-report.js', review: 'self-check.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js' };
+const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js' };
 const valueFlags = new Set(['--config', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format']);
 const severityRank = { info: 0, warning: 1, error: 2, blocker: 3 };
 const ruleSeverity = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
@@ -34,7 +34,7 @@ function hasPositional(args) {
 }
 
 function addDefaultRoot(command, args) {
-  if (['audit', 'review', 'self-check', 'detect', 'affected-tests'].includes(command) && !hasPositional(args)) {
+  if (['audit', 'self-check', 'detect', 'affected-tests'].includes(command) && !hasPositional(args)) {
     return [process.cwd(), ...args];
   }
   return args;
@@ -88,13 +88,20 @@ function auditExit(report, config) {
   return actionable.length > 0 ? 1 : 0;
 }
 
+function reviewExit(report, config) {
+  return (report.findings || []).some((finding) =>
+    finding.severity === 'blocker' || (config.reportOnlyExits && finding.severity === 'info')) ? 1 : 0;
+}
+
 function jsonReportExit(command, args, config) {
   const jsonArgs = args.includes('--json') ? args : [...args, '--json'];
   const result = runScript(command, jsonArgs, true);
   if (![0, 1].includes(result.status)) return result.status || 2;
   try {
     const report = JSON.parse(result.stdout);
-    return command === 'audit' ? auditExit(report, config) : selfCheckExit(report, config);
+    if (command === 'audit') return auditExit(report, config);
+    if (command === 'review') return reviewExit(report, config);
+    return selfCheckExit(report, config);
   } catch {
     return result.status || 0;
   }
@@ -157,7 +164,7 @@ function main() {
     console.error('Hint: add gavel.config.json for thresholds, allowlists, and $schema editor autocomplete.');
   }
   if (['audit', 'review', 'self-check'].includes(command) && [0, 1].includes(result.status)) {
-    process.exit(jsonReportExit(command === 'review' ? 'self-check' : command, finalArgs, resolved.config));
+    process.exit(jsonReportExit(command, finalArgs, resolved.config));
   }
   process.exit(result.status || 0);
 }

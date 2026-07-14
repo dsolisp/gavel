@@ -815,7 +815,7 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { RULES };
+module.exports = { RULES, findMatches };
 
 if (require.main === module) {
   main();

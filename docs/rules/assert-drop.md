@@ -39,6 +39,7 @@ fixtures/self-check/diff/assert-drop/
 |---------|-------|----------|
 | `assertion-deleted` | violating | Assertion removed; title unchanged |
 | `early-return` | violating | Early return before remaining asserts; title unchanged |
+| `strength-downgrade` | violating | Equality assertion replaced by existence-only; title unchanged |
 | `title-changed` | clean | Assertion removed **and** title string changed (refactor) |
 | `consolidated` | clean | Multiple asserts → one with same observable coverage |
 

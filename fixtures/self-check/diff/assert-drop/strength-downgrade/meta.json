@@ -1,0 +1,12 @@
+{
+  "tag": "assert-drop",
+  "label": "violating",
+  "subCase": "strength-downgrade",
+  "expectedFindings": [
+    {
+      "file": "after.spec.ts",
+      "line": 3,
+      "subCase": "strength-downgrade"
+    }
+  ]
+}

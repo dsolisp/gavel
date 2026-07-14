@@ -134,6 +134,19 @@ test('complex-locator itemizes fragility and honors selector allowlists', () => 
   assert.equal(JSON.parse(clean.stdout).findings.some((finding) => finding.tag === 'complex-locator'), false);
 });
 
+test('gavel-review applies assert-drop severities and scoped suppression', () => {
+  const diffRoot = 'fixtures/self-check/diff/assert-drop';
+  assert.equal(runCli(['review', `${diffRoot}/assertion-deleted/before.spec.ts`, `${diffRoot}/assertion-deleted/after.spec.ts`, '--json']).status, 1);
+  assert.equal(runCli(['review', `${diffRoot}/strength-downgrade/before.spec.ts`, `${diffRoot}/strength-downgrade/after.spec.ts`, '--json']).status, 0);
+
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-assert-drop-'));
+  const before = path.join(repo, 'before.spec.ts');
+  const after = path.join(repo, 'after.spec.ts');
+  fs.writeFileSync(before, "test('keeps title', () => {\n  expect(value).toBe('ok');\n});\n");
+  fs.writeFileSync(after, "test('keeps title', () => {\n  // gavel-ignore: assert-drop — intentional refactor\n});\n");
+  assert.equal(runCli(['review', before, after, '--json']).status, 0);
+});
+
 test('package publishes unified gavel bins and config schema', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   for (const name of ['gavel', 'gavel-audit', 'gavel-review', 'gavel-self-check', 'gavel-analyze', 'gavel-affected-tests', 'gavel-detect']) {
@@ -181,7 +194,7 @@ test('unified CLI exit codes, hidden companion help, and alias path work', () =>
 });
 
 test('unified CLI core commands run', () => {
-  assert.equal(runCli(['review', 'fixtures/self-check/clean', '--json']).status, 0);
+  assert.equal(runCli(['review', 'fixtures/self-check/diff/assert-drop/consolidated/before.spec.ts', 'fixtures/self-check/diff/assert-drop/consolidated/after.spec.ts', '--json']).status, 0);
   assert.equal(runCli(['detect', '.', '--json']).status, 0);
   assert.equal(runCli(['affected-tests', 'fixtures/affected-tests', '--tag', 'smoke', '--json']).status, 0);
   assert.equal(runCli(['analyze', 'fixtures/reports/junit/sample-failures.xml', '--json']).status, 0);
