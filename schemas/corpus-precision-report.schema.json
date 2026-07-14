@@ -56,7 +56,11 @@
           },
           "pass": {
             "type": "boolean",
-            "description": "true when precision meets threshold (or flagged=0 with zero FN)."
+            "description": "true when precision meets threshold (or flagged=0 with zero FN). Always true when pendingScanner."
+          },
+          "pendingScanner": {
+            "type": "boolean",
+            "description": "true when the tag has a corpus but no RULES entry yet (contract-first). Precision is null; FNs do not fail."
           },
           "falsePositiveFindings": {
             "type": "array",

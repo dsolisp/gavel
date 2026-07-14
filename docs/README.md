@@ -17,6 +17,7 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [BAILIFF.md](BAILIFF.md) | Sibling QA-workflow repo (planning only) | Architects |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Verify gate, model tiers, budgets | Contributors |
 | [fixtures/corpus/README.md](../fixtures/corpus/README.md) | Corpus label + precision contract (v0.8) | Contributors |
+| [rules/brittle-assert.md](rules/brittle-assert.md) | Heuristic contract: prose equality assertions | Contributors / Tier-R |
 | [GAVEL_ROADMAP.md](../GAVEL_ROADMAP.md) | Trust → Freeze release narrative | Product / contributors |
 | [companion/README.md](../companion/README.md) | Optional CI/env/hub/closure skills | Teams needing extras |
 

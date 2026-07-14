@@ -1,0 +1,172 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "brittle-assert",
+  "samples": [
+    {
+      "file": "violating/playwright-not-found.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "toBe on punctuated prose literal",
+      "expectedFindings": [{ "line": 5, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/playwright-welcome.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "toEqual on multi-word punctuated prose",
+      "expectedFindings": [{ "line": 5, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/jest-operation.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "jest",
+      "rationale": "toBe on multi-word prose without needing punctuation alone",
+      "expectedFindings": [{ "line": 5, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/jest-sale-banner.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "jest",
+      "rationale": "toEqual on prose ending with !",
+      "expectedFindings": [{ "line": 5, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/mocha-file-missing.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "mocha",
+      "rationale": "assert.strictEqual on punctuated prose",
+      "expectedFindings": [{ "line": 7, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/test_unauthorized.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "== on punctuated prose literal",
+      "expectedFindings": [{ "line": 3, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/test_please_try_again.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "== on multi-word punctuated prose",
+      "expectedFindings": [{ "line": 3, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/test_access_denied.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "unittest",
+      "rationale": "assertEqual on punctuated prose",
+      "expectedFindings": [{ "line": 7, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/InvalidCredentials.test.java",
+      "label": "violating",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "assertEquals on punctuated prose",
+      "expectedFindings": [{ "line": 8, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/CheckoutFailed.test.java",
+      "label": "violating",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "AssertJ isEqualTo on punctuated prose",
+      "expectedFindings": [{ "line": 8, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/PaymentRejected.test.java",
+      "label": "violating",
+      "language": "java",
+      "framework": "testng",
+      "rationale": "TestNG assertEquals on multi-word punctuated prose",
+      "expectedFindings": [{ "line": 8, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "clean/playwright-status.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "equality on numeric status code"
+    },
+    {
+      "file": "clean/playwright-flag.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "equality on boolean"
+    },
+    {
+      "file": "clean/playwright-same-file-const.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "same-file const identifier — domain invariant, not prose literal RHS"
+    },
+    {
+      "file": "clean/jest-short-code.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "jest",
+      "rationale": "short token without whitespace or sentence punctuation"
+    },
+    {
+      "file": "clean/mocha-count.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "mocha",
+      "rationale": "equality on numeric zero"
+    },
+    {
+      "file": "clean/test_status_code.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "equality on integer status"
+    },
+    {
+      "file": "clean/test_bool_flag.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "equality on boolean"
+    },
+    {
+      "file": "clean/test_enum_role.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "equality on short enum-like token"
+    },
+    {
+      "file": "clean/HttpStatus.test.java",
+      "label": "clean",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "equality on enum values"
+    },
+    {
+      "file": "clean/CountZero.test.java",
+      "label": "clean",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "equality on integer"
+    },
+    {
+      "file": "clean/AdminRole.test.java",
+      "label": "clean",
+      "language": "java",
+      "framework": "testng",
+      "rationale": "equality on short role token"
+    }
+  ]
+}

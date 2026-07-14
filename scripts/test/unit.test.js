@@ -211,7 +211,8 @@ test('corpus labels schema accepts valid docs and rejects unknown fields', () =>
   const { validateLabels, GRADUATION, listTagDirs } = require('../verify-corpus-precision');
   assert.equal(GRADUATION['report-to-warning'], 0.9);
   assert.equal(GRADUATION['warning-to-blocker'], 0.95);
-  assert.deepEqual(listTagDirs(), []);
+  assert.ok(Array.isArray(listTagDirs()));
+  assert.ok(listTagDirs().includes('brittle-assert'));
 
   const valid = {
     schemaVersion: '1.0.0',

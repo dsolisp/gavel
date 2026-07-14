@@ -13,6 +13,8 @@ fixtures/corpus/<tag>/
 
 Tag directories are added when each heuristic builds its corpus (v0.8 items #3+). This directory may be empty of tag data; `npm run verify` still runs the precision runner and exits 0.
 
+When a tag corpus exists but the rule is not yet in `RULES` (contract-first, Implementation Contract #9), the runner reports `precision=n/a pendingScanner` and exits 0. Graduation thresholds apply only after the scanner ships.
+
 ## `labels.json` contract
 
 Schema: [`schemas/corpus-labels.schema.json`](../../schemas/corpus-labels.schema.json)
