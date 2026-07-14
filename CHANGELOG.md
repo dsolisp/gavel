@@ -7,6 +7,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Corpus label schema (`schemas/corpus-labels.schema.json`) + precision report schema (`schemas/corpus-precision-report.schema.json`)
+- `scripts/verify-corpus-precision.js` — measures heuristic precision from `fixtures/corpus/<tag>/labels.json` (empty corpus → exit 0)
+- `fixtures/corpus/README.md` — layout and graduation floors (0.90 / 0.95)
+
 ## [0.7.1] - 2026-07-13
 
 ### Added

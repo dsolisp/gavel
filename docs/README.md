@@ -16,6 +16,7 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Two-repo design, browser-first authoring principle | Contributors, architects |
 | [BAILIFF.md](BAILIFF.md) | Sibling QA-workflow repo (planning only) | Architects |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Verify gate, model tiers, budgets | Contributors |
+| [fixtures/corpus/README.md](../fixtures/corpus/README.md) | Corpus label + precision contract (v0.8) | Contributors |
 | [GAVEL_ROADMAP.md](../GAVEL_ROADMAP.md) | Trust → Freeze release narrative | Product / contributors |
 | [companion/README.md](../companion/README.md) | Optional CI/env/hub/closure skills | Teams needing extras |
 
@@ -33,6 +34,7 @@ Index for scripts, templates, and companion workflows. For install and first run
 | `scripts/analyze-ci.js` | Parse CI report, cluster, correlate commits |
 | `scripts/audit-autofix.js` | Safe dead code removal (dry-run default) |
 | `scripts/verify-docs.js` | Doc drift guardrail (runs in `npm run verify`) |
+| `scripts/verify-corpus-precision.js` | Heuristic corpus precision (`fixtures/corpus/`) |
 
 ### Report parsers
 

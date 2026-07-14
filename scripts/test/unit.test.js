@@ -206,3 +206,35 @@ test('result envelope schema examples validate; invalid envelopes report errors'
   assert.ok(errors.some((error) => error.includes('confidence')));
   assert.ok(errors.some((error) => error.includes('unknown field "extra"')));
 });
+
+test('corpus labels schema accepts valid docs and rejects unknown fields', () => {
+  const { validateLabels, GRADUATION, listTagDirs } = require('../verify-corpus-precision');
+  assert.equal(GRADUATION['report-to-warning'], 0.9);
+  assert.equal(GRADUATION['warning-to-blocker'], 0.95);
+  assert.deepEqual(listTagDirs(), []);
+
+  const valid = {
+    schemaVersion: '1.0.0',
+    tag: 'brittle-assert',
+    samples: [
+      {
+        file: 'violating/a.spec.ts',
+        label: 'violating',
+        language: 'ts',
+        framework: 'playwright',
+        rationale: 'prose equality',
+        expectedFindings: [{ line: 4, tag: 'brittle-assert' }],
+      },
+      {
+        file: 'clean/b.py',
+        label: 'clean',
+        language: 'py',
+        framework: 'pytest',
+        rationale: 'contains matcher',
+      },
+    ],
+  };
+  assert.deepEqual(validateLabels(valid), []);
+  assert.ok(validateLabels({}).some((error) => error.includes('missing required field')));
+  assert.ok(validateLabels({ ...valid, extra: true }).some((error) => error.includes('unknown field')));
+});
