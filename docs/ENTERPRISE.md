@@ -34,15 +34,18 @@ Gavel is *SonarQube for test architecture* — layered POM discipline, assertion
 7. Audit of largest sample repo under a published time budget
 8. Clear Gavel vs Bailiff blast radius for security review
 
-## CI gate (today)
+## Day-1 CI (no LLM)
+
+Platform teams wire Gavel as a **static CLI gate** — pin the npm package, emit SARIF, upload to your dashboard, fail the job on threshold. IDE skills and companion workflows are optional; they are not part of the required PR check.
 
 ```bash
-# Fail the job when findings meet failThreshold (default: warning)
-npx gavel audit --format sarif > gavel.sarif
-npx gavel self-check --format sarif > gavel-self-check.sarif
+# Pin the version in regulated orgs (matches templates/github-actions/gavel-audit-sarif.yml)
+npx --yes @dsolisp/gavel@0.7.1 audit --format sarif > gavel.sarif
 ```
 
-**Exit codes:** `0` clean · `1` actionable findings at/above `failThreshold` · `2` usage/config/schema error.
+`gavel audit` runs constitution self-check by default. A separate `gavel self-check --format sarif` step is optional when you want SARIF split by category.
+
+**Exit codes:** `0` clean · `1` actionable findings at/above `failThreshold` (default: `warning`) · `2` usage/config/schema error.
 
 Report-only / `report` severity findings do not force exit `1` unless config opts in.
 
@@ -50,15 +53,36 @@ See [CLI_MATRIX.md](CLI_MATRIX.md) for which README commands are real binaries v
 
 ### SARIF → GitHub Code Scanning
 
-Use the template: [templates/github-actions/gavel-audit-sarif.yml](../templates/github-actions/gavel-audit-sarif.yml).
+1. Copy [templates/github-actions/gavel-audit-sarif.yml](../templates/github-actions/gavel-audit-sarif.yml) into your automation repo as `.github/workflows/gavel-audit.yml`.
+2. Ensure the workflow has `security-events: write` (required for Code Scanning upload).
+3. The template pins `@dsolisp/gavel@0.7.1`, runs `audit --format sarif`, uploads via `github/codeql-action/upload-sarif@v3`, then fails the job when the audit step exits non-zero.
+4. Findings appear under **Security → Code scanning alerts** with category `gavel`. Rule IDs match Gavel tags (`selector-leak`, `manual-wait`, …).
+
+Prefer a locked `package.json` dependency over floating `npx` when your change-control policy requires it; keep the semver pin aligned with [package.json](../package.json).
 
 ### SARIF → SonarQube / SonarCloud
 
-1. Produce `gavel.sarif` from `npx gavel audit --format sarif`
-2. Import with Sonar’s external issues / SARIF import mechanism for your edition
-3. Map Gavel rule IDs 1:1 to quality-gate conditions if desired; do not rename rule IDs
+Gavel ships **SARIF 2.1.0** only — there is no Sonar plugin. Import the file as external issues alongside your normal Sonar scan.
 
-Recipe detail ships with the v0.8 / v1.0 integration pack in the roadmap.
+1. **Produce SARIF in CI** (before `sonar-scanner`):
+
+   ```bash
+   npx --yes @dsolisp/gavel@0.7.1 audit --format sarif > gavel.sarif
+   ```
+
+2. **Point Sonar at the file** — add to `sonar-project.properties` or pass as a scanner parameter:
+
+   ```properties
+   sonar.sarifReportPaths=gavel.sarif
+   ```
+
+   Multiple reports: comma-separated paths. Path is relative to the project base directory.
+
+3. **Run your existing Sonar scan** — Gavel findings import as external issues with stable `ruleId` values from the SARIF driver rules list.
+
+4. **Quality gates** — reference Gavel rule IDs as-is in gate conditions; do not rename or remap IDs (baseline ratchet in v0.9 keys on `path + rule + snippetHash`).
+
+5. **Edition notes** — SonarCloud and SonarQube 9.9+ support `sonar.sarifReportPaths`. Older editions may require the REST import API; consult your Sonar admin docs for SARIF external-issue import.
 
 ## Data handling
 
@@ -70,7 +94,7 @@ Recipe detail ships with the v0.8 / v1.0 integration pack in the roadmap.
 
 | Release | Capability |
 |---------|------------|
-| v0.8 | `gavel-baseline.json` **schema** + verify samples (no write CLI yet) |
+| v0.8 | [`gavel-baseline.json` schema](../schemas/gavel-baseline.schema.json) + [verify samples](../fixtures/baseline/) (no write CLI yet) |
 | v0.9 | `gavel baseline` **command** + new-findings-only gating for legacy monorepos |
 | v1.0 | Frozen baseline key continuity with SARIF fingerprints |
 
