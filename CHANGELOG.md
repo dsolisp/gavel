@@ -5,6 +5,16 @@ All notable changes to the gavel package are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Planned — v0.10.0 Playwright.NET Language Surface
+
+Prep pack only (no scanner behavior yet). Implementation follows `v0.10.0-prompts.txt` and [docs/contracts/playwright-dotnet-v0.10.0.md](docs/contracts/playwright-dotnet-v0.10.0.md).
+
+- Promote Playwright for .NET (`Microsoft.Playwright`) to the next release theme; Remediation Loop → v0.11.0; Assertion Integrity → v0.12.0 ([GAVEL_ROADMAP.md](GAVEL_ROADMAP.md))
+- Tier-A contract: `.cs` walk/`TEST_FILE_RE`, detect + `playwright_dotnet` freshness, API→rule map, backward-compat, interface budget (2 surfaces, 0 new rule tags)
+- Session prompts (#1–#9) and graduation evidence stub with HOLD defaults
+
 ## [0.9.0] - 2026-07-16
 
 ### Added

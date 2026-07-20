@@ -16,7 +16,7 @@
 
 ---
 
-Gavel is an independent QA discipline project for automation repos. It enforces **lean suites**, **trustworthy test code**, and **resilient structure** across Playwright, Selenium, Cypress, WebdriverIO, Cucumber, Robot, and pytest-playwright — without turning into a full QA platform.
+Gavel is an independent QA discipline project for automation repos. It enforces **lean suites**, **trustworthy test code**, and **resilient structure** across Playwright (TS/JS + pytest-playwright; Playwright.NET planned in v0.10.0), Selenium, Cypress, WebdriverIO, Cucumber, and Robot — without turning into a full QA platform.
 
 Inspired by [ponytail](https://github.com/DietrichGebert/ponytail)'s minimalism. Not a fork. No upstream sync required.
 
@@ -42,7 +42,7 @@ Install into your IDE (Cursor, Claude Code, OpenCode, Windsurf, and 16+ more) us
 
 ### Sample repos
 
-Four complete example projects under `fixtures/sample-repos/` — **Playwright**, **Cypress**, **Selenium**, and **WebdriverIO** — each with good and bad examples showing Gavel's constitution rules applied to real test code. Run the self-check against them to see verdicts in action.
+Four complete example projects under `fixtures/sample-repos/` — **Playwright**, **Cypress**, **Selenium**, and **WebdriverIO** — each with good and bad examples showing Gavel's constitution rules applied to real test code. Run the self-check against them to see verdicts in action. A **Playwright.NET** sample is planned for v0.10.0 (see [GAVEL_ROADMAP.md](GAVEL_ROADMAP.md)).
 
 ## What can gavel do for me?
 
@@ -98,7 +98,7 @@ Run `gavel companion --help` for optional companion workflows (CI migration, env
 | **Boundary guard** | Mechanical enforcement of Gavel/Bailiff scope separation |
 | **CI intelligence** | JUnit, Allure, Playwright, Cypress, Cucumber parsers + clustering |
 | **Evidence gate** | Compile + affected tests before declaring done |
-| **Frameworks** | Playwright, Cypress, Selenium, WebdriverIO, Cucumber, Robot, pytest-playwright |
+| **Frameworks** | Playwright (TS/JS, pytest-playwright; .NET in v0.10.0), Cypress, Selenium, WebdriverIO, Cucumber, Robot |
 
 ## Example output
 

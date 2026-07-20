@@ -16,6 +16,8 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Two-repo design, browser-first authoring principle | Contributors, architects |
 | [BAILIFF.md](BAILIFF.md) | Sibling QA-workflow repo (planning only) | Architects |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Verify gate, model tiers, budgets | Contributors |
+| [contracts/playwright-dotnet-v0.10.0.md](contracts/playwright-dotnet-v0.10.0.md) | Tier-A contract: Playwright.NET language surface (prep) | Contributors / Tier-A / Tier-R |
+| [graduation-evidence-v0.10.0.md](graduation-evidence-v0.10.0.md) | Graduation stub + HOLD defaults for v0.10.0 | Contributors / Tier-R |
 | [fixtures/corpus/README.md](../fixtures/corpus/README.md) | Corpus label + precision contract (v0.8) | Contributors |
 | [rules/brittle-assert.md](rules/brittle-assert.md) | Heuristic contract: prose equality assertions | Contributors / Tier-R |
 | [rules/assert-drop.md](rules/assert-drop.md) | Diff harness: assertion deletion / early-return / strength downgrade | Contributors / Tier-B |
