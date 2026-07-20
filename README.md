@@ -42,7 +42,7 @@ Install into your IDE (Cursor, Claude Code, OpenCode, Windsurf, and 16+ more) us
 
 ### Sample repos
 
-Four complete example projects under `fixtures/sample-repos/` — **Playwright**, **Cypress**, **Selenium**, and **WebdriverIO** — each with good and bad examples showing Gavel's constitution rules applied to real test code. Run the self-check against them to see verdicts in action. A **Playwright.NET** sample is planned for v0.10.0 (see [GAVEL_ROADMAP.md](GAVEL_ROADMAP.md)).
+Four complete example projects under `fixtures/sample-repos/` — **Playwright**, **Cypress**, **Selenium**, and **WebdriverIO** — each with good and bad examples showing Gavel's constitution rules applied to real test code. Run the self-check against them to see verdicts in action. A **Playwright.NET** sample is planned for v0.10.0.
 
 ## What can gavel do for me?
 
