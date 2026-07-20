@@ -61,6 +61,32 @@ Before adding any abstraction:
 - **BDD**: extract shared step definitions only after scenarios repeat; prefer scenario outlines for repeated examples.
 - **Tags**: consolidate execution tags to risk, scope, and quarantine categories.
 
+## No-Op Wait Migration Playbook
+
+When refactoring `manual-wait` violations at scale (20+ calls):
+
+1. **Analyze context** — read 1-3 lines after each `waitForTimeout`/`time.sleep`:
+   - If the next line has a Playwright/framework timeout → classify as **redundant** (90% of cases)
+   - If the next line reads DOM state via `.evaluate()` / `.textContent()` → classify as **stale-read-risk** (5-10%)
+   - If the call is in bot/persona/simulation code → classify as **intentional**
+
+2. **Apply no-op migration** for redundant waits:
+   - Convert the wait helper to a no-op (`async function quickPause(_page: Page) {}`)
+   - Or remove the call entirely if the helper has no other callers
+   - Do NOT replace each redundant wait with a state-driven wait — the subsequent code already handles the wait
+
+3. **Add targeted `pollUntil`** only for stale-read-risk spots:
+   - Replace with `pollUntil(predicate, timeout, interval)` that checks the specific DOM state
+   - Generate a predicate from the evaluate() call that follows
+
+4. **Rename intentional waits** for clarity (JS/TS) or use the universal Python pattern below:
+   - `waitForTimeout(random)` → `humanDelay(page, min, max)` (bot simulation)
+   - `waitForTimeout(60000)` → `waitForSafetyHalt(page, 1)` (safety protocol)
+   - `waitForTimeout(2000)` → `waitForRecovery(page)` (session stabilization)
+   - Python `time.sleep(N)` that is intentional + replaceable → `threading.Event` (see below)
+
+5. **Report time impact**: sum removed milliseconds → "eliminated ~52s of dead sleep"
+
 ## Python Sleep Replacement (`threading.Event`, signal-driven only)
 
 **Order of preference** for replacing Python `time.sleep(N)`:
@@ -157,6 +183,7 @@ After refactoring:
 - Compare pass rate before vs after — must be equal or better
 - If tests not run: declare INCOMPLETE, not done
 - No test should be removed or skipped without explicit justification
+- **Cross-step data flow** (if >20 edits): review variable flow across step closures — no `const` inside a step should re-read a value mutated in a prior step; hoist shared state to test body with `let`
 
 ## Apply-Safe Mode
 
@@ -178,13 +205,18 @@ before declaring complete.
 
 ## Selector-Leak Remediation
 
-When refactoring action classes, check for inline locator chains and
-centralize them:
+Selector-leak is about **architectural placement**, not locator quality.
+`page.getByRole()` is Playwright's recommended API — but it's still a
+selector leak when it lives in a spec file. Locators belong in the locator
+layer; specs and actions consume locator methods.
+
+When refactoring, check for inline locator chains in **both specs and
+action files** and centralize them:
 
 ```text
-1. Find this.page.getBy* or row.locator() in action files
+1. Find page.getBy*, page.locator(), or row.locator() in spec or action files
 2. Move to corresponding locator class as a property or parameterized method
-3. Update action to call this.locators.methodName()
+3. Update spec/action to call the locator method
 ```
 
 This applies to ANY element targeting outside the locator layer:
@@ -196,3 +228,18 @@ This applies to ANY element targeting outside the locator layer:
 
 If a locator needs a runtime value (search term, row index), add a
 parameterized method to the locator class rather than building an inline chain.
+
+## Violation Remediation Reference
+
+When the self-check scanner reports violations, use this table to determine
+the correct remediation path:
+
+| Violation | What it means | Fix |
+|-----------|---------------|-----|
+| `selector-leak` | Locator call in spec/action file instead of locator layer | Extract to POM locator class; use `gavel scaffold-pom` or manual migration |
+| `brittle-assert` | Boolean snapshot assertion (`isVisible().toBe(true)`) | Replace with auto-retrying: `await expect(locator).toBeVisible()`; add `gavel-ignore` only if `evaluate()` in shadow DOM with no locator alternative |
+| `no-step` | Test has no `test.step()` grouping | Wrap logical phases (setup → action → verify); `gavel-refactor` handles this |
+| `manual-wait` | Hard-coded sleep (`waitForTimeout`, `time.sleep`) | See wait-remediation classifier: redundant → no-op, stale-read-risk → `pollUntil`, intentional → rename (JS) or signal-driven `threading.Event` (Python + replaceable, `.set()` required) |
+| `hardcoded-env` | Hard-coded URL, port, or credential in test | Extract to `process.env` or fixture config; add `gavel-ignore` only for type definitions |
+| `skip-marker` | `test.skip()` without category prefix | Add prefix: `SEED-DATA:`, `ENV-LIMIT:`, `HEADLESS:`, `WIP:` |
+| `assert-drop` | Assertion removed or weakened in diff | Restore assertion or document reason; never silently drop |

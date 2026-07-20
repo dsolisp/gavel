@@ -18,6 +18,10 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Skip-marker prefix suppression**: recognized prefixes (`SEED-DATA`, `ENV-LIMIT`, …) plus configurable `skipPrefixes` suppress skip-marker findings
 - **Ignore-no-reason context-aware**: bare `gavel-ignore` only flagged in test/locator/action files; docs, utilities, and fenced examples suppressed
 - **IDE config directory exclusions**: `.claude`, `.qoder`, `.cursor`, `.vscode` added to `EXCLUDED_DIRS` across all scanner scripts — IDE tooling directories no longer scanned for test violations
+- **No-op wait migration playbook** (`gavel-refactor`): structured 5-step playbook for bulk `manual-wait` remediation — classify (redundant / stale-read / intentional), no-op redundant waits, targeted `pollUntil` for stale-read, rename intentional, report time impact
+- **Violation remediation reference table** (`gavel-refactor`): per-tag fix guidance for `selector-leak`, `brittle-assert`, `no-step`, `manual-wait`, `hardcoded-env`, `skip-marker`, `assert-drop`
+- **Cross-step data-flow gate** (`gavel-refactor`): verification gate checks variable flow across step closures after bulk edits (>20); hoists shared state to test body
+- **Selector-leak placement clarification** (`gavel-refactor`): selector-leak is about architectural placement, not locator quality; specs and action files both checked
 
 ### Changed
 
