@@ -22,6 +22,10 @@ const EXCLUDED_DIRS = new Set([
   'venv',
   'venv-enhanced',
   '.venv-ci',
+  '.claude',
+  '.qoder',
+  '.cursor',
+  '.vscode',
 ]);
 
 const LOCATOR_RE = /locators?\//i;

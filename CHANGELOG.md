@@ -5,7 +5,27 @@ All notable changes to the gavel package are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.0] - 2026-07-16
+
+### Added
+
+- **Test-vs-utility scope filter**: RULES `scope` field (`test-only` | `all-files`) and `excludePaths` config (default `scripts/**`, `fixtures/**`, `tools/**`, `utility_scripts/**`) so utility files no longer inflate self-check / audit health scores; audit summary reports `excludedFileCount`
+- **Path-weighting for suite health**: `gavel.config.json` `paths` entries (`pattern`, `weight` 0–2, `label`) weight violation counts by path category; suite health / audit report raw vs weighted totals and `byLabel` grouping
+- **`manual-wait` sub-classifier**: findings include `subCase` (`redundant` | `stale-read` | `intentional`); intentional waits downgrade to warning/fix; replaceable intentional waits (polling loops, post-API sleeps) further downgrade to info/report with `replaceable` and `suggestion` fields
+- **`threading.Event` remediation pattern**: Python `time.sleep` inside a `while` loop is flagged with `pollingLoop: true` and `suggestion: threading.Event.wait()`
+- **`threading.Event` signal-driven replacement**: agent/skill docs (`gavel-refactor`, `gavel-healer`, `gavel-heal`) encode the signal-driven `threading.Event` pattern (`.set()` by the readiness owner + single `.wait(timeout=N)` block) as the Python sleep replacement for replaceable intentional waits; an unset Event (sleep rename) is explicitly prohibited
+- **Time-impact estimation**: parse wait durations into `durationMs`; audit `--json` reports `timeImpact` totals
+- **Skip-marker prefix suppression**: recognized prefixes (`SEED-DATA`, `ENV-LIMIT`, …) plus configurable `skipPrefixes` suppress skip-marker findings
+- **Ignore-no-reason context-aware**: bare `gavel-ignore` only flagged in test/locator/action files; docs, utilities, and fenced examples suppressed
+- **IDE config directory exclusions**: `.claude`, `.qoder`, `.cursor`, `.vscode` added to `EXCLUDED_DIRS` across all scanner scripts — IDE tooling directories no longer scanned for test violations
+
+### Changed
+
+- **Default scan coverage now excludes utility globs** (`scripts/**`, `fixtures/**`, `tools/**`, `utility_scripts/**`) when a repo has no `gavel.config.json` or its config omits `excludePaths`. Pre-v0.9.0 these paths were scanned. This is a default-behavior change for repos with violations under those trees. To restore pre-v0.9.0 scanning scope, set `"excludePaths": []` in `gavel.config.json`. The self-check console now prints a one-line notice when the default exclusion applies.
+
+### Migration
+
+- Repos upgrading from v0.8.x without `gavel.config.json`: if you relied on findings under `scripts/`, `fixtures/`, `tools/`, or `utility_scripts/`, add `"excludePaths": []` to your `gavel.config.json` (or scope the exclusion list to your needs).
 
 ## [0.8.1] - 2026-07-13
 

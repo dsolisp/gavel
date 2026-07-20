@@ -11,6 +11,7 @@ const path = require('path');
 const EXCLUDED_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'coverage',
   'playwright-report', 'test-results', 'allure-results', 'allure-report',
+  '.claude', '.qoder', '.cursor', '.vscode',
 ]);
 
 // Matches real-world test file naming per ecosystem, not just `.spec./.test.`:

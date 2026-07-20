@@ -130,11 +130,21 @@ function main() {
     if (!tag) { console.error('Usage: gavel explain <tag> [--json]'); process.exit(2); }
     const rule = RULES.find((r) => r.id === tag);
     if (!rule) { console.error(`Unknown rule: ${tag}\nAvailable: ${RULES.map((r) => r.id).join(', ')}`); process.exit(2); }
-    const contract = { id: rule.id, class: rule.class, severity: rule.severity, envelopeSeverity: rule.envelopeSeverity, ...(rule.confidence ? { confidence: rule.confidence } : {}), message: rule.message, remediation: rule.remediation };
+    const contract = {
+      id: rule.id,
+      class: rule.class,
+      severity: rule.severity,
+      envelopeSeverity: rule.envelopeSeverity,
+      scope: rule.scope,
+      ...(rule.confidence ? { confidence: rule.confidence } : {}),
+      message: rule.message,
+      remediation: rule.remediation,
+    };
     if (jsonOut) { fs.writeSync(1, `${JSON.stringify(contract, null, 2)}\n`); } else {
       console.log(`Rule: ${contract.id}`);
       console.log(`Class: ${contract.class}`);
       console.log(`Severity: ${contract.severity} (envelope: ${contract.envelopeSeverity})`);
+      console.log(`Scope: ${contract.scope}`);
       if (contract.confidence) console.log(`Confidence: ${contract.confidence}`);
       console.log(`Message: ${contract.message}`);
       console.log(`Remediation: ${contract.remediation}`);

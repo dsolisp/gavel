@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadGavelConfig, parseConfigFlag } = require('./load-gavel-config');
 const { toSarif, formatFlag } = require('./to-sarif');
+const { isExcludedPath } = require('./glob-match');
 
 let config = {};
 let allowlist = [];
@@ -17,6 +18,18 @@ let scanRoot = '';
 // Matches *.spec.*, *.test.*, *.cy.{js,ts} (Cypress), and Python test_*/#*_test files
 const TEST_FILE_RE = /\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$/;
 const LOCATOR_FILE_RE = /locators?\//i;
+const ACTION_PAGE_FILE_RE = /(?:pages?|actions?)\//i;
+
+// Recognized skip-marker prefixes; configurable via gavel.config.json skipPrefixes.
+const DEFAULT_SKIP_PREFIXES = [
+  'SEED-DATA',
+  'ENV-LIMIT',
+  'HEADLESS',
+  'BROKER-DOWN',
+  'FLAKY-UPSTREAM',
+  'WIP',
+  'KNOWN-BUG',
+];
 
 function findMatches(content, pattern, filePath = '') {
   const hits = [];
@@ -259,6 +272,107 @@ function findBrittleAssertMatches(filePath, content) {
     .map(({ line }) => ({ line, text: lines[line - 1].trim() }));
 }
 
+// Classify a manual-wait finding by the next 3 lines of context.
+//   redundant — the following code already has its own wait/timeout/retry pattern.
+//   stale-read — the following code reads DOM state, so the sleep creates a race.
+//   intentional — neither; may be a legitimate bot/animation/safety delay.
+function classifyManualWaitSubCase(lines, lineNumber) {
+  const context = lines.slice(lineNumber, lineNumber + 3).join('\n');
+  const redundantPattern = /waitFor(?!Timeout)\w+\s*\(|expect\.poll\s*\(|cy\.wait\s*\(\s*['"`@]/;
+  const staleReadPattern = /evaluate\s*\(|innerHTML|textContent|getAttribute|\$eval/;
+  if (redundantPattern.test(context)) return 'redundant';
+  if (staleReadPattern.test(context)) return 'stale-read';
+  return 'intentional';
+}
+
+// Classify whether an intentional wait is replaceable with a state-driven alternative.
+// Inspects previous 5 + next 5 lines for polling loops, API calls, or assertions.
+// Returns { replaceable: true|false|'unknown', suggestion?: string }
+function classifyReplaceability(lines, lineNumber) {
+  const start = Math.max(0, lineNumber - 5);
+  const end = Math.min(lines.length, lineNumber + 6);
+  const context = lines.slice(start, end).join('\n');
+  const currentLine = lines[lineNumber] || '';
+
+  // Signal-driven threading.Event (with a .set() caller) is the correct pattern;
+  // an unset Event + wait(timeout=N) is a sleep rename, not a remediation — do not
+  // short-circuit on .wait(timeout) alone.
+  if (/threading\.Event|Event\(\)/.test(context) && /\.set\(\)/.test(context)) {
+    return { replaceable: false };
+  }
+
+  // Polling loop: while condition + time.sleep (covers `while not flag:` too)
+  const prevLines = lines.slice(Math.max(0, lineNumber - 3), lineNumber).join('\n');
+  if (/\bwhile\b.*:/.test(prevLines) && /time\.sleep/.test(currentLine)) {
+    return { replaceable: true, suggestion: 'threading.Event.wait()' };
+  }
+
+  // After API call or assertion — likely replaceable with expect.poll()
+  if (/\b(?:fetch|axios|request|supertest|\.(?:get|post|put|patch|delete))\s*\(/.test(prevLines)
+    || /\b(?:expect|assert)\b/.test(prevLines)) {
+    return { replaceable: true, suggestion: 'expect.poll()' };
+  }
+
+  // No signals detected — genuinely intentional or unknown
+  return { replaceable: false };
+}
+
+// Detect busy-wait polling loops around a time.sleep line.
+// Heuristic: preceding 3 lines contain a while header whose condition reads
+// a boolean variable/state (not a counter/timer), and no threading.Event or
+// time.monotonic() appears within 10 lines.
+function isPollingLoop(lines, lineNumber) {
+  const prevLines = lines.slice(Math.max(0, lineNumber - 3), lineNumber);
+  const whileLine = prevLines.find((line) => /\bwhile\b.*:/.test(line));
+  if (!whileLine) return false;
+
+  const conditionMatch = whileLine.match(/\bwhile\s+(.+):/);
+  if (!conditionMatch) return false;
+  const condition = conditionMatch[1].trim();
+
+  // Boolean variable/state (identifier, attribute, or True/False literal); reject compound/call expressions.
+  if (!/^(not\s+)?(?:[A-Za-z_][A-Za-z0-9_.]*|True|False)$/.test(condition)) return false;
+
+  // Reject counters/timers.
+  if (/\b(?:\d+|time\.|monotonic|counter|count|index|attempt|len\(|range\()/.test(condition)) return false;
+
+  // No threading.Event or time.monotonic() within 10 lines.
+  const start = Math.max(0, lineNumber - 5);
+  const end = Math.min(lines.length, lineNumber + 6);
+  const context = lines.slice(start, end).join('\n');
+  if (/threading\.Event|time\.monotonic/.test(context)) return false;
+
+  return true;
+}
+
+// Parse the duration of a manual-wait call from its source line.
+//   waitForTimeout(3000), browser.pause(2000), Thread.sleep(1500), cy.wait(5000) → ms
+//   time.sleep(2) → 2000ms (seconds converted to ms)
+//   Variables/expressions/unparseable arguments → null (unknown)
+function parseManualWaitDuration(text) {
+  const msMatch = text.match(/(?:waitForTimeout|browser\.pause|Thread\.sleep|cy\.wait)\s*\(\s*(\d+)\s*\)?/);
+  if (msMatch) return Number(msMatch[1]);
+  const secMatch = text.match(/time\.sleep\s*\(\s*(\d+(?:\.\d+)?)\s*\)?/);
+  if (secMatch) return Math.round(Number(secMatch[1]) * 1000);
+  return null;
+}
+
+// Recognized skip prefixes suppress skip-marker findings even without a reason
+// comment. Matching is case-insensitive and treats hyphens/underscores as equal
+// so `SEED-DATA` in config matches `SEED_DATA` in source.
+function matchesSkipPrefix(text, prefixes) {
+  const normalizedText = text.toUpperCase().replace(/[-_]/g, '');
+  return prefixes.some((prefix) => {
+    const normalizedPrefix = prefix.toUpperCase().replace(/[-_]/g, '');
+    return normalizedText.includes(normalizedPrefix);
+  });
+}
+
+function getSkipPrefixes() {
+  const configured = Array.isArray(config.skipPrefixes) ? config.skipPrefixes : [];
+  return [...new Set([...DEFAULT_SKIP_PREFIXES, ...configured])];
+}
+
 // Matches `gavel-ignore` / deprecated `gavel-allow`, bare or tag-scoped:
 //   gavel-ignore              — wildcard, suppresses every tag on the line (back-compat)
 //   gavel-ignore: *           — explicit wildcard
@@ -344,6 +458,7 @@ function splitTestBlocks(content) {
 //   severity — self-check/failThreshold vocabulary: blocker | error | warning | info
 //   envelopeSeverity — audit envelope vocabulary: blocker | fix | cleanup | delete | report
 //   class — constitution | locator | assertion | data | workflow
+//   scope — test-only (specs only) | all-files (non-excluded paths)
 //   message — one-line finding description
 //   remediation — how to fix, referencing AGENTS.md
 //   test — detection function
@@ -354,6 +469,7 @@ const RULES = [
     severity: 'error',
     envelopeSeverity: 'blocker',
     class: 'assertion',
+    scope: 'all-files',
     message: 'Assertion APIs in action/page/locator files',
     remediation: 'Move assertions into spec files; locator, action, and page classes stay assertion-free (AGENTS.md: Page Object Discipline).',
     test: (filePath, content) => {
@@ -368,6 +484,7 @@ const RULES = [
     severity: 'error',
     envelopeSeverity: 'fix',
     class: 'locator',
+    scope: 'all-files',
     message: 'Raw selector chains outside locator classes',
     remediation: 'Expose the element as a named locator in a locator class and call it by name (AGENTS.md: Selector Boundary Rule).',
     test: (filePath, content) => {
@@ -377,11 +494,16 @@ const RULES = [
       if (!/(pages?|actions?|components?)\//i.test(filePath) && !TEST_FILE_RE.test(filePath)) {
         return [];
       }
-      return findMatches(
+      const matches = findMatches(
         content,
         /\.(getByRole|getByText|getByLabel|getByPlaceholder|getByTestId|locator|findElement(s)?|find_element(s)?)\s*\(|querySelector(All)?\s*\(|\.closest\s*\(|\.matches\s*\(|\$\$\s*\(|page\.\$\s*\(|\$\s*\(/g,
         filePath,
       );
+      // Python locator-constant unpacking: find_element(*locators.NAME) is NOT a leak
+      return matches.filter((m) => {
+        const line = content.split('\n')[m.line - 1] || '';
+        return !/\*locators?\./.test(line);
+      });
     },
   },
   {
@@ -389,20 +511,44 @@ const RULES = [
     severity: 'error',
     envelopeSeverity: 'blocker',
     class: 'assertion',
+    scope: 'all-files',
     message: 'Manual sleeps or arbitrary polling',
     remediation: 'Replace manual waits with the framework\'s native retrying/eventual assertions (AGENTS.md: Assertion Discipline).',
-    test: (filePath, content) =>
-      findMatches(
+    test: (filePath, content) => {
+      const lines = content.split('\n');
+      return findMatches(
         content,
         /waitForTimeout\s*\(|page\.waitForTimeout|time\.sleep\s*\(|Thread\.sleep\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(/g,
         filePath,
-      ),
+      ).map((hit) => {
+        let subCase = classifyManualWaitSubCase(lines, hit.line);
+        const result = {
+          ...hit,
+          subCase,
+          durationMs: parseManualWaitDuration(hit.text),
+        };
+        if (isPollingLoop(lines, hit.line - 1)) {
+          result.subCase = 'intentional';
+          result.pollingLoop = true;
+          result.suggestion = 'threading.Event.wait()';
+        }
+        if (result.subCase === 'intentional') {
+          const replaceability = classifyReplaceability(lines, hit.line - 1);
+          result.replaceable = replaceability.replaceable;
+          if (replaceability.suggestion && !result.suggestion) {
+            result.suggestion = replaceability.suggestion;
+          }
+        }
+        return result;
+      });
+    },
   },
   {
     id: 'no-di',
     severity: 'error',
     envelopeSeverity: 'blocker',
     class: 'constitution',
+    scope: 'test-only',
     message: 'Direct page object construction in specs',
     remediation: 'Inject page objects through the runner\'s fixture/DI mechanism (AGENTS.md: Test Constitution MUST DO #1).',
     test: (filePath, content) => {
@@ -417,6 +563,7 @@ const RULES = [
     severity: 'warning',
     envelopeSeverity: 'fix',
     class: 'workflow',
+    scope: 'test-only',
     message: 'Large specs without step grouping',
     remediation: 'Group multi-test specs with the runner\'s native step primitive, e.g. test.step() (AGENTS.md: Test Constitution MUST DO #4).',
     test: (filePath, content) => {
@@ -436,6 +583,7 @@ const RULES = [
     severity: 'warning',
     envelopeSeverity: 'fix',
     class: 'workflow',
+    scope: 'test-only',
     message: 'test.fail() without issue tracker reference',
     remediation: 'Add a bug/ticket reference next to the expected-failure marker (AGENTS.md: Expected-Failure Expiry Policy).',
     test: (filePath, content) => {
@@ -462,6 +610,7 @@ const RULES = [
     severity: 'error',
     envelopeSeverity: 'fix',
     class: 'workflow',
+    scope: 'test-only',
     message: 'test.fail() must precede assertions in the same test',
     remediation: 'Move the expected-failure marker above the first assertion in the test block (AGENTS.md: Test Constitution MUST DO #7).',
     test: (filePath, content) => {
@@ -494,6 +643,7 @@ const RULES = [
     severity: 'warning',
     envelopeSeverity: 'fix',
     class: 'workflow',
+    scope: 'test-only',
     message: 'Skip, quarantine, or WIP marker without reason',
     remediation: 'Add a reason and ticket reference to the skip/quarantine/WIP marker (AGENTS.md: Expected-Failure Expiry Policy).',
     test: (filePath, content) => {
@@ -502,13 +652,16 @@ const RULES = [
       }
       const hits = [];
       const lines = content.split('\n');
+      const skipPrefixes = getSkipPrefixes();
       for (let i = 0; i < lines.length; i += 1) {
         const line = lines[i];
         if (!/\btest\.skip\s*\(|\btest\.fixme\s*\(|\bit\.skip\s*\(|\b@wip\b|\b@quarantine\b|\b@flaky\b|@pytest\.mark\.skip\b/.test(line)) {
           continue;
         }
         const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
-        if (!/reason:|\/\/|\/\*|because|ticket|[A-Z][A-Z0-9]+-\d+/.test(context)) {
+        const hasReason = /reason:|\/\/|\/\*|because|ticket|[A-Z][A-Z0-9]+-\d+/.test(context);
+        const hasRecognizedPrefix = matchesSkipPrefix(context, skipPrefixes);
+        if (!hasReason && !hasRecognizedPrefix) {
           hits.push({ line: i + 1, text: line.trim() });
         }
       }
@@ -520,21 +673,52 @@ const RULES = [
     severity: 'info',
     envelopeSeverity: 'report',
     class: 'workflow',
+    scope: 'all-files',
     message: 'Bare gavel-ignore without tag or reason',
     remediation: 'Use gavel-ignore: <tag> with a reason comment, or remove the suppression (AGENTS.md: Expected-Failure Expiry Policy).',
     test: (filePath, content) => {
+      // Context-aware: only fire on test, locator, or action/page files.
+      const isTestFile = TEST_FILE_RE.test(filePath);
+      const isLocatorFile = LOCATOR_FILE_RE.test(filePath);
+      const isActionPageFile = ACTION_PAGE_FILE_RE.test(filePath);
+      if (!isTestFile && !isLocatorFile && !isActionPageFile) {
+        return [];
+      }
+
       const hits = [];
       const lines = content.split('\n');
       const reasonRe = /reason|because|ticket|TODO|FIXME|[A-Z][A-Z0-9]+-\d+|explain/i;
       const bareIgnoreRe = /\bgavel-ignore\b(?!\s*:)/g;
+      const isMd = filePath.endsWith('.md');
+      let inFencedBlock = false;
 
       for (let i = 0; i < lines.length; i += 1) {
         const line = lines[i];
         const trimmed = line.trim();
 
+        // Track fenced code blocks in .md files
+        if (isMd && trimmed.startsWith('```')) {
+          inFencedBlock = !inFencedBlock;
+          continue;
+        }
+
         bareIgnoreRe.lastIndex = 0;
         const match = bareIgnoreRe.exec(line);
         if (!match) {
+          continue;
+        }
+
+        // Suppress inside fenced code blocks in .md files
+        if (inFencedBlock) {
+          continue;
+        }
+
+        // Suppress when gavel-ignore appears in a string literal (quoted context)
+        const before = line.slice(0, match.index);
+        const singleQ = (before.match(/'/g) || []).length;
+        const doubleQ = (before.match(/"/g) || []).length;
+        const backtickQ = (before.match(/`/g) || []).length;
+        if (singleQ % 2 === 1 || doubleQ % 2 === 1 || backtickQ % 2 === 1) {
           continue;
         }
 
@@ -562,6 +746,7 @@ const RULES = [
     severity: 'error',
     envelopeSeverity: 'blocker',
     class: 'data',
+    scope: 'test-only',
     message: 'Hardcoded environment value in a test spec',
     remediation: 'Use environment variables, .env files, or config modules instead of hardcoded URLs, paths, IPs, ports, or credentials (AGENTS.md: Test Constitution WON\'T DO #3).',
     test: findHardcodedEnvMatches,
@@ -571,6 +756,7 @@ const RULES = [
     severity: 'info',
     envelopeSeverity: 'report',
     class: 'data',
+    scope: 'test-only',
     confidence: 'low',
     message: 'Inline state creation without file-local teardown; misses cross-file fixtures and cannot prove runtime orphaning',
     remediation: 'Add cleanup in the same file or suite with afterEach, tearDown, addfinalizer, post-yield teardown, or @AfterEach. This static rule cannot assess cross-file fixtures or runtime orphaning.',
@@ -581,6 +767,7 @@ const RULES = [
     severity: 'info',
     envelopeSeverity: 'report',
     class: 'locator',
+    scope: 'all-files',
     confidence: 'low',
     message: 'Fragile locator expression scored at least 5',
     remediation: 'Use Locator Priority rung 1 accessibility locators before stable test IDs, structural selectors, or XPath (AGENTS.md: Locator Priority).',
@@ -591,12 +778,22 @@ const RULES = [
     severity: 'warning',
     envelopeSeverity: 'fix',
     class: 'assertion',
+    scope: 'test-only',
     confidence: 'medium',
     message: 'Equality assertion against prose likely to drift with product copy',
     remediation: 'Use a native partial matcher: Playwright toContain() or expect(locator).toHaveText(/partial/); pytest assert "substring" in value; JUnit assertThat(actual).contains(expected); Cypress should(\'contain\', \'partial\').',
     test: findBrittleAssertMatches,
   },
 ];
+
+const DEFAULT_EXCLUDE_PATHS = ['scripts/**', 'fixtures/**', 'tools/**', 'utility_scripts/**'];
+
+function shouldRunRule(rule, relPath) {
+  if (rule.scope === 'test-only' && !TEST_FILE_RE.test(relPath)) {
+    return false;
+  }
+  return true;
+}
 
 const RULE_SEVERITY = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
 const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
@@ -618,6 +815,10 @@ const EXCLUDED_DIRS = new Set([
   'venv',
   'venv-enhanced',
   '.venv-ci',
+  '.claude',
+  '.qoder',
+  '.cursor',
+  '.vscode',
 ]);
 
 function walkFiles(dir, files = []) {
@@ -736,30 +937,77 @@ function main() {
   }
 
   const findings = [];
-  const files = walkFiles(resolvedRoot);
+  const excludePaths = config.excludePaths ?? DEFAULT_EXCLUDE_PATHS;
+  const usingDefaultExcludePaths = !config.excludePaths;
+  if (usingDefaultExcludePaths && !jsonOutput && !format && DEFAULT_EXCLUDE_PATHS.length > 0) {
+    console.error(`Note: excluding ${DEFAULT_EXCLUDE_PATHS.length} default paths (${DEFAULT_EXCLUDE_PATHS.join(', ')}). Set "excludePaths": [] in gavel.config.json to scan all paths.`);
+  }
+  const walked = walkFiles(resolvedRoot);
+  const scanned = [];
+  let excludedFileCount = 0;
 
-  for (const filePath of files) {
+  for (const filePath of walked) {
+    const relPath = path.relative(resolvedRoot, filePath).replace(/\\/g, '/');
+    if (isExcludedPath(relPath, excludePaths)) {
+      excludedFileCount += 1;
+      continue;
+    }
+    scanned.push(filePath);
+  }
+
+  for (const filePath of scanned) {
     const relPath = path.relative(resolvedRoot, filePath).replace(/\\/g, '/');
     const content = fs.readFileSync(filePath, 'utf8');
 
     for (const rule of RULES) {
+      if (!shouldRunRule(rule, relPath)) {
+        continue;
+      }
       const hits = rule.test(relPath, content);
       for (const hit of hits) {
         if (isAllowlisted(relPath, rule.id, hit.line) || isTagIgnored(content, hit.line, rule.id)) {
           continue;
         }
-        findings.push({
+        const finding = {
           tag: rule.id,
           description: rule.message,
           file: relPath,
           line: hit.line,
           text: hit.text,
-        });
+        };
+        if (hit.subCase) {
+          finding.subCase = hit.subCase;
+          if (hit.subCase === 'intentional') {
+            if (hit.replaceable === true) {
+              finding.severity = 'info';
+              finding.envelopeSeverity = 'report';
+            } else {
+              finding.severity = 'warning';
+              finding.envelopeSeverity = 'fix';
+            }
+          } else {
+            finding.severity = 'error';
+            finding.envelopeSeverity = 'blocker';
+          }
+        }
+        if (hit.replaceable !== undefined) {
+          finding.replaceable = hit.replaceable;
+        }
+        if (hit.suggestion) {
+          finding.suggestion = hit.suggestion;
+        }
+        if (hit.pollingLoop) {
+          finding.pollingLoop = true;
+        }
+        if (hit.durationMs !== undefined) {
+          finding.durationMs = hit.durationMs;
+        }
+        findings.push(finding);
       }
     }
   }
 
-  findings.push(...scanTestIds(files, resolvedRoot));
+  findings.push(...scanTestIds(scanned, resolvedRoot));
 
   findings.sort((a, b) => a.tag.localeCompare(b.tag) || a.file.localeCompare(b.file));
 
@@ -770,7 +1018,8 @@ function main() {
 
   const report = {
     target: resolvedRoot,
-    scannedFiles: files.length,
+    scannedFiles: scanned.length,
+    excludedFileCount,
     violationCount: findings.length,
     summary,
     findings,
@@ -785,7 +1034,7 @@ function main() {
   if (format === 'sarif') {
     const sarif = toSarif(findings.map((finding) => ({
       tag: finding.tag,
-      severity: RULE_SEVERITY[finding.tag] || 'warning',
+      severity: finding.severity || RULE_SEVERITY[finding.tag] || 'warning',
       message: finding.description,
       file: finding.file,
       line: finding.line,
@@ -796,7 +1045,7 @@ function main() {
   }
 
   console.log(`Gavel self-check — ${resolvedRoot}`);
-  console.log(`Scanned ${files.length} files. Violations: ${findings.length}`);
+  console.log(`Scanned ${scanned.length} files. Excluded: ${excludedFileCount}. Violations: ${findings.length}`);
 
   if (findings.length === 0) {
     console.log('No Constitution violations detected.');

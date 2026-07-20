@@ -76,6 +76,44 @@ When gavel-analyze or gavel-impact classifies **test-maintenance-drift**:
 - **Timing evidence**: replace sleeps with the runner's native retry/assertion/wait primitive tied to a user-visible condition.
 - **Isolation evidence**: confirm factories, seeds, cleanup, worker count, and shared state before blaming the product.
 
+## Manual Wait Remediation
+
+When healing `manual-wait` violations (`waitForTimeout`, `time.sleep`, `Thread.sleep`, `browser.pause`):
+
+1. **Classify each wait** by reading 1-3 lines after the call (and scanner fields when present: `subCase`, `replaceable`, `suggestion`):
+
+   | Next-line / scanner signal | Classification | Fix |
+   |----------------------------|---------------|-----|
+   | `.isVisible(`, `.waitFor(`, `expect(`, locator with `{ timeout:` | **redundant** | Remove or no-op — subsequent code already waits |
+   | `.evaluate(`, `.textContent()`, `.getAttribute()`, `.inputValue()` | **stale-read-risk** | Replace with `pollUntil` / `expect.poll` for the specific DOM state |
+   | `subCase: intentional` + `replaceable: true` (Python `time.sleep`) | **intentional + replaceable** | Replace with universal pattern — see below |
+   | Bot/persona/simulation context (file: `persona`, `bot`, `overnight`) | **intentional** (non-replaceable) | Keep — rename to `humanDelay` for clarity |
+   | Safety halt / recovery / cool-down | **intentional** (non-replaceable) | Keep — rename to `waitForSafetyHalt` / `waitForRecovery` |
+   | `frame.evaluate()` or `page.mouse.click(x,y)` followed by wait | **iframe-interaction** | Replace with `frame.waitForSelector()` or `frame.waitForFunction()` |
+
+2. **Apply the 90/10 rule**: ~90% of waits are redundant (remove/no-op). Only ~10% need state-driven replacement.
+3. **Generate helpers** for iframe waits: `waitForChartElement(frame, selector, timeout)` wrapping `frame.waitForSelector`.
+4. **Report time impact**: sum the milliseconds of removed waits and report total estimated savings.
+
+### Universal Python pattern (`intentional` + `replaceable: true`)
+
+When the finding is Python `time.sleep` with `subCase: intentional` and `replaceable: true` (or `suggestion: threading.Event.wait()`), use the **signal-driven** pattern from `agents/gavel-refactor.md`. An `Event` that is never `.set()` is just `time.sleep` under another name and is **NOT** an allowed remediation:
+
+```python
+import threading
+
+ready = threading.Event()
+
+# producer (callback / worker / watcher) — when the condition becomes true:
+ready.set()
+
+# consumer — single block, no sleep loop:
+if not ready.wait(timeout=N):
+    raise TimeoutError("condition not met")
+```
+
+Prefer a framework-native eventual wait (`expect(locator).to_be_visible(timeout=...)`, `wait_for_function`, `WebDriverWait`) when the wait targets an observable condition. Use `threading.Event` only when another thread/callback owns the readiness signal. Do **not** use this for non-replaceable intentional waits (bot jitter, safety halt) — rename + reason, or `gavel-ignore: manual-wait` with a ticket. JS/TS Playwright waits use native `expect` / named helpers, not `threading.Event`.
+
 ## Common Failure Patterns
 
 | Pattern | Root Cause | Fix |

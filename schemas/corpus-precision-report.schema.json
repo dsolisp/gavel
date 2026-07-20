@@ -45,6 +45,11 @@
           "truePositives": { "type": "integer", "minimum": 0 },
           "falsePositives": { "type": "integer", "minimum": 0 },
           "falseNegatives": { "type": "integer", "minimum": 0 },
+          "fieldMismatches": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Findings on the right line+tag but with wrong subCase/replaceable/pollingLoop/suggestion (field-lock violations)."
+          },
           "flagged": {
             "type": "integer",
             "minimum": 0,
@@ -85,6 +90,24 @@
                 "file": { "type": "string" },
                 "line": { "type": "integer", "minimum": 1 },
                 "tag": { "type": "string" }
+              }
+            }
+          },
+          "fieldMismatchFindings": {
+            "type": "array",
+            "description": "Findings that matched an expected line+tag but failed a field lock (subCase/replaceable/pollingLoop/suggestion).",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "line", "tag", "mismatches"],
+              "properties": {
+                "file": { "type": "string" },
+                "line": { "type": "integer", "minimum": 1 },
+                "tag": { "type": "string" },
+                "mismatches": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
               }
             }
           }

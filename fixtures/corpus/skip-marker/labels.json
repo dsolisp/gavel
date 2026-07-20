@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "skip-marker",
+  "samples": [
+    {
+      "file": "violating/unreasoned-skip.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "test.skip without reason or recognized prefix",
+      "expectedFindings": [{ "line": 3, "tag": "skip-marker" }]
+    },
+    {
+      "file": "violating/test_unreasoned_skip.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "@pytest.mark.skip without reason or ticket",
+      "expectedFindings": [{ "line": 5, "tag": "skip-marker" }]
+    },
+    {
+      "file": "clean/reasoned-skip.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "test.skip with reason comment and ticket"
+    },
+    {
+      "file": "clean/test_reasoned_skip.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "@pytest.mark.skip with reason and ticket"
+    },
+    {
+      "file": "clean/prefixed-constant.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "recognized SEED_DATA prefix suppresses skip-marker"
+    },
+    {
+      "file": "clean/test_prefixed_string.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "recognized ENV_LIMIT prefix in skip string suppresses skip-marker"
+    }
+  ]
+}

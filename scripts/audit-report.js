@@ -28,17 +28,21 @@ function runSelfCheck(repoRoot, configPath = null) {
     encoding: 'utf8',
   });
   if (!result.stdout) {
-    return [];
+    return { findings: [], excludedFileCount: 0 };
   }
   try {
     const payload = JSON.parse(result.stdout);
-    return (payload.findings || []).map(mapSelfCheckFinding);
+    return {
+      findings: (payload.findings || []).map(mapSelfCheckFinding),
+      excludedFileCount: payload.excludedFileCount || 0,
+    };
   } catch {
-    return [];
+    return { findings: [], excludedFileCount: 0 };
   }
 }
 
-// Envelope severity comes from the RULES registry (rule.envelopeSeverity).
+// Envelope severity comes from the finding when the rule produced a sub-case
+// override (e.g. manual-wait intentional), otherwise from the RULES registry.
 // Default 'fix' covers config-driven scans outside the registry (test-id-*).
 const TAG_AUTOFIX = {
   'skip-marker': 'report-only',
@@ -47,8 +51,8 @@ const TAG_AUTOFIX = {
 };
 
 function mapSelfCheckFinding(finding) {
-  return {
-    severity: RULE_META[finding.tag]?.envelopeSeverity || 'fix',
+  const mapped = {
+    severity: finding.envelopeSeverity || RULE_META[finding.tag]?.envelopeSeverity || 'fix',
     autofix: TAG_AUTOFIX[finding.tag] || 'review',
     tag: finding.tag,
     message: finding.description,
@@ -56,12 +60,49 @@ function mapSelfCheckFinding(finding) {
     line: finding.line,
     snippet: finding.text,
   };
+  if (finding.subCase) {
+    mapped.subCase = finding.subCase;
+  }
+  if (finding.durationMs !== undefined) {
+    mapped.durationMs = finding.durationMs;
+  }
+  // Forward manual-wait remediation-aid fields so healer/refactor agents reading
+  // `gavel audit --with-self-check --json` see the same signals as `gavel self-check`.
+  if (finding.replaceable !== undefined) {
+    mapped.replaceable = finding.replaceable;
+  }
+  if (finding.suggestion) {
+    mapped.suggestion = finding.suggestion;
+  }
+  if (finding.pollingLoop) {
+    mapped.pollingLoop = true;
+  }
+  return mapped;
 }
 
 function formatSelfCheckLine(finding) {
   const location = finding.line ? `${finding.file}:L${finding.line}` : finding.file;
   const prefix = finding.critical ? 'critical ' : '';
   return `${prefix}${finding.severity} ${finding.autofix} ${finding.tag} ${finding.message}. [${location}]`;
+}
+
+// Sum manual-wait durations by sub-case for the audit report summary.
+function buildTimeImpact(findings) {
+  const bySubCase = { redundant: 0, 'stale-read': 0, intentional: 0 };
+  let totalWaitMs = 0;
+  let findingCount = 0;
+  let unknownCount = 0;
+  for (const finding of findings.filter((item) => item.tag === 'manual-wait')) {
+    if (finding.durationMs === null || finding.durationMs === undefined) {
+      unknownCount += 1;
+      continue;
+    }
+    totalWaitMs += finding.durationMs;
+    findingCount += 1;
+    const bucket = bySubCase[finding.subCase] !== undefined ? finding.subCase : 'intentional';
+    bySubCase[bucket] += finding.durationMs;
+  }
+  return { totalWaitMs, findingCount, unknownCount, bySubCase };
 }
 
 function rankFindings(autofixFindings, selfCheckFindings, repoRoot, config = loadGavelConfig(repoRoot)) {
@@ -141,18 +182,32 @@ function main() {
     process.exit(2);
   }
   const autofixCandidates = findAutofixCandidates(resolved);
-  const selfCheckFindings = withSelfCheck ? runSelfCheck(resolved, configPath) : [];
+  const selfCheckResult = withSelfCheck
+    ? runSelfCheck(resolved, configPath)
+    : { findings: [], excludedFileCount: 0 };
+  const selfCheckFindings = selfCheckResult.findings;
+  const excludedFileCount = selfCheckResult.excludedFileCount;
   const scoredSelfCheck = selfCheckFindings.map((finding) => scoreFinding(finding, resolved, config));
   const ranked = rankFindings(autofixCandidates, scoredSelfCheck, resolved, config);
-  const health = buildSuiteHealthSummary(autofixCandidates, scoredSelfCheck, resolved, config);
+  const health = buildSuiteHealthSummary(
+    autofixCandidates,
+    scoredSelfCheck,
+    resolved,
+    config,
+    excludedFileCount,
+  );
+  const timeImpact = buildTimeImpact(scoredSelfCheck);
 
   const report = {
     repo: resolved,
     autofixCount: autofixCandidates.length,
     selfCheckCount: selfCheckFindings.length,
+    excludedFileCount,
     byTag: health.byTag,
     byArea: health.byArea,
+    byLabel: health.byLabel,
     suiteHealth: health,
+    timeImpact,
     lines: ranked.map((entry) => entry.line),
   };
 

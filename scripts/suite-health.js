@@ -4,7 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const { loadGavelConfig } = require('./load-gavel-config');
-const { findMapEntry, normalizeArea } = require('./area-map');
+const { normalizeArea } = require('./area-map');
+const { matchGlob } = require('./glob-match');
 
 function areaForFile(filePath, areaMap) {
   if (!filePath) {
@@ -49,24 +50,50 @@ function loadAreaMapFromConfig(repoRoot, config) {
   return null;
 }
 
+function resolvePathCategory(filePath, paths = []) {
+  if (!Array.isArray(paths) || paths.length === 0) {
+    return { label: null, weight: 1 };
+  }
+  const normalized = (filePath || '').replace(/\\/g, '/');
+  const ordered = [...paths].sort((a, b) => b.pattern.length - a.pattern.length);
+  for (const entry of ordered) {
+    if (matchGlob(normalized, entry.pattern)) {
+      return { label: entry.label, weight: entry.weight };
+    }
+  }
+  return { label: 'default', weight: 1 };
+}
+
 function scoreFinding(finding, repoRoot, config = loadGavelConfig(repoRoot)) {
   const areaMap = loadAreaMapFromConfig(repoRoot, config);
   const area = areaForFile(finding.file, areaMap);
   const critical = isCriticalArea(area, config);
   const severityRank = { blocker: 0, fix: 1, cleanup: 2, delete: 3 };
   const base = severityRank[finding.severity] ?? 5;
+  const { label: pathLabel, weight: pathWeight } = resolvePathCategory(finding.file, config.paths);
   return {
     ...finding,
     area,
     impactScore: base - (critical ? 2 : 0),
     critical,
+    pathLabel,
+    pathWeight,
   };
 }
 
-function buildSuiteHealthSummary(autofixFindings, selfCheckFindings, repoRoot, config = loadGavelConfig(repoRoot)) {
+function buildSuiteHealthSummary(
+  autofixFindings,
+  selfCheckFindings,
+  repoRoot,
+  config = loadGavelConfig(repoRoot),
+  excludedFileCount = 0,
+) {
   const byTag = {};
   const byArea = {};
+  const byLabel = {};
   let criticalCount = 0;
+  let weightedViolations = 0;
+  const hasPaths = Array.isArray(config.paths) && config.paths.length > 0;
 
   const all = [...autofixFindings, ...selfCheckFindings].map((finding) =>
     scoreFinding(finding, repoRoot, config),
@@ -78,6 +105,14 @@ function buildSuiteHealthSummary(autofixFindings, selfCheckFindings, repoRoot, c
     byArea[area] = (byArea[area] || 0) + 1;
     if (finding.critical) {
       criticalCount += 1;
+    }
+    weightedViolations += finding.pathWeight;
+    if (hasPaths && finding.pathLabel) {
+      if (!byLabel[finding.pathLabel]) {
+        byLabel[finding.pathLabel] = { raw: 0, weighted: 0 };
+      }
+      byLabel[finding.pathLabel].raw += 1;
+      byLabel[finding.pathLabel].weighted += finding.pathWeight;
     }
   }
 
@@ -92,8 +127,12 @@ function buildSuiteHealthSummary(autofixFindings, selfCheckFindings, repoRoot, c
     constitutionViolations: selfCheckFindings.length,
     safeAutofixCandidates: autofixFindings.length,
     criticalAreaViolations: criticalCount,
+    excludedFileCount,
+    rawViolations: all.length,
+    weightedViolations,
     byTag,
     byArea,
+    byLabel,
     scoredFindings: all.sort((a, b) => a.impactScore - b.impactScore),
   };
 }
@@ -111,6 +150,7 @@ function formatSuiteHealth(summary) {
     `  Constitution violations: ${summary.constitutionViolations}`,
     `  Critical-area violations: ${summary.criticalAreaViolations}`,
     `  Safe autofix candidates: ${summary.safeAutofixCandidates}`,
+    `  Excluded files: ${summary.excludedFileCount ?? 0}`,
   ];
 
   const topAreas = Object.entries(summary.byArea)
@@ -124,6 +164,17 @@ function formatSuiteHealth(summary) {
     }
   }
 
+  const labels = Object.entries(summary.byLabel || {});
+  if (labels.length > 0) {
+    lines.push(`  Weighted violations: ${summary.weightedViolations} (raw: ${summary.rawViolations})`);
+    lines.push('  By path category:');
+    labels
+      .sort((a, b) => b[1].weighted - a[1].weighted)
+      .forEach(([label, counts]) => {
+        lines.push(`    ${label}: ${counts.raw} raw → ${counts.weighted} weighted`);
+      });
+  }
+
   return lines.join('\n');
 }
 
@@ -132,5 +183,6 @@ module.exports = {
   buildSuiteHealthSummary,
   formatSuiteHealth,
   isCriticalArea,
+  resolvePathCategory,
   scoreFinding,
 };

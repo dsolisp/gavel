@@ -9,8 +9,8 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { parseJUnitXml } = require('../parsers/junit');
 const { clusterFailures } = require('../cluster-failures');
-const { buildSuiteHealthSummary } = require('../suite-health');
-const { resolveGavelConfig } = require('../load-gavel-config');
+const { buildSuiteHealthSummary, formatSuiteHealth } = require('../suite-health');
+const { resolveGavelConfig, validateGavelConfig } = require('../load-gavel-config');
 const { validateEnvelope, schema: envelopeSchema } = require('../validate-envelope');
 const { toSarif } = require('../to-sarif');
 
@@ -53,6 +53,50 @@ test('buildSuiteHealthSummary counts dead code and constitution tags', () => {
   assert.equal(summary.deadPoms, 1);
   assert.equal(summary.manualWaits, 1);
   assert.equal(summary.bareTestFail, 1);
+  assert.equal(summary.rawViolations, 4);
+  assert.equal(summary.weightedViolations, 4);
+  assert.deepEqual(summary.byLabel, {});
+  const formatted = formatSuiteHealth(summary);
+  assert.doesNotMatch(formatted, /Weighted violations/);
+  assert.doesNotMatch(formatted, /By path category/);
+});
+
+test('path weights group findings by label and scale counts', () => {
+  const paths = JSON.parse(
+    fs.readFileSync(path.join(root, 'fixtures/config/paths-weighting.example.json'), 'utf8'),
+  ).paths;
+  const legacy = Array.from({ length: 4 }, (_, i) => ({
+    tag: 'manual-wait',
+    severity: 'blocker',
+    autofix: 'review',
+    file: `tests/legacy/v1-checkout/case-${i}.spec.ts`,
+  }));
+  const active = Array.from({ length: 2 }, (_, i) => ({
+    tag: 'selector-leak',
+    severity: 'fix',
+    autofix: 'review',
+    file: `tests/e2e/checkout/flow-${i}.spec.ts`,
+  }));
+  const summary = buildSuiteHealthSummary([], [...legacy, ...active], root, { paths });
+  assert.equal(summary.byLabel.legacy.raw, 4);
+  assert.equal(summary.byLabel.legacy.weighted, 1);
+  assert.equal(summary.byLabel.active.raw, 2);
+  assert.equal(summary.byLabel.active.weighted, 2);
+  assert.equal(summary.rawViolations, 6);
+  assert.equal(summary.weightedViolations, 3);
+  const formatted = formatSuiteHealth(summary);
+  assert.match(formatted, /Weighted violations: 3 \(raw: 6\)/);
+  assert.match(formatted, /legacy: 4 raw → 1 weighted/);
+  assert.match(formatted, /active: 2 raw → 2 weighted/);
+
+  assert.throws(
+    () => validateGavelConfig({ paths: [{ pattern: 'x/**', label: 'x', weight: 3 }] }),
+    /paths\[\]\.weight must be a number between 0 and 2/,
+  );
+  assert.throws(
+    () => validateGavelConfig({ paths: [{ pattern: 'x/**', weight: 1 }] }),
+    /paths\[\]\.label must be a non-empty string/,
+  );
 });
 
 test('gavel config resolution prefers --config, cwd config, package metadata, defaults', () => {
@@ -156,8 +200,45 @@ test('package publishes unified gavel bins and config schema', () => {
   assert.ok(schema.properties.failThreshold.enum.includes('warning'));
   assert.equal(schema.properties.fixturePaths.items.type, 'string');
   assert.equal(schema.properties.factoryPaths.items.type, 'string');
+  assert.equal(schema.properties.excludePaths.items.type, 'string');
+  assert.deepEqual(schema.properties.excludePaths.default, [
+    'scripts/**',
+    'fixtures/**',
+    'tools/**',
+    'utility_scripts/**',
+  ]);
+  assert.deepEqual(schema.properties.paths.items.required, ['pattern', 'weight', 'label']);
+  assert.equal(schema.properties.paths.items.properties.weight.minimum, 0);
+  assert.equal(schema.properties.paths.items.properties.weight.maximum, 2);
   assert.equal(schema.properties.selectorAllowlist.properties.componentPrefixes.items.type, 'string');
   assert.equal(schema.properties.selectorAllowlist.properties.customElements.type, 'boolean');
+});
+
+test('excludePaths skips utility scripts; empty override rescans them', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-exclude-'));
+  fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(repo, 'pages'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, 'scripts', 'utility.js'),
+    'await page.waitForTimeout(1000);\n',
+  );
+  fs.writeFileSync(
+    path.join(repo, 'pages', 'FooPage.ts'),
+    'await page.waitForTimeout(1000);\n',
+  );
+
+  const defaulted = JSON.parse(runCli(['self-check', repo, '--json']).stdout);
+  assert.equal(defaulted.excludedFileCount, 1);
+  assert.equal(defaulted.findings.some((finding) => finding.file === 'scripts/utility.js'), false);
+  assert.ok(defaulted.findings.some((finding) => finding.tag === 'manual-wait' && finding.file === 'pages/FooPage.ts'));
+
+  const configPath = path.join(repo, 'gavel.config.json');
+  fs.writeFileSync(configPath, JSON.stringify({ excludePaths: [] }));
+  const overridden = JSON.parse(runCli(['self-check', repo, '--config', configPath, '--json']).stdout);
+  assert.equal(overridden.excludedFileCount, 0);
+  assert.ok(overridden.findings.some((finding) => finding.tag === 'manual-wait' && finding.file === 'scripts/utility.js'));
+
+  assert.throws(() => validateGavelConfig({ excludePaths: 'scripts/**' }), /excludePaths must be an array of strings/);
 });
 
 test('unified CLI exit codes, hidden companion help, and alias path work', () => {

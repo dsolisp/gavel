@@ -19,6 +19,10 @@ for (const rule of RULES) {
     console.error(`Rule ${rule.id} has invalid envelopeSeverity: ${rule.envelopeSeverity}`);
     process.exit(1);
   }
+  if (!['test-only', 'all-files'].includes(rule.scope)) {
+    console.error(`Rule ${rule.id} has invalid scope: ${rule.scope}`);
+    process.exit(1);
+  }
   if (rule.confidence !== undefined && !['high', 'medium', 'low'].includes(rule.confidence)) {
     console.error(`Rule ${rule.id} has invalid confidence: ${rule.confidence}`);
     process.exit(1);
@@ -66,6 +70,72 @@ if (cleanReport.violationCount > 0) {
   for (const finding of cleanReport.findings) {
     console.error(`  ${finding.tag} ${finding.file}:${finding.line} — ${finding.text}`);
   }
+  process.exit(1);
+}
+
+const manualWaits = report.findings.filter((finding) => finding.tag === 'manual-wait');
+const subCases = new Set(manualWaits.map((finding) => finding.subCase));
+const subCaseCounts = manualWaits.reduce((acc, finding) => {
+  acc[finding.subCase] = (acc[finding.subCase] || 0) + 1;
+  return acc;
+}, {});
+const expectedSubCases = ['redundant', 'stale-read', 'intentional'];
+const missingSubCases = expectedSubCases.filter((subCase) => !subCases.has(subCase));
+
+if (missingSubCases.length > 0) {
+  console.error(`manual-wait fixtures missing sub-cases: ${missingSubCases.join(', ')}`);
+  process.exit(1);
+}
+
+for (const subCase of expectedSubCases) {
+  if ((subCaseCounts[subCase] || 0) < 2) {
+    console.error(`manual-wait sub-case ${subCase} has fewer than 2 fixtures (${subCaseCounts[subCase] || 0})`);
+    process.exit(1);
+  }
+}
+
+const missingDuration = manualWaits.find((finding) => !('durationMs' in finding));
+if (missingDuration) {
+  console.error(`manual-wait finding missing durationMs: ${missingDuration.file}:${missingDuration.line}`);
+  process.exit(1);
+}
+
+const waitPatterns = [
+  { name: 'waitForTimeout', predicate: (text) => /waitForTimeout\s*\(/.test(text) },
+  { name: 'time.sleep', predicate: (text) => /time\.sleep\s*\(/.test(text) },
+  { name: 'Thread.sleep', predicate: (text) => /Thread\.sleep\s*\(/.test(text) },
+  { name: 'cy.wait', predicate: (text) => /cy\.wait\s*\(/.test(text) },
+  { name: 'browser.pause', predicate: (text) => /browser\.pause\s*\(/.test(text) },
+];
+for (const { name, predicate } of waitPatterns) {
+  const matching = manualWaits.filter((finding) => predicate(finding.text));
+  if (!matching.some((finding) => finding.durationMs !== null)) {
+    console.error(`manual-wait fixtures missing parseable duration for ${name}`);
+    process.exit(1);
+  }
+}
+
+// Replaceability analysis: intentional findings must have replaceable field
+const intentionalFindings = manualWaits.filter((f) => f.subCase === 'intentional');
+const missingReplaceable = intentionalFindings.find((f) => !('replaceable' in f));
+if (missingReplaceable) {
+  console.error(`manual-wait intentional finding missing replaceable field: ${missingReplaceable.file}:${missingReplaceable.line}`);
+  process.exit(1);
+}
+const replaceableCount = intentionalFindings.filter((f) => f.replaceable === true).length;
+const nonReplaceableCount = intentionalFindings.filter((f) => f.replaceable === false).length;
+if (replaceableCount < 1) {
+  console.error(`manual-wait fixtures need at least 1 replaceable intentional finding (found ${replaceableCount})`);
+  process.exit(1);
+}
+if (nonReplaceableCount < 1) {
+  console.error(`manual-wait fixtures need at least 1 non-replaceable intentional finding (found ${nonReplaceableCount})`);
+  process.exit(1);
+}
+
+const pollingLoopCount = manualWaits.filter((f) => f.pollingLoop === true).length;
+if (pollingLoopCount < 1) {
+  console.error(`manual-wait fixtures need at least 1 polling-loop finding (found ${pollingLoopCount})`);
   process.exit(1);
 }
 

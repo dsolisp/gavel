@@ -40,7 +40,7 @@ function validateGavelConfig(config, source = CONFIG_NAME) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error(`${source}: config must be an object`);
   }
-  const stringArrays = ['criticalAreas', 'criticalTags', 'fixturePaths', 'factoryPaths'];
+  const stringArrays = ['criticalAreas', 'criticalTags', 'fixturePaths', 'factoryPaths', 'excludePaths', 'skipPrefixes'];
   for (const key of stringArrays) {
     if (config[key] && (!Array.isArray(config[key]) || config[key].some((item) => typeof item !== 'string'))) {
       throw new Error(`${source}: ${key} must be an array of strings`);
@@ -66,6 +66,26 @@ function validateGavelConfig(config, source = CONFIG_NAME) {
     }
     if (allowlist.customElements !== undefined && typeof allowlist.customElements !== 'boolean') {
       throw new Error(`${source}: selectorAllowlist.customElements must be boolean`);
+    }
+  }
+  if (config.paths !== undefined) {
+    if (!Array.isArray(config.paths)) {
+      throw new Error(`${source}: paths must be an array`);
+    }
+    for (const entry of config.paths) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        throw new Error(`${source}: paths entries must be objects`);
+      }
+      if (typeof entry.pattern !== 'string' || !entry.pattern) {
+        throw new Error(`${source}: paths[].pattern must be a non-empty string`);
+      }
+      if (typeof entry.label !== 'string' || !entry.label) {
+        throw new Error(`${source}: paths[].label must be a non-empty string`);
+      }
+      if (typeof entry.weight !== 'number' || Number.isNaN(entry.weight)
+        || entry.weight < 0 || entry.weight > 2) {
+        throw new Error(`${source}: paths[].weight must be a number between 0 and 2`);
+      }
     }
   }
   return config;

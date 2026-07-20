@@ -61,6 +61,92 @@ Before adding any abstraction:
 - **BDD**: extract shared step definitions only after scenarios repeat; prefer scenario outlines for repeated examples.
 - **Tags**: consolidate execution tags to risk, scope, and quarantine categories.
 
+## Python Sleep Replacement (`threading.Event`, signal-driven only)
+
+**Order of preference** for replacing Python `time.sleep(N)`:
+
+1. **Framework-native eventual wait** — `expect(locator).to_be_visible(timeout=...)`,
+   `wait_for_function`, `WebDriverWait`, or a health-check poll with a `time.monotonic()`
+   deadline. Always first choice when the wait targets an observable condition.
+2. **Signal-driven `threading.Event`** — only when another thread/callback owns the
+   readiness signal (subprocess completion handler, WebSocket message, file watcher).
+3. **Rename + `gavel-ignore: manual-wait` with reason** — only for genuinely
+   non-replaceable intentional waits (bot jitter, safety halt, hardware cool-down).
+
+### The signal-driven pattern (the only allowed `threading.Event` form)
+
+An `Event` that is **never `.set()`** always waits the full timeout — that is
+`time.sleep(N)` under another name and is **NOT an allowed remediation**. The
+Event must be owned by the code that flips readiness:
+
+```python
+import threading
+
+ready = threading.Event()
+
+# producer (callback / worker / watcher) — when the condition becomes true:
+ready.set()
+
+# consumer — single block, no sleep loop:
+if not ready.wait(timeout=N):
+    raise TimeoutError("condition not met")
+```
+
+### Before / after by context
+
+**UI settling** — prefer the native retrying assertion; fall back to Event only
+when no native API exists and a signal source is wired:
+
+```python
+# Before
+page.click("#submit")
+time.sleep(0.5)
+assert page.is_visible("#result")
+
+# After (preferred — native retrying assertion)
+page.click("#submit")
+expect(page.locator("#result")).to_be_visible(timeout=500)
+
+# After (fallback — only when a callback can signal readiness)
+page.click("#submit")
+if not ready.wait(timeout=0.5):
+    raise TimeoutError("result not visible")
+```
+
+**Process startup** — the subprocess completion is the signal source:
+
+```python
+# Before
+proc = subprocess.Popen(["./server"])
+time.sleep(2)
+
+# After — wire a readiness signal (health-check callback, proc.poll, etc.)
+proc = subprocess.Popen(["./server"])
+if not server_ready.wait(timeout=2):
+    raise TimeoutError("server did not start")
+```
+
+**Polling interval** — replace the loop, do not wrap it. An `Event` + `while` +
+`wait(timeout)` is still a busy-wait and is NOT allowed:
+
+```python
+# Before (flagged)
+while not ready:
+    time.sleep(0.1)
+
+# After — block once on the signal owned by the code that flips readiness
+# (or use expect.poll / wait_for_function on an observable)
+ready_event.wait(timeout=30)
+```
+
+### When NOT to use `threading.Event`
+
+- **Redundant** waits — remove/no-op; a later timeout/assertion already waits.
+- **Stale-read** waits — use `pollUntil` / `expect.poll` / framework eventual assert on the DOM/API state.
+- **Genuinely non-replaceable intentional** waits — bot humanization with random jitter, safety halt protocols, or external hardware cool-downs where a rename + `gavel-ignore: manual-wait` with reason is correct.
+- **Any fixed delay with no signal source** — `_settle = threading.Event(); _settle.wait(timeout=N)` with no `.set()` caller is a sleep rename and silences the scanner without fixing the violation. Do not generate it.
+- **JS/TS Playwright** — use `expect(locator).toBeVisible()`, `expect.poll`, or named delay helpers; do not invent a Node `threading.Event` analogue.
+
 ## Verification Gate
 
 After refactoring:
