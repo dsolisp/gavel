@@ -19,9 +19,13 @@ changelog-*.png
 # Internal dev artifacts — not part of the product distribution
 v0.7.0-prompts.txt
 v0.8.0-prompts.txt
+v0.9.0-prompts.txt
+v0.10.0-prompts.txt
 GAVEL_ROADMAP.md
 docs/v0.7.0-cross-review-1-remediation.md
 docs/graduation-evidence-v0.8.0.md
 docs/graduation-evidence-v0.8.0-rerun.md
+docs/graduation-evidence-v0.9.0.md
+docs/graduation-evidence-v0.10.0.md
 docs/graduation-verdict-v0.8.0.md
 docs/graduation/

@@ -23,6 +23,10 @@ const EXCLUDED_DIRS = new Set([
   'test-results',
   'allure-results',
   'allure-report',
+  '.claude',
+  '.qoder',
+  '.cursor',
+  '.vscode',
 ]);
 
 const FRAMEWORK_COMMANDS = {

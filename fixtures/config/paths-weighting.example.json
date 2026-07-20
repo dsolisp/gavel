@@ -1,0 +1,6 @@
+{
+  "paths": [
+    { "pattern": "tests/legacy/**", "weight": 0.25, "label": "legacy" },
+    { "pattern": "tests/e2e/**", "weight": 1.0, "label": "active" }
+  ]
+}

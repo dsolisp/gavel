@@ -165,18 +165,23 @@ function measureTag(tagName, threshold) {
   const report = runSelfCheck(tagDir);
   const sampleFiles = new Set(doc.samples.map((s) => s.file.replace(/\\/g, '/')));
 
-  const expectedKeys = new Set();
+  // Build expected map keyed by file::line::tag → field locks (subCase/replaceable/...
+  // Optional locks let the corpus assert field-level correctness, not just tag presence.
+  const expectedByKey = new Map();
   for (const sample of doc.samples) {
     for (const exp of sample.expectedFindings || []) {
-      expectedKeys.add(findingKey(sample.file.replace(/\\/g, '/'), exp.line, exp.tag));
+      const key = findingKey(sample.file.replace(/\\/g, '/'), exp.line, exp.tag);
+      expectedByKey.set(key, exp);
     }
   }
+  const expectedKeys = new Set(expectedByKey.keys());
 
   const taggedFindings = (report.findings || []).filter(
     (f) => f.tag === tagName && sampleFiles.has(String(f.file).replace(/\\/g, '/')),
   );
 
   const falsePositiveFindings = [];
+  const fieldMismatchFindings = [];
   let truePositives = 0;
   const matchedExpected = new Set();
 
@@ -184,8 +189,28 @@ function measureTag(tagName, threshold) {
     const file = String(finding.file).replace(/\\/g, '/');
     const key = findingKey(file, finding.line, finding.tag);
     if (expectedKeys.has(key)) {
-      truePositives += 1;
-      matchedExpected.add(key);
+      // Field-level lock check: a finding on the right line+tag with the wrong
+      // subCase/replaceable/pollingLoop/suggestion is a precision failure.
+      const exp = expectedByKey.get(key);
+      const mismatches = [];
+      if (exp.subCase !== undefined && finding.subCase !== exp.subCase) {
+        mismatches.push(`subCase: expected ${exp.subCase}, got ${finding.subCase}`);
+      }
+      if (exp.replaceable !== undefined && finding.replaceable !== exp.replaceable) {
+        mismatches.push(`replaceable: expected ${exp.replaceable}, got ${finding.replaceable}`);
+      }
+      if (exp.pollingLoop !== undefined && Boolean(finding.pollingLoop) !== exp.pollingLoop) {
+        mismatches.push(`pollingLoop: expected ${exp.pollingLoop}, got ${Boolean(finding.pollingLoop)}`);
+      }
+      if (exp.suggestion !== undefined && finding.suggestion !== exp.suggestion) {
+        mismatches.push(`suggestion: expected ${exp.suggestion}, got ${finding.suggestion}`);
+      }
+      if (mismatches.length > 0) {
+        fieldMismatchFindings.push({ file, line: finding.line, tag: finding.tag, mismatches });
+      } else {
+        truePositives += 1;
+        matchedExpected.add(key);
+      }
     } else {
       falsePositiveFindings.push({ file, line: finding.line, tag: finding.tag });
     }
@@ -202,6 +227,7 @@ function measureTag(tagName, threshold) {
   const flagged = taggedFindings.length;
   const falsePositives = falsePositiveFindings.length;
   const falseNegatives = falseNegativeFindings.length;
+  const fieldMismatches = fieldMismatchFindings.length;
   const precision = flagged === 0 ? null : truePositives / flagged;
   // Contract-first corpora (Implementation Contract #9) may land before the RULES
   // scanner. Until the tag is registered, precision is n/a and FNs do not fail verify.
@@ -209,7 +235,8 @@ function measureTag(tagName, threshold) {
   const pendingScanner = !RULES.some((rule) => rule.id === tagName);
   const pass = pendingScanner
     ? true
-    : falseNegatives === 0 &&
+    : fieldMismatches === 0 &&
+      falseNegatives === 0 &&
       (flagged === 0 ? truePositives === 0 : precision !== null && precision + Number.EPSILON >= threshold);
 
   return {
@@ -218,12 +245,14 @@ function measureTag(tagName, threshold) {
     truePositives,
     falsePositives,
     falseNegatives,
+    fieldMismatches,
     flagged,
     languages,
     pass,
     pendingScanner,
     falsePositiveFindings,
     falseNegativeFindings,
+    fieldMismatchFindings,
   };
 }
 
@@ -274,13 +303,16 @@ function main() {
       const pct = row.precision === null ? 'n/a' : `${(row.precision * 100).toFixed(1)}%`;
       const pending = row.pendingScanner ? ' pendingScanner' : '';
       console.log(
-        `  ${row.tag}: precision=${pct}${pending} TP=${row.truePositives} FP=${row.falsePositives} FN=${row.falseNegatives} languages=${row.languages.join(',')} ${row.pass ? 'PASS' : 'FAIL'}`,
+        `  ${row.tag}: precision=${pct}${pending} TP=${row.truePositives} FP=${row.falsePositives} FN=${row.falseNegatives} FM=${row.fieldMismatches} languages=${row.languages.join(',')} ${row.pass ? 'PASS' : 'FAIL'}`,
       );
       for (const fp of row.falsePositiveFindings) {
         console.log(`    FP ${fp.file}:${fp.line}`);
       }
       for (const fn of row.falseNegativeFindings) {
         console.log(`    FN ${fn.file}:${fn.line}`);
+      }
+      for (const fm of row.fieldMismatchFindings) {
+        console.log(`    FM ${fm.file}:${fm.line} — ${fm.mismatches.join('; ')}`);
       }
     }
   }

@@ -1,0 +1,109 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "manual-wait",
+  "samples": [
+    {
+      "file": "violating/redundant-expect-poll.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "subCase=redundant — waitForTimeout before expect.poll",
+      "expectedFindings": [{ "line": 5, "tag": "manual-wait", "subCase": "redundant" }]
+    },
+    {
+      "file": "violating/redundant-waitForSelector.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "subCase=redundant — waitForTimeout before waitForSelector",
+      "expectedFindings": [{ "line": 5, "tag": "manual-wait", "subCase": "redundant" }]
+    },
+    {
+      "file": "violating/stale-read-evaluate.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "subCase=stale-read — waitForTimeout before page.evaluate",
+      "expectedFindings": [{ "line": 5, "tag": "manual-wait", "subCase": "stale-read" }]
+    },
+    {
+      "file": "violating/stale-read-getAttribute.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "subCase=stale-read — waitForTimeout before getAttribute",
+      "expectedFindings": [{ "line": 5, "tag": "manual-wait", "subCase": "stale-read" }]
+    },
+    {
+      "file": "violating/intentional-bot-simulation.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "subCase=intentional — bot simulation wait still flagged (downgraded severity)",
+      "expectedFindings": [{ "line": 5, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "violating/intentional-animation-delay.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "subCase=intentional — animation delay still flagged (downgraded severity)",
+      "expectedFindings": [{ "line": 5, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "violating/test_python_sleep.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "subCase=intentional — time.sleep in pytest",
+      "expectedFindings": [{ "line": 5, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "violating/ManualWaitTest.java",
+      "label": "violating",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "subCase=intentional — Thread.sleep in JUnit",
+      "expectedFindings": [{ "line": 6, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "violating/replaceable-polling-loop.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "subCase=intentional, replaceable=true, pollingLoop=true — while not ready + time.sleep → threading.Event.wait()",
+      "expectedFindings": [{ "line": 7, "tag": "manual-wait", "subCase": "intentional", "replaceable": true, "pollingLoop": true, "suggestion": "threading.Event.wait()" }]
+    },
+    {
+      "file": "violating/replaceable-busy-wait.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "subCase=intentional, replaceable=true, pollingLoop=true — while True + time.sleep → threading.Event.wait()",
+      "expectedFindings": [{ "line": 7, "tag": "manual-wait", "subCase": "intentional", "replaceable": true, "pollingLoop": true, "suggestion": "threading.Event.wait()" }]
+    },
+    {
+      "file": "violating/non-replaceable-intentional.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "subCase=intentional, replaceable=false — no polling loop or API call, genuinely intentional",
+      "expectedFindings": [{ "line": 6, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "clean/native-waits.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "native expect timeout; comment mentioning waitForTimeout must not fire"
+    },
+    {
+      "file": "clean/intentional-wait-with-ignore.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "tagged gavel-ignore: manual-wait with reason suppresses finding"
+    }
+  ]
+}

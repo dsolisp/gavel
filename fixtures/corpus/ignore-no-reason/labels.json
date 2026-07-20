@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "ignore-no-reason",
+  "samples": [
+    {
+      "file": "violating/bare-ignore.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "bare gavel-ignore in a test file without tag or reason",
+      "expectedFindings": [{ "line": 1, "tag": "ignore-no-reason" }]
+    },
+    {
+      "file": "violating/test_bare_ignore.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "bare gavel-ignore in a pytest file without tag or reason",
+      "expectedFindings": [{ "line": 1, "tag": "ignore-no-reason" }]
+    },
+    {
+      "file": "clean/tagged-with-reason.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "tagged gavel-ignore with reason is not bare"
+    },
+    {
+      "file": "clean/utility-helper.js",
+      "label": "clean",
+      "language": "js",
+      "framework": "node",
+      "rationale": "utility file outside test/locator/action scope — context-aware rule skips"
+    },
+    {
+      "file": "clean/helpers.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "utility module outside test_* naming — context-aware rule skips"
+    }
+  ]
+}

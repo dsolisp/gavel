@@ -30,6 +30,24 @@
     "enforceConsecutiveTestIds": { "type": "boolean", "default": false },
     "fixturePaths": { "type": "array", "items": { "type": "string" } },
     "factoryPaths": { "type": "array", "items": { "type": "string" } },
+    "excludePaths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["scripts/**", "fixtures/**", "tools/**", "utility_scripts/**"]
+    },
+    "paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "weight", "label"],
+        "properties": {
+          "pattern": { "type": "string" },
+          "weight": { "type": "number", "minimum": 0, "maximum": 2 },
+          "label": { "type": "string" }
+        }
+      }
+    },
     "selectorAllowlist": {
       "type": "object",
       "additionalProperties": false,
@@ -40,6 +58,7 @@
     },
     "criticalAreas": { "type": "array", "items": { "type": "string" } },
     "criticalTags": { "type": "array", "items": { "type": "string" } },
+    "skipPrefixes": { "type": "array", "items": { "type": "string" } },
     "areaMap": {
       "type": "object",
       "additionalProperties": { "type": ["string", "object"] }

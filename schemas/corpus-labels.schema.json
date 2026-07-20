@@ -58,7 +58,23 @@
               "required": ["line", "tag"],
               "properties": {
                 "line": { "type": "integer", "minimum": 1 },
-                "tag": { "type": "string", "minLength": 1 }
+                "tag": { "type": "string", "minLength": 1 },
+                "subCase": {
+                  "type": "string",
+                  "description": "Optional field lock: the finding must carry this subCase value."
+                },
+                "replaceable": {
+                  "type": "boolean",
+                  "description": "Optional field lock: the finding must carry this replaceable value."
+                },
+                "pollingLoop": {
+                  "type": "boolean",
+                  "description": "Optional field lock: the finding must carry pollingLoop=true."
+                },
+                "suggestion": {
+                  "type": "string",
+                  "description": "Optional field lock: the finding must carry this suggestion value."
+                }
               }
             }
           }
