@@ -108,27 +108,53 @@ function findHardcodedEnvMatches(filePath, content) {
     /['"](?:\/(?:home|Users)\/|[A-Za-z]:\\+(?:Users|home)\\+)/,
     /\b(?:password|token|secret|api[_-]?key)\s*[:=]\s*['"][^'"]+/i,
   ];
-  const lines = content.split('\n');
+  const maskedLines = maskEnvFallbacks(content).split('\n');
   const hits = new Map();
   for (const pattern of patterns) {
     for (const hit of findMatches(content, pattern, filePath)) {
-      // A value that appears as a fallback default inside an env wrapper is not a
-      // hardcoded value — the environment variable is the primary source (roadmap #4).
-      if (isEnvWrapperLine(lines[hit.line - 1] || '')) continue;
+      // A value that is the fallback default of an env wrapper is not a hardcoded
+      // value — the environment variable is the primary source (roadmap #4). We
+      // mask *only the fallback expression*, never the whole line: a credential or
+      // an LHS `process.env.X = 'literal'` assignment sharing the line is still a
+      // real finding. Re-test the masked line — if the value survives masking it
+      // lives outside any env-fallback and stands as a violation.
+      if (!patternMatches(pattern, maskedLines[hit.line - 1] || '')) continue;
       hits.set(hit.line, { line: hit.line, text: 'hardcoded environment value' });
     }
   }
   return [...hits.values()];
 }
 
-// Env-wrapper access with a fallback default across ecosystems:
-//   os.environ.get('X', default) / os.getenv('X', default) (Python)
-//   process.env.X || default / process.env.X ?? default (JS/TS)
-//   System.getenv("X") (Java) / Environment.GetEnvironmentVariable("X") (C#)
-const ENV_WRAPPER_RE = /\bos\.environ\.get\s*\(|\bos\.getenv\s*\(|\bprocess\.env\b|\bSystem\.getenv\s*\(|\bEnvironment\.GetEnvironmentVariable\s*\(/;
+// Blank a substring's characters (line offsets preserved) so downstream line
+// splitting and matching stay aligned; newlines are kept.
+function blankNonNewline(text) {
+  return text.replace(/[^\n]/g, ' ');
+}
 
-function isEnvWrapperLine(line) {
-  return ENV_WRAPPER_RE.test(line);
+// Env-wrapper call whose parenthesized argument region carries the fallback
+// default (may span lines): os.environ.get('X', DEFAULT) / os.getenv('X', DEFAULT)
+// / System.getenv(...) / Environment.GetEnvironmentVariable(...).
+const ENV_CALL_RE = /\b(?:os\.environ\.get|os\.getenv|System\.getenv|Environment\.GetEnvironmentVariable)\s*\(([\s\S]*?)\)/g;
+
+// Trailing fallback operand after an env access: `process.env.X || DEFAULT`,
+// `process.env.X ?? DEFAULT`, or Python `os.getenv('X') or DEFAULT`. An LHS
+// assignment `process.env.X = 'literal'` has no ||/??/or operand, so nothing is
+// masked and the literal is flagged.
+const ENV_ACCESS_SRC = '(?:process\\.env(?:\\.\\w+|\\[[^\\]\\n]*\\])?|(?:os\\.environ\\.get|os\\.getenv|System\\.getenv|Environment\\.GetEnvironmentVariable)\\s*\\([^)\\n]*\\))';
+const ENV_FALLBACK_RE = new RegExp(`(${ENV_ACCESS_SRC}\\s*(?:\\|\\||\\?\\?|\\bor\\b)\\s*)(['"][^'"\\n]*['"]|[^;,)\\s\\n]+)`, 'g');
+
+// Mask only the fallback-default expression(s) of env-wrapper accesses.
+function maskEnvFallbacks(content) {
+  let out = content.replace(ENV_CALL_RE, (m, inner) => m.replace(inner, blankNonNewline(inner)));
+  out = out.replace(ENV_FALLBACK_RE, (m, head, operand) => head + blankNonNewline(operand));
+  return out;
+}
+
+// Stateless single-line test (patterns are non-global today; reset lastIndex
+// defensively so a future /g pattern cannot leak state between lines).
+function patternMatches(pattern, line) {
+  pattern.lastIndex = 0;
+  return pattern.test(line);
 }
 
 function findDescribeBlocks(content) {
@@ -264,6 +290,11 @@ function isProseValue(value) {
 // not a brittle assertion. Splits on the first top-level comma outside quotes/brackets.
 function stripAssertMessage(line) {
   if (!/^\s*assert\b/.test(line)) return line;
+  // `assert (cond, "msg")` is the Python tuple footgun: the whole expression is
+  // wrapped in one paren, so the message comma sits at paren-depth 1, not 0. When
+  // assert opens directly with `(`, split at that depth too so the message is not
+  // scanned as a comparison literal.
+  const wrapped = /^\s*assert\s*\(/.test(line);
   let depth = 0;
   let quote = null;
   for (let i = 0; i < line.length; i += 1) {
@@ -275,20 +306,72 @@ function stripAssertMessage(line) {
     if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
     if (ch === '(' || ch === '[' || ch === '{') depth += 1;
     else if (ch === ')' || ch === ']' || ch === '}') depth -= 1;
-    else if (ch === ',' && depth === 0) return line.slice(0, i);
+    else if (ch === ',' && (depth === 0 || (wrapped && depth === 1))) return line.slice(0, i);
   }
   return line;
 }
 
-// Argument-position / subject-first prose (roadmap #11): inspect the equality
-// *expected* literal, not just the first quoted string on the line. Catches
-// `"actual".Should().Be("Payment rejected.")` and `Assert.That("actual", Is.EqualTo("Welcome home!"))`,
-// where the first quote is the subject. Short-token/numeric/bool RHS is guarded by isProseValue.
+// Argument-position / subject-first prose (roadmap #11): inspect the prose of
+// the equality matcher's *compared* argument(s), not the first quoted string on
+// the line and not a trailing failure-message argument. This catches prose in a
+// compared position — `expect(x).toBe("Not found.")`,
+// `assertEquals(actual, "Access denied.")` (prose 2nd arg), `Is.EqualTo("Welcome home!")` —
+// while ignoring both a prose *subject* before the matcher
+// (`"Payment rejected.".Should().Be(actual)` → clean) and a trailing assertion
+// *message* argument (`assert.equal(status, 404, "Status should be Not Found.")` → clean).
+const MATCHER_CALL_RE = /(?:\.(?:toBe|toEqual|isEqualTo|Be)|Is\.EqualTo|assert\.(?:strictEqual|deepEqual|equal)|assertEquals|assertEqual|AreEqual|equal_to)\s*\(/i;
+
+// Function-style equality assertions compare their first two positional arguments;
+// any further argument is a human-readable failure message, not a compared value:
+//   assert.equal(actual, expected, msg) / assertEquals(a, b, msg) /
+//   Assert.AreEqual(a, b, msg) / unittest self.assertEqual(a, b, msg).
+// Method-style matchers (subject.toBe(x) / .Be(x) / Is.EqualTo(x)) take the
+// expected value as their first argument; anything after is a because/reason string.
+const FUNCTION_STYLE_MATCHER_RE = /^\s*(?:assert\.(?:strictEqual|deepEqual|equal)|assertEquals|assertEqual|AreEqual)\s*\(/i;
+
 function expectedProseLiteral(line) {
-  const match = line.match(
-    /(?:\.(?:toBe|toEqual|isEqualTo|Be)|Is\.EqualTo|assert\.(?:strictEqual|deepEqual|equal)|assertEquals|assertEqual|AreEqual)\s*\(\s*(['"])(.*?)\1/i,
-  );
-  return match ? isProseValue(match[2]) : false;
+  // Scan *every* matcher call on the line, not just the first: FluentAssertions
+  // chains expose more than one equality — `x.Should().Be("OK").And.Be("Payment
+  // rejected.")` — where a short-token first `.Be` must not shadow prose in a
+  // later `.And.Be`. Any compared-position prose literal in any call flags.
+  const scanner = new RegExp(MATCHER_CALL_RE.source, 'gi');
+  let matcher;
+  while ((matcher = scanner.exec(line)) !== null) {
+    const openIdx = matcher.index + matcher[0].length - 1;
+    const args = matcherArgs(line, openIdx);
+    const comparedCount = FUNCTION_STYLE_MATCHER_RE.test(matcher[0]) ? 2 : 1;
+    if (args.slice(0, comparedCount).flat().some(isProseValue)) return true;
+  }
+  return false;
+}
+
+// Split the matcher call's balanced argument list (opening at `openIdx`) into
+// top-level arguments, returning the string literals found in each. Commas
+// inside nested calls, arrays, objects, or string literals never split an
+// argument, so the trailing message arg stays a distinct entry that callers can
+// drop. Stops when the matcher call's own parens close.
+function matcherArgs(line, openIdx) {
+  const args = [];
+  let current = [];
+  let depth = 0;
+  let quote = null;
+  let buf = '';
+  for (let i = openIdx; i < line.length; i += 1) {
+    const ch = line[i];
+    if (quote) {
+      if (ch === quote && line[i - 1] !== '\\') { current.push(buf); buf = ''; quote = null; } else buf += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
+    if (ch === '(' || ch === '[' || ch === '{') { depth += 1; continue; }
+    if (ch === ')' || ch === ']' || ch === '}') {
+      depth -= 1;
+      if (depth === 0) { args.push(current); break; }
+      continue;
+    }
+    if (ch === ',' && depth === 1) { args.push(current); current = []; }
+  }
+  return args;
 }
 
 function importedConstants(content) {
@@ -311,11 +394,21 @@ function sameFileConstants(content) {
 }
 
 // Equality-assertion shapes across ecosystems. C# forms: classic Assert.AreEqual,
-// NUnit constraint Assert.That(x, Is.EqualTo(y)), and FluentAssertions .Should().Be().
-const EQUALITY_ASSERTION_RE = /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s|\bAssert\.AreEqual\s*\(|\bIs\.EqualTo\s*\(|\.Should\(\)\.Be\s*\(/;
+// NUnit constraint Assert.That(x, Is.EqualTo(y)), and FluentAssertions .Should().Be()
+// — including chained forms like .Should().NotBeNull().And.Be(y).
+const EQUALITY_ASSERTION_RE = /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s|\bAssert\.AreEqual\s*\(|\bIs\.EqualTo\s*\(|\.Should\(\)\.Be\s*\(|\.And\.Be\s*\(/;
+
+// Matcher-style equality: the compared value sits in an *argument position*
+// (toBe/Be/EqualTo/AreEqual/assertEquals/equal_to…). Excludes the bare
+// `assert a == b` form, whose comparison literal is inline, not an argument.
+const MATCHER_EQUALITY_RE = /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bAssert\.AreEqual\s*\(|\bIs\.EqualTo\s*\(|\.Should\(\)\.Be\s*\(|\.And\.Be\s*\(/;
 
 function isEqualityAssertion(line) {
   return EQUALITY_ASSERTION_RE.test(line);
+}
+
+function hasMatcherEquality(line) {
+  return MATCHER_EQUALITY_RE.test(line);
 }
 
 function importedConstantAssertion(line, imported, constants) {
@@ -333,9 +426,13 @@ function findBrittleAssertMatches(filePath, content) {
     .filter(({ line }) => {
       // #5: inspect only the comparison, not a trailing Python assert message.
       const comparison = stripAssertMessage(lines[line - 1]);
-      return proseLiteral(comparison)
-        || expectedProseLiteral(comparison)
-        || importedConstantAssertion(comparison, imported, constants);
+      if (importedConstantAssertion(comparison, imported, constants)) return true;
+      // #11: for matcher-style equality, inspect the *expected argument* literal
+      // only. The first quoted string may be the subject (`"actual".Should().Be(x)`),
+      // which is not the comparison target — OR-ing proseLiteral there false-positives.
+      if (hasMatcherEquality(comparison)) return expectedProseLiteral(comparison);
+      // Bare `assert a == "prose"`: the comparison literal is inline, not an argument.
+      return proseLiteral(comparison);
     })
     .map(({ line }) => ({ line, text: lines[line - 1].trim() }));
 }
@@ -918,6 +1015,8 @@ const FIX_HINTS = {
   'no-teardown': 'add teardown in the same file/suite (afterEach, tearDown, addfinalizer, post-yield, @AfterEach)',
   'complex-locator': 'prefer a rung-1 accessibility locator or stable test id over structural/XPath selectors',
   'brittle-assert': 'use a partial matcher (toContain / toHaveText(/partial/); "substring" in value; assertThat(actual).contains(expected))',
+  'test-id-duplicate': 'make the test id unique per spec, or consolidate the duplicated tests',
+  'test-id-gap': 'renumber to close the gap, or document the intentional skip in the id scheme',
 };
 
 // Context-aware manual-wait fix hint driven by subCase/replaceable (roadmap #2).
@@ -1164,6 +1263,15 @@ function main() {
   }
 
   findings.push(...scanTestIds(scanned, resolvedRoot));
+
+  // Attach fix hints uniformly: test-id findings are pushed outside the per-rule
+  // loop above, so this pass guarantees every violation carries a `fix:` hint.
+  for (const finding of findings) {
+    if (!finding.fix) {
+      const fix = fixHintFor(finding);
+      if (fix) finding.fix = fix;
+    }
+  }
 
   findings.sort((a, b) => a.tag.localeCompare(b.tag) || a.file.localeCompare(b.file));
 

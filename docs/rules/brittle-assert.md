@@ -95,16 +95,22 @@ expect(message).toBe(NOT_FOUND); // same-file constant — clean
 
 Deliberate shallow provenance (v1): only same-file bindings. Imported constants are treated as literals unless allowlisted.
 
-## Known limitations (false negatives)
+## Argument-position prose (subject-first shapes)
 
-`proseLiteral` (`scripts/self-check.js`) inspects only the **first** quoted literal on the line. Assertions whose *actual* is a literal and whose *expected* is prose are therefore missed:
+`proseLiteral` (`scripts/self-check.js`) inspects only the **first** quoted literal on the line. Assertions whose *actual* is a literal and whose *expected* is prose are caught by the companion `expectedProseLiteral` predicate (shipped v0.11.0 #11), which inspects the equality **argument/expected** literal instead of the first quote:
 
-| Pattern | Why it is missed | Status |
+| Pattern | How it is caught | Status |
 |---------|------------------|--------|
-| `"actual".Should().Be("Payment rejected.")` (FluentAssertions, subject-first) | First literal is the short-token subject; argument-position prose is not inspected | Deferred — roadmap v0.11.0 #11 |
-| `Assert.That("actual", Is.EqualTo("Welcome home!"))` (NUnit, subject-first) | Same — first literal `"actual"` clears the prose guard; the `Is.EqualTo(...)` argument is not checked | Deferred — roadmap v0.11.0 #11 |
+| `"actual".Should().Be("Payment rejected.")` (FluentAssertions, subject-first) | `expectedProseLiteral` reads the `.Be(...)` argument, not the short-token subject | Shipped v0.11.0 #11 |
+| `Assert.That("actual", Is.EqualTo("Welcome home!"))` (NUnit, subject-first) | `expectedProseLiteral` reads the `Is.EqualTo(...)` argument | Shipped v0.11.0 #11 |
+| `message.Should().NotBeNull().And.Be("Payment rejected.")` (FluentAssertions chain) | `.And.Be(` is an equality candidate; `expectedProseLiteral` scans **every** matcher call on the line, so a later `.And.Be` prose is not shadowed by an earlier short-token `.Be` | Shipped v0.11.0 remediation |
 
-Surfaced by the v0.10.0 .NET ecosystem Tier-R cross-review. Not widened in v0.10.0: `proseLiteral` is language-agnostic and shared by every language, so inspecting the argument position needs corpus proof against cross-language FPs before it ships.
+Two argument-position refinements ship with the v0.11.0 remediation loop:
+
+- **Trailing failure-message argument is dropped.** Function-style equality assertions compare their first two positional arguments; any further argument is a human-readable message, not a compared value. `assert.equal(status, 404, "Status should be Not Found.")`, `self.assertEqual(count, 3, "Should be three items.")`, `assertEquals(2, actual, "Payment count mismatch.")` and `Assert.AreEqual(2, actual, "Payment count mismatch.")` are **clean** — the prose lives only in the message slot. Method-style matchers (`.toBe`, `.Be`, `Is.EqualTo`) take the expected value as their first argument, so any because/reason string after it is likewise ignored.
+- **`.And.Be(` FluentAssertions chains are candidates.** Both `EQUALITY_ASSERTION_RE` and `MATCHER_EQUALITY_RE` accept `.And.Be(`, and `expectedProseLiteral` scans every matcher call, so chained equalities with prose in any position flag.
+
+When a matcher-style equality is present, only the argument-position literal is inspected (the first-quote subject prose is **not** OR'd in), so `"Payment rejected.".Should().Be(actual)` — prose subject, identifier expected — is not flagged. Surfaced by the v0.10.0 .NET ecosystem Tier-R cross-review; shipped in v0.11.0 with `cs` subject-first corpus rows proving cross-language FP-freedom.
 
 ## Corpus path
 

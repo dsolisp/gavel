@@ -116,6 +116,30 @@
       "expectedFindings": [{ "line": 10, "tag": "hardcoded-env" }]
     },
     {
+      "file": "violating/credential-plus-env.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "credential literal shares the line with a process.env read — the env access must not suppress the hardcoded credential (B)",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/env-assignment-literal.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "process.env.X = 'http://localhost:3000' is an LHS assignment, not a fallback default; the literal is hardcoded (B)",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
+      "file": "violating/comment-env-credential.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "credential literal with a trailing // process.env.PASSWORD comment — the comment must not suppress the credential (B)",
+      "expectedFindings": [{ "line": 4, "tag": "hardcoded-env" }]
+    },
+    {
       "file": "clean/env-url.spec.ts",
       "label": "clean",
       "language": "ts",
@@ -219,6 +243,20 @@
       "language": "py",
       "framework": "pytest",
       "rationale": "IP:port URL is a fallback default inside os.getenv(), not a hardcoded value (#4)"
+    },
+    {
+      "file": "clean/multiline-env-fallback.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "localhost URL is a fallback default in a process.env || expression split across lines — the multi-line operand is masked, not just same-line (B)"
+    },
+    {
+      "file": "clean/test_multiline_getenv_fallback.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "IP:port URL is a fallback default inside a multi-line os.getenv(...) call — the call's argument region is masked across lines (B)"
     }
   ]
 }

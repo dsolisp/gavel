@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // gavel — flakiness scoring from CI history (roadmap v0.11.0 #10)
 //
-// Turns retry counts and pass/fail flips into a per-test flakiness score so
-// gavel-flake and the suite-health scoreboard can rank the worst offenders
-// instead of guessing. Report-only; scores nothing to a merge gate.
+// Turns retry counts and pass/fail flips into a per-test flakiness score the
+// gavel-flake / gavel-gain agents consume via the `gavel flakiness` CLI to rank
+// the worst offenders instead of guessing. Report-only; not wired into
+// suite-health.js and scores nothing to a merge gate.
 //
 // A test is flaky when it produced more than one attempt with a mixed outcome
 // (at least one failed attempt and at least one pass), or was rerun by the
@@ -51,9 +52,12 @@ function collectPlaywrightTests(node, inheritedFile, out) {
 function scorePlaywright(report) {
   const raw = collectPlaywrightTests({ suites: report.suites || [] }, '', []);
   const tests = raw.map(({ test, file, results }) => {
-    const attempts = results.length;
-    const failures = results.filter((r) => r.status && r.status !== 'passed' && r.status !== 'skipped').length;
-    const eventualPass = attempts > 0 && results[results.length - 1].status === 'passed';
+    // Skipped attempts are not signal — they neither pass nor fail, so counting
+    // them dilutes the score and can mark a skipped+passed pair as flaky.
+    const graded = results.filter((r) => r.status && r.status !== 'skipped');
+    const attempts = graded.length;
+    const failures = graded.filter((r) => r.status !== 'passed').length;
+    const eventualPass = attempts > 0 && graded[graded.length - 1].status === 'passed';
     return { test, file, ...scoreOutcome(attempts, failures, eventualPass) };
   });
   return finalize('playwright', tests);
@@ -63,14 +67,20 @@ function scorePlaywright(report) {
 
 function scoreJUnit(xml) {
   const groups = new Map(); // key -> { test, file, attempts, failures }
-  const cases = [...xml.matchAll(/<testcase\b([^>]*)(?:\/>|>([\s\S]*?)<\/testcase>)/g)];
-  for (const [, attrs, body = ''] of cases) {
-    const name = (attrs.match(/name="([^"]*)"/) || [])[1] || 'unknown-test';
+  // Match self-closing testcases separately from paired ones. A single `[^>]*`
+  // attr class swallows the `/` of a `/>`, so a self-closing tag would fuse with
+  // the *next* `</testcase>` and undercount attempts — the self-closing branch is
+  // tried first so `<testcase .../>` is a standalone attempt, not a wrapper.
+  const cases = [...xml.matchAll(/<testcase\b([^>]*?)\/>|<testcase\b([^>]*?)>([\s\S]*?)<\/testcase>/g)];
+  for (const match of cases) {
+    const attrs = match[1] !== undefined ? match[1] : match[2] || '';
+    const body = match[3] || '';
+    const name = (attrs.match(/\bname="([^"]*)"/) || [])[1] || 'unknown-test';
     const classname = (attrs.match(/classname="([^"]*)"/) || [])[1] || '';
     const file = (attrs.match(/file="([^"]*)"/) || [])[1] || classname;
     const key = `${classname}#${name}`;
     if (!groups.has(key)) {
-      groups.set(key, { test: name, file, attempts: 0, failures: 0, retried: false });
+      groups.set(key, { test: name, file, attempts: 0, failures: 0, retried: false, lastOutcome: null });
     }
     const group = groups.get(key);
     // Surefire retry markers: the test ran multiple times within one testcase.
@@ -84,15 +94,20 @@ function scoreJUnit(xml) {
       // Rerun blocks are prior attempts; the primary result is the final one.
       group.attempts += flakyFailures + rerunFailures + 1;
       group.failures += flakyFailures + rerunFailures + (primaryFailed ? 1 : 0);
+      group.lastOutcome = primaryFailed ? 'fail' : 'pass';
     } else if (!skipped) {
       group.attempts += 1;
       if (primaryFailed) group.failures += 1;
+      // Duplicate <testcase> blocks are attempts in document order; the last one
+      // seen is the final outcome, so eventualPass is derived from result order,
+      // not the order-blind failures<attempts (which mislabels pass-then-fail).
+      group.lastOutcome = primaryFailed ? 'fail' : 'pass';
     }
     if (groups.size > 1 || group.attempts > 1) group.file = file;
   }
 
-  const tests = [...groups.values()].map(({ test, file, attempts, failures }) => {
-    const eventualPass = failures < attempts;
+  const tests = [...groups.values()].map(({ test, file, attempts, failures, lastOutcome }) => {
+    const eventualPass = lastOutcome ? lastOutcome === 'pass' : failures < attempts;
     return { test, file, ...scoreOutcome(attempts, failures, eventualPass) };
   });
   return finalize('junit', tests);
@@ -111,11 +126,19 @@ function finalize(format, tests) {
 }
 
 function scoreFlakiness(content) {
-  const trimmed = content.trimStart();
-  if (trimmed.startsWith('{')) {
-    return scorePlaywright(JSON.parse(content));
+  // Strip a UTF-8 BOM before *both* the format sniff and the parse: trimStart()
+  // treats U+FEFF as whitespace, so sniffing on a trimmed copy while parsing the
+  // raw string threw "Unexpected token" on BOM-prefixed Playwright reports.
+  const body = content.replace(/^\uFEFF/, '').trimStart();
+  if (body.startsWith('{')) {
+    return scorePlaywright(JSON.parse(body));
   }
-  return scoreJUnit(content);
+  // Fail closed on anything that is neither a JSON object nor XML — a JSON array,
+  // primitive, or empty input must not be silently sniffed as empty JUnit (exit 0).
+  if (!body.startsWith('<')) {
+    throw new Error('Unrecognized report: expected a Playwright JSON object ("{...}") or JUnit/Surefire XML ("<...>").');
+  }
+  return scoreJUnit(body);
 }
 
 function formatFlakiness(summary, limit = 10) {
@@ -142,7 +165,14 @@ function main() {
   }
 
   const resolved = path.resolve(inputPath);
-  const summary = scoreFlakiness(fs.readFileSync(resolved, 'utf8'));
+  let summary;
+  try {
+    summary = scoreFlakiness(fs.readFileSync(resolved, 'utf8'));
+  } catch (err) {
+    // Malformed / unrecognized input is a usage error, not a clean report.
+    console.error(`flakiness: ${err.message}`);
+    process.exit(2);
+  }
 
   if (jsonOutput) {
     console.log(JSON.stringify(summary, null, 2));

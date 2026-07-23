@@ -496,6 +496,13 @@ test('toSarif emits a description-only fixes array only when a finding carries a
   const [first, second] = sarif.runs[0].results;
   assert.deepEqual(first.fixes, [{ description: { text: 'extract to locator' } }]);
   assert.equal(second.fixes, undefined);
+
+  // Quotes, newlines, and unicode in a fix must survive the SARIF round-trip intact.
+  const tricky = 'wrap in "await" →\nuse poll_until(…)';
+  const round = JSON.parse(JSON.stringify(toSarif([
+    { tag: 'manual-wait', severity: 'blocker', message: 'm', file: 'c.spec.ts', line: 5, snippet: 'z', fix: tricky },
+  ])));
+  assert.equal(round.runs[0].results[0].fixes[0].description.text, tricky);
 });
 
 test('adoption scanner reports unused helpers (#8) and unused fixtures (#9), never adopted ones', () => {
@@ -543,4 +550,83 @@ test('flakiness scoring (#10): mixed outcomes are flaky, consistent-but-retried 
   assert.equal(junit.tests.find((t) => t.test === 'flakyLogin').flaky, true);
   assert.equal(junit.tests.find((t) => t.test === 'checkoutHardFail').flaky, false);
   assert.equal(junit.tests.find((t) => t.test === 'stableHome').flaky, false);
+});
+
+test('flakiness (#10) strips BOM, fails closed on non-object JSON, drops skipped, derives JUnit order', () => {
+  const { scoreFlakiness } = require('../flakiness');
+
+  // A UTF-8 BOM must be stripped before sniff AND parse — otherwise BOM-prefixed
+  // Playwright JSON throws "Unexpected token" instead of scoring.
+  const pw = fs.readFileSync(path.join(root, 'fixtures/reports/playwright/flaky.json'), 'utf8');
+  assert.equal(scoreFlakiness(`\uFEFF${pw}`).format, 'playwright');
+
+  // Neither a JSON object ("{") nor XML ("<") → fail closed, never a silent empty pass.
+  assert.throws(() => scoreFlakiness('[]'), /Unrecognized report/);
+  assert.throws(() => scoreFlakiness('   '), /Unrecognized report/);
+
+  // Skipped attempts are not signal: skipped-then-passed is one graded pass, not flaky.
+  const skipMix = JSON.stringify({
+    suites: [{
+      specs: [{
+        title: 'retried after skip',
+        file: 'a.spec.ts',
+        tests: [{ results: [{ status: 'skipped' }, { status: 'passed' }] }],
+      }],
+    }],
+  });
+  const skipTest = scoreFlakiness(skipMix).tests.find((t) => t.test === 'retried after skip');
+  assert.equal(skipTest.attempts, 1);
+  assert.equal(skipTest.flaky, false);
+
+  // JUnit duplicate <testcase> in document order: pass-then-fail → final outcome is fail.
+  // Order-blind failures<attempts (1<2) would wrongly report eventualPass=true.
+  const passThenFail = [
+    '<testsuite>',
+    '  <testcase classname="C" name="ordered"></testcase>',
+    '  <testcase classname="C" name="ordered"><failure/></testcase>',
+    '</testsuite>',
+  ].join('\n');
+  const ordered = scoreFlakiness(passThenFail).tests.find((t) => t.test === 'ordered');
+  assert.equal(ordered.attempts, 2);
+  assert.equal(ordered.failures, 1);
+  assert.equal(ordered.eventualPass, false);
+
+  // A self-closing <testcase .../> pass followed by a failing sibling with the
+  // same classname#name is two attempts, not one. A single [^>]* attr class would
+  // swallow the "/" of "/>" and fuse the pass into the next </testcase>.
+  const selfClosingThenFail = [
+    '<testsuite>',
+    '  <testcase name="loginFlow" classname="Auth"/>',
+    '  <testcase name="loginFlow" classname="Auth"><failure/></testcase>',
+    '</testsuite>',
+  ].join('\n');
+  const login = scoreFlakiness(selfClosingThenFail).tests.find((t) => t.test === 'loginFlow');
+  assert.equal(login.attempts, 2);
+  assert.equal(login.failures, 1);
+  assert.equal(login.flaky, true);
+});
+
+test('adoption (#8/#9) masks comments/strings and excludes Playwright waitFor* builtins', () => {
+  const { findUnusedHelpers } = require('../adoption-scan');
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-adoption-'));
+  fs.mkdirSync(path.join(repo, 'lib'), { recursive: true });
+  fs.mkdirSync(path.join(repo, 'tests'), { recursive: true });
+
+  fs.writeFileSync(path.join(repo, 'lib', 'helpers.ts'), [
+    'export async function waitForModal() {}',
+    'export async function waitForTimeout() {}', // Playwright builtin name — never a gap
+  ].join('\n'));
+
+  // The only mentions of waitForModal are a comment and a string literal → not adoption.
+  fs.writeFileSync(path.join(repo, 'tests', 'login.spec.ts'), [
+    "import { test } from '@playwright/test';",
+    '// waitForModal documented here',
+    "test('open dialog', () => {",
+    "  const note = 'call waitForModal later';",
+    '});',
+  ].join('\n'));
+
+  const helpers = findUnusedHelpers(repo);
+  assert.deepEqual(helpers.map((h) => h.symbol), ['waitForModal']);
+  assert.ok(helpers.every((h) => h.tag === 'unused-helper' && h.severity === 'report'));
 });

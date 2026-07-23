@@ -14,6 +14,8 @@ Every name that looks like a “core command” in README / help must either shi
 | `gavel analyze` | `scripts/analyze-ci.js` | **CLI** |
 | `gavel affected-tests` | `scripts/affected-tests.js` | **CLI** |
 | `gavel detect` | `scripts/detect.js` | **CLI** |
+| `gavel adoption` | `scripts/adoption-scan.js` | **CLI** (report-only, exit `0`) |
+| `gavel flakiness` | `scripts/flakiness.js` | **CLI** (report-only, exit `0`; `2` on unreadable report) |
 | `gavel explain <tag>` | Inline in `scripts/cli.js` (RULES registry) | **CLI** |
 | `gavel companion --help` | Stub → points at `companion/README.md` | **CLI stub** (no workflow execution) |
 | `gavel --help` | Lists CLI commands only | **CLI** |

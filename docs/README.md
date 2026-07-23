@@ -33,6 +33,8 @@ Index for scripts, templates, and companion workflows. For install and first run
 | `scripts/affected-tests.js` | Affected spec discovery + `--tag` |
 | `scripts/extract-tags.js` | Multi-framework tag extraction |
 | `scripts/analyze-ci.js` | Parse CI report, cluster, correlate commits |
+| `scripts/adoption-scan.js` | Remediation-helper / fixture adoption gaps (`gavel adoption`, report-only) |
+| `scripts/flakiness.js` | Per-test flakiness score from CI history (`gavel flakiness`, report-only) |
 | `scripts/audit-autofix.js` | Safe dead code removal (dry-run default) |
 | `scripts/verify-docs.js` | Doc drift guardrail (runs in `npm run verify`) |
 | `scripts/verify-corpus-precision.js` | Heuristic corpus precision (`fixtures/corpus/`) |
@@ -72,7 +74,7 @@ node scripts/affected-tests.js ../my-repo --tag smoke
 
 ## Skills and agents
 
-- **Core skills:** `skills/*/SKILL.md` (26 skills — in default plugin manifest)
+- **Core skills:** `skills/*/SKILL.md` (29 skills — in default plugin manifest)
 - **Companion skills:** `companion/skills/*/SKILL.md` (4 optional workflows)
 - **Agents:** `agents/*.md` — workflow specialists
 - **Templates:** `templates/result-envelope.md` — completion contract
