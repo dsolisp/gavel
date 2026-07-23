@@ -133,6 +133,34 @@ if (embedded.length !== envelopeSchema.examples.length) {
   });
 }
 
+// CLI completeness: every `gavel <cmd>` verb wired in scripts/cli.js must appear
+// as a row in docs/CLI_MATRIX.md (and vice versa) so the matrix cannot silently
+// omit an irreversible command. `explain` and `companion` are inline (not in the
+// scripts map) but are still contract verbs the matrix must document.
+const cliSource = readText('scripts/cli.js');
+const scriptsLiteral = cliSource.match(/const scripts = \{([^}]*)\}/);
+if (!scriptsLiteral) {
+  fail('scripts/cli.js: could not locate the `const scripts = {...}` command map');
+} else {
+  const cliMatrix = readText('docs/CLI_MATRIX.md');
+  const scriptCommands = [...scriptsLiteral[1].matchAll(/(?:'([^']+)'|([A-Za-z-]+))\s*:/g)].map(
+    (m) => m[1] || m[2],
+  );
+  const inlineCommands = ['explain', 'companion'];
+  for (const command of [...scriptCommands, ...inlineCommands]) {
+    if (!cliMatrix.includes(`\`gavel ${command}`)) {
+      fail(`docs/CLI_MATRIX.md missing row for CLI command: gavel ${command}`);
+    }
+  }
+  const documented = [...cliMatrix.matchAll(/\| `gavel ([a-z][a-z-]*)/g)].map((m) => m[1]);
+  const known = new Set([...scriptCommands, ...inlineCommands]);
+  for (const command of documented) {
+    if (!known.has(command)) {
+      fail(`docs/CLI_MATRIX.md documents unknown CLI command: gavel ${command} (not in scripts/cli.js)`);
+    }
+  }
+}
+
 if (failed) {
   process.exit(1);
 }

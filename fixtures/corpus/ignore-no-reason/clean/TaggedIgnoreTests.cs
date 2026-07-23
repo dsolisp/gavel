@@ -4,7 +4,7 @@ namespace Gavel.Fixtures;
 
 public class TaggedIgnoreTests
 {
-    // gavel-ignore: no-di — TIC-123 fixture wiring pending
+    // gavel-ignore: no-di — PROJ-123 fixture wiring pending
     [Test]
     public void UsesTaggedSuppression()
     {

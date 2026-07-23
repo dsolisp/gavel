@@ -7,6 +7,41 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-16
+
+Theme: **Remediation Loop** — close the detect → suggest → fix → verify loop. The scanner now tells agents *how* to fix findings, reduces false positives on `hardcoded-env` and `brittle-assert`, adds adoption/fixture-utilization scanners and CI-history flakiness scoring, and the orchestrator's agent contract mandates post-refactor review and parallel delegation. Also ships GitHub Copilot native discovery and the v0.10.x ecosystem cleanup.
+
+### Added
+
+- **`fix:` remediation hints** in `self-check` output — every violation line carries a `fix:` hint telling agents the remediation path, in text, JSON, and SARIF. Wait findings emit context-aware hints per `subCase` (redundant → remove; stale-read → `expect.poll`/`pollUntil`; intentional+replaceable → signal-driven; intentional+non-replaceable → rename or `gavel-ignore`). SARIF results carry a `fixes` array with `description.text` per result so GitHub Code Scanning renders suggestions inline.
+- **Adoption scanner** (`gavel adoption <repo>`, report-only): surfaces wait/poll/retry helpers (`unused-helper`) and fixtures (`unused-fixture`, `.extend({...})` / `@pytest.fixture`) that are defined in lib/support dirs but never referenced by a test — the gap between building a safe pattern and the suite adopting it. Lists, never edits.
+- **Flakiness scoring** (`gavel flakiness <report>`): parses Playwright JSON and JUnit/Surefire XML (`flakyFailure`/`rerunFailure` aware) retry counts and pass/fail flips into a per-test score (`failedAttempts / totalAttempts`). A test is flaky only on a *mixed* outcome; a test that fails every retry is a real failure (`score = 1`, `flaky: false`). Report-only CLI — available to the `gavel-flake` and `gavel-gain` agents via `gavel flakiness`; not wired into the `suite-health.js` script.
+- **Orchestrator quality gates**: `gavel-orchestrator` now mandates a post-refactor code review after bulk refactoring (>20 edits across >5 files) to catch silent logic weakening that compile + tests miss, and documents a parallel agent delegation pattern for bulk remediation (>50 violations across >20 files) with per-agent scope boundaries.
+- **GitHub Copilot native discovery**: shipped `.vscode/settings.json` points Copilot's `chat.agentSkillsLocations` at gavel's canonical `skills/` and `companion/skills/`, and `chat.agentFilesLocations` at `agents/` — no duplication. Skills now surface as `/gavel-*` slash commands and the 7 agents (including `gavel-orchestrator`) appear in the Copilot agents dropdown. QUICKSTART documents the install path and the monorepo parent-repository caveat.
+
+### Removed
+
+- **gavel-oms skill**: removed a domain-specific skill (Order Management System / trading account lifecycle) that fell outside gavel's generic, cross-cutting scope. Core skill catalog is now 29.
+
+### Fixed
+
+- **`hardcoded-env` env-wrapper recognition**: findings are suppressed when the literal is a fallback default inside `os.environ.get()` / `os.getenv()` / `process.env` — those are env-driven defaults, not hardcoded values.
+- **`brittle-assert` false positives**: the rule now parses `assert <comparison>, <message>` structure and only checks the comparison for prose literals, not the error-message text; and it inspects the equality **argument/expected** literal rather than just the first quoted string, catching subject-first shapes like `"actual".Should().Be("Payment rejected.")` and `Assert.That("actual", Is.EqualTo("Welcome home!"))` while guarding short-token/numeric/bool RHS.
+- **.NET build directories excluded from scanning**: `self-check.js`, `affected-tests.js`, and `extract-tags.js` now skip `bin`, `obj`, `packages`, and `.vs` — eliminating false positives from generated C# sources and the Playwright.NET driver under `bin/Debug/.playwright/`. Mirrors the exclusions already present in `check-profile-freshness.js`.
+
+### Tier-R remediation hardening
+
+Two adversarial cross-review passes (Tier-R) exercised the new surfaces against real-repo inputs the corpus alone did not cover. All findings were fixed under the release theme (fewer false positives, no new blockers):
+
+- **`brittle-assert` trailing failure-message argument dropped**: function-style equality assertions (`assert.equal` / `strictEqual` / `deepEqual`, `assertEquals`, unittest `self.assertEqual`, `Assert.AreEqual`) compare only their first two positional arguments — a 3rd prose argument is a human-readable message, not a compared value, so `assert.equal(status, 404, "Status should be Not Found.")` and its Python/Java/C# equivalents are clean. Method-style matchers (`.toBe` / `.Be` / `Is.EqualTo`) ignore any trailing because/reason string. Reverses a false-positive regression the argument-position work (#11) introduced.
+- **`brittle-assert` FluentAssertions chains**: `.And.Be(` is now an equality candidate and `expectedProseLiteral` scans *every* matcher call on a line, so `message.Should().NotBeNull().And.Be("Payment rejected.")` and `x.Should().Be("OK").And.Be("Payment rejected.")` flag instead of being shadowed by an earlier short-token `.Be`.
+- **`flakiness` self-closing JUnit testcases**: `<testcase .../>` self-closing elements are matched separately from paired ones, so a self-closing pass followed by a failing sibling counts as two attempts (flaky) instead of fusing into the next close tag and undercounting. Also strips a UTF-8 BOM before format sniffing, fails closed on non-object/non-XML input, excludes Playwright `skipped` results from attempt counts, and derives `eventualPass` from outcome order.
+- **`adoption` comment/string masking**: helper/fixture usage is detected on code only — mentions inside comments or string literals no longer count as adoption, and Playwright `waitFor*` built-ins are excluded from the unused-helper surface.
+
+### Changed
+
+- **Example ticket references**: normalized placeholder ticket IDs from `TIC-###` to `PROJ-###` across skill docs and corpus/self-check fixtures for a project-agnostic convention.
+
 ## [0.10.0] - 2026-07-20
 
 ### Added
@@ -248,7 +283,8 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/dsolisp/gavel/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/dsolisp/gavel/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/dsolisp/gavel/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/dsolisp/gavel/compare/v0.8.0...v0.8.1

@@ -91,6 +91,26 @@ For each category:
 <HIGH | MEDIUM | LOW>
 ```
 
+## Flakiness Scoring (from CI history)
+
+Before reproducing by hand, let the CI history rank the offenders. `gavel flakiness`
+parses retry counts and pass/fail flips into a per-test score so you triage the
+worst tests first instead of guessing.
+
+```bash
+# Playwright JSON reporter output
+gavel flakiness playwright-report/results.json --json
+# JUnit / Surefire XML (flakyFailure / rerunFailure aware)
+gavel flakiness target/surefire-reports/TEST-suite.xml
+```
+
+- `score = failedAttempts / totalAttempts` (0..1); higher = flakier.
+- A test is **flaky** only when it had a *mixed* outcome (at least one pass and
+  one fail across retries). A test that fails every retry is a real failure with
+  `score = 1` and `flaky: false` — send it to gavel-heal, not quarantine.
+- `flakyCount` feeds the gavel-gain suite-health scoreboard; the ranked `tests`
+  list tells you which spec to run through the diagnostic workflow below first.
+
 ## Rules
 
 - Do NOT retry silently. Flaky tests are bugs — they need diagnosis, not retries.

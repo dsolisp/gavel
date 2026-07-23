@@ -29,6 +29,20 @@ Same categories as gavel-review, plus suite-level findings:
 - `manual-wait:` manual wait/sleep count. Replacement: web-first assertions.
 - `no-di:` specs with direct instantiation. Replacement: fixture DI.
 - `flake-risk:` tests with shared state, execution-order dependency, or non-idempotent cleanup. Replacement: isolate.
+- `unused-helper:` wait/poll/retry helper defined in a lib/support dir but never referenced by a test. Replacement: adopt in tests or delete. (report-only)
+- `unused-fixture:` fixture defined (`.extend({...})` or `@pytest.fixture`) but never consumed by a test. Replacement: adopt in tests or delete. (report-only)
+
+## Adoption scan (report-only)
+
+Remediation only sticks when the helpers and fixtures gavel recommends actually
+get used. `gavel adoption <repo>` surfaces wait/poll/retry helpers and fixtures
+that are defined but never referenced by a test — the gap between "we built the
+safe pattern" and "the suite adopted it". Report-only: it lists, never edits.
+
+```bash
+gavel adoption <automation-repo>            # unused helpers + fixtures
+gavel adoption <automation-repo> --json
+```
 
 ## Hunt
 

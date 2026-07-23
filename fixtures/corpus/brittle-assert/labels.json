@@ -116,6 +116,46 @@
       "expectedFindings": [{ "line": 12, "tag": "brittle-assert" }]
     },
     {
+      "file": "violating/SubjectFirstPaymentTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "subject-first .Should().Be(prose) — expected literal is prose even though the subject is a short token (#11)",
+      "expectedFindings": [{ "line": 11, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/AssertThatSubjectFirstTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "subject-first Assert.That(short, Is.EqualTo(prose)) — expected argument literal is prose (#11)",
+      "expectedFindings": [{ "line": 10, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/ChainedBeTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "FluentAssertions chained .Should().NotBeNull().And.Be(prose) — expected arg is prose; the .And.Be chain must still be a candidate (C)",
+      "expectedFindings": [{ "line": 12, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/MultiBeTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "multiple .Be() on one line — a short-token first .Be(\"OK\") must not shadow prose in a later .And.Be; expectedProseLiteral scans every matcher call (C)",
+      "expectedFindings": [{ "line": 12, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/test_assert_comparison_prose.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "prose in the assert comparison with a trailing message — comparison is still brittle (#5)",
+      "expectedFindings": [{ "line": 3, "tag": "brittle-assert" }]
+    },
+    {
       "file": "clean/playwright-status.spec.ts",
       "label": "clean",
       "language": "ts",
@@ -212,6 +252,55 @@
       "language": "cs",
       "framework": "xunit",
       "rationale": "FluentAssertions .Should().Be(true) on boolean"
+    },
+    {
+      "file": "clean/test_assert_message.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "prose lives only in the assert error message; the numeric comparison is not brittle (#5)"
+    },
+    {
+      "file": "clean/test_assert_tuple_message.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "assert (cond, \"prose\") tuple footgun — the message sits at paren-depth 1 and must be stripped, leaving a non-prose comparison (C)"
+    },
+    {
+      "file": "clean/ProseSubjectTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "prose subject with an identifier expected (\"prose\".Should().Be(actual)) — only the argument position is inspected, so the subject prose is not flagged (C/#11)"
+    },
+    {
+      "file": "clean/mocha-assert-message.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "mocha",
+      "rationale": "assert.equal(actual, 404, \"prose message\") — the 3rd arg is a failure message, not a compared value, so only the numeric expected is inspected (C)"
+    },
+    {
+      "file": "clean/test_assertequal_message.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "unittest",
+      "rationale": "self.assertEqual(count, 3, \"prose message\") — trailing message arg is dropped, numeric comparison is not brittle (C)"
+    },
+    {
+      "file": "clean/CountMessage.test.java",
+      "label": "clean",
+      "language": "java",
+      "framework": "junit",
+      "rationale": "assertEquals(2, actual, \"prose message\") — JUnit5 3rd-arg message dropped; first two compared args are numeric/identifier (C)"
+    },
+    {
+      "file": "clean/AreEqualMessageTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual(2, actual, \"prose message\") — 3rd-arg message dropped; first two compared args are numeric/identifier (C)"
     }
   ]
 }

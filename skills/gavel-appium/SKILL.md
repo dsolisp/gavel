@@ -145,9 +145,9 @@ Wrap gestures behind action methods — never inline coordinates in a spec.
 ## Skip / Ignore Markers
 
 ```csharp
-[Ignore("TIC-123: emulator unavailable in CI")]   // NUnit — reason + ticket
-Assert.Ignore("TIC-456: known iOS regression");     // same policy
-[Fact(Skip = "TIC-789: flaky on UiAutomator2")]      // xUnit — reason required
+[Ignore("PROJ-123: emulator unavailable in CI")]   // NUnit — reason + ticket
+Assert.Ignore("PROJ-456: known iOS regression");     // same policy
+[Fact(Skip = "PROJ-789: flaky on UiAutomator2")]      // xUnit — reason required
 ```
 
 Bare `[Ignore]`, `Assert.Ignore()` without reason, or `[Fact(Skip = "")]` →

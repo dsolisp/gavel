@@ -28,7 +28,7 @@ function fingerprint(finding) {
   return crypto.createHash('sha256').update(key).digest('hex');
 }
 
-// findings: { tag, severity, message, file, line?, snippet? }
+// findings: { tag, severity, message, file, line?, snippet?, fix? }
 // ruleMeta: optional { [tag]: { message } } — static rule descriptions from the
 // RULES registry. The driver.rules dictionary must stay static, so per-finding
 // messages never leak into it; rules without registry metadata carry id/name only.
@@ -47,7 +47,7 @@ function toSarif(findings, ruleMeta = {}) {
 
   const results = findings.map((finding) => {
     const region = Number.isInteger(finding.line) && finding.line > 0 ? { region: { startLine: finding.line } } : {};
-    return {
+    const result = {
       ruleId: finding.tag,
       ruleIndex: ruleIndex.get(finding.tag),
       level: SARIF_LEVEL[finding.severity] || 'warning',
@@ -55,6 +55,13 @@ function toSarif(findings, ruleMeta = {}) {
       locations: [{ physicalLocation: { artifactLocation: { uri: finding.file, uriBaseId: 'SRCROOT' }, ...region } }],
       partialFingerprints: { 'gavelSnippetHash/v1': fingerprint(finding) },
     };
+    // Remediation hint (roadmap #3): SARIF consumers (GitHub Code Scanning,
+    // SonarQube) render the fix description inline. Gavel emits the guidance text
+    // only — no artifactChanges, since it does not compute concrete edits here.
+    if (finding.fix) {
+      result.fixes = [{ description: { text: finding.fix } }];
+    }
+    return result;
   });
 
   return {

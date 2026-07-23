@@ -1,6 +1,6 @@
 {
   "name": "gavel",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "The judge's hammer for test quality. Minimalism + QA discipline — one test, one verdict, move on.",
   "contextFileName": "AGENTS.md"
 }

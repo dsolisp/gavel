@@ -60,7 +60,7 @@
       "label": "clean",
       "language": "cs",
       "framework": "playwright-dotnet",
-      "rationale": "[Ignore(\"TIC-123: ...\")] with ticket reason"
+      "rationale": "[Ignore(\"PROJ-123: ...\")] with ticket reason"
     },
     {
       "file": "violating/XunitSkipTests.cs",
@@ -75,7 +75,7 @@
       "label": "clean",
       "language": "cs",
       "framework": "xunit",
-      "rationale": "[Fact(Skip = \"TIC-456: ...\")] carries a ticket reason"
+      "rationale": "[Fact(Skip = \"PROJ-456: ...\")] carries a ticket reason"
     }
   ]
 }
