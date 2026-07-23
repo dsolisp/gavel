@@ -16,6 +16,10 @@ const SUPPORT_RE = /(locators?|pages?|actions?|components?|services?|support|lib
 const EXCLUDED_DIRS = new Set([
   'node_modules',
   '.git',
+  'bin',
+  'obj',
+  'packages',
+  '.vs',
   'dist',
   'build',
   'coverage',

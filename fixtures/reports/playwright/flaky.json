@@ -1,0 +1,50 @@
+{
+  "config": { "version": "1.61.0" },
+  "suites": [
+    {
+      "title": "login",
+      "file": "tests/login.spec.ts",
+      "specs": [
+        {
+          "title": "flaky login retries then passes",
+          "file": "tests/login.spec.ts",
+          "tests": [
+            {
+              "results": [
+                { "status": "failed", "retry": 0 },
+                { "status": "passed", "retry": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "stable dashboard renders",
+          "file": "tests/login.spec.ts",
+          "tests": [
+            { "results": [ { "status": "passed", "retry": 0 } ] }
+          ]
+        }
+      ],
+      "suites": [
+        {
+          "title": "checkout",
+          "file": "tests/checkout.spec.ts",
+          "specs": [
+            {
+              "title": "checkout consistently fails",
+              "file": "tests/checkout.spec.ts",
+              "tests": [
+                {
+                  "results": [
+                    { "status": "failed", "retry": 0 },
+                    { "status": "failed", "retry": 1 }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

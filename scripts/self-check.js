@@ -108,13 +108,27 @@ function findHardcodedEnvMatches(filePath, content) {
     /['"](?:\/(?:home|Users)\/|[A-Za-z]:\\+(?:Users|home)\\+)/,
     /\b(?:password|token|secret|api[_-]?key)\s*[:=]\s*['"][^'"]+/i,
   ];
+  const lines = content.split('\n');
   const hits = new Map();
   for (const pattern of patterns) {
     for (const hit of findMatches(content, pattern, filePath)) {
+      // A value that appears as a fallback default inside an env wrapper is not a
+      // hardcoded value — the environment variable is the primary source (roadmap #4).
+      if (isEnvWrapperLine(lines[hit.line - 1] || '')) continue;
       hits.set(hit.line, { line: hit.line, text: 'hardcoded environment value' });
     }
   }
   return [...hits.values()];
+}
+
+// Env-wrapper access with a fallback default across ecosystems:
+//   os.environ.get('X', default) / os.getenv('X', default) (Python)
+//   process.env.X || default / process.env.X ?? default (JS/TS)
+//   System.getenv("X") (Java) / Environment.GetEnvironmentVariable("X") (C#)
+const ENV_WRAPPER_RE = /\bos\.environ\.get\s*\(|\bos\.getenv\s*\(|\bprocess\.env\b|\bSystem\.getenv\s*\(|\bEnvironment\.GetEnvironmentVariable\s*\(/;
+
+function isEnvWrapperLine(line) {
+  return ENV_WRAPPER_RE.test(line);
 }
 
 function findDescribeBlocks(content) {
@@ -232,7 +246,49 @@ function findComplexLocatorMatches(filePath, content) {
 
 function proseLiteral(line) {
   const match = line.match(/(['"])(.*?)\1/);
-  return match && (/\s/.test(match[2]) || /[.!?]$/.test(match[2]));
+  return match && isProseValue(match[2]);
+}
+
+// A literal is prose (drift-prone product copy) when it contains whitespace or
+// ends with sentence punctuation, and is not a numeric/boolean/null constant.
+function isProseValue(value) {
+  if (value === undefined || value === null) return false;
+  const trimmed = value.trim();
+  if (/^(?:true|false|null|nil|none)$/i.test(trimmed)) return false;
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) return false;
+  return /\s/.test(value) || /[.!?]$/.test(value);
+}
+
+// Python bare-assert message stripping (roadmap #5): `assert <comparison>, <message>`.
+// Only the comparison should be inspected for prose — a prose error message is
+// not a brittle assertion. Splits on the first top-level comma outside quotes/brackets.
+function stripAssertMessage(line) {
+  if (!/^\s*assert\b/.test(line)) return line;
+  let depth = 0;
+  let quote = null;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (quote) {
+      if (ch === quote && line[i - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
+    if (ch === '(' || ch === '[' || ch === '{') depth += 1;
+    else if (ch === ')' || ch === ']' || ch === '}') depth -= 1;
+    else if (ch === ',' && depth === 0) return line.slice(0, i);
+  }
+  return line;
+}
+
+// Argument-position / subject-first prose (roadmap #11): inspect the equality
+// *expected* literal, not just the first quoted string on the line. Catches
+// `"actual".Should().Be("Payment rejected.")` and `Assert.That("actual", Is.EqualTo("Welcome home!"))`,
+// where the first quote is the subject. Short-token/numeric/bool RHS is guarded by isProseValue.
+function expectedProseLiteral(line) {
+  const match = line.match(
+    /(?:\.(?:toBe|toEqual|isEqualTo|Be)|Is\.EqualTo|assert\.(?:strictEqual|deepEqual|equal)|assertEquals|assertEqual|AreEqual)\s*\(\s*(['"])(.*?)\1/i,
+  );
+  return match ? isProseValue(match[2]) : false;
 }
 
 function importedConstants(content) {
@@ -274,7 +330,13 @@ function findBrittleAssertMatches(filePath, content) {
   const constants = sameFileConstants(content);
   return findMatches(content, EQUALITY_ASSERTION_RE, filePath)
     .filter(({ line }) => isEqualityAssertion(lines[line - 1]))
-    .filter(({ line }) => proseLiteral(lines[line - 1]) || importedConstantAssertion(lines[line - 1], imported, constants))
+    .filter(({ line }) => {
+      // #5: inspect only the comparison, not a trailing Python assert message.
+      const comparison = stripAssertMessage(lines[line - 1]);
+      return proseLiteral(comparison)
+        || expectedProseLiteral(comparison)
+        || importedConstantAssertion(comparison, imported, constants);
+    })
     .map(({ line }) => ({ line, text: lines[line - 1].trim() }));
 }
 
@@ -838,9 +900,59 @@ function shouldRunRule(rule, relPath) {
 const RULE_SEVERITY = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
 const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
 
+// Concise, agent-actionable remediation hints keyed by rule id (roadmap #1).
+// Distinct from the verbose `remediation` field on each rule (which references
+// AGENTS.md): a `fix:` hint is the one-line path an AI agent follows. The RULES
+// contract stays frozen at v1.0 — hints live here, not on the rule objects.
+// manual-wait is intentionally absent: its hint is context-aware (see manualWaitFixHint, #2).
+const FIX_HINTS = {
+  'expect-in-action': 'move the assertion into a spec file; keep locator/action/page classes assertion-free',
+  'selector-leak': 'extract the selector to a named locator in a locator class and call it by name',
+  'no-di': 'inject the page object through the runner fixture/DI mechanism instead of constructing it',
+  'no-step': 'group the flow with the runner native step primitive (e.g. test.step())',
+  'bare-test-fail': 'add a bug/ticket reference next to the expected-failure marker',
+  'test-fail-order': 'move the expected-failure marker above the first assertion in the test block',
+  'skip-marker': 'add a reason and ticket reference to the skip/quarantine/WIP marker',
+  'ignore-no-reason': 'use gavel-ignore: <tag> with a reason comment, or remove the suppression',
+  'hardcoded-env': 'read the value from an env var, .env file, or config module',
+  'no-teardown': 'add teardown in the same file/suite (afterEach, tearDown, addfinalizer, post-yield, @AfterEach)',
+  'complex-locator': 'prefer a rung-1 accessibility locator or stable test id over structural/XPath selectors',
+  'brittle-assert': 'use a partial matcher (toContain / toHaveText(/partial/); "substring" in value; assertThat(actual).contains(expected))',
+};
+
+// Context-aware manual-wait fix hint driven by subCase/replaceable (roadmap #2).
+// Returns null when the wait cannot be classified.
+function manualWaitFixHint(finding) {
+  switch (finding.subCase) {
+    case 'redundant':
+      return 'remove — subsequent code already waits';
+    case 'stale-read':
+      return 'replace with expect.poll / pollUntil on the specific DOM state';
+    case 'intentional':
+      if (finding.replaceable === true) {
+        return `replace with ${finding.suggestion || 'a signal-driven wait'} (see gavel-refactor)`;
+      }
+      return 'rename for clarity or gavel-ignore with a reason';
+    default:
+      return null;
+  }
+}
+
+// Resolve the fix hint for a finding: context-aware for manual-wait, static otherwise.
+function fixHintFor(finding) {
+  if (finding.tag === 'manual-wait') {
+    return manualWaitFixHint(finding);
+  }
+  return FIX_HINTS[finding.tag] || null;
+}
+
 const EXCLUDED_DIRS = new Set([
   'node_modules',
   '.git',
+  'bin',
+  'obj',
+  'packages',
+  '.vs',
   'dist',
   'build',
   'coverage',
@@ -1042,6 +1154,10 @@ function main() {
         if (hit.durationMs !== undefined) {
           finding.durationMs = hit.durationMs;
         }
+        const fix = fixHintFor(finding);
+        if (fix) {
+          finding.fix = fix;
+        }
         findings.push(finding);
       }
     }
@@ -1079,6 +1195,7 @@ function main() {
       file: finding.file,
       line: finding.line,
       snippet: finding.text,
+      fix: finding.fix,
     })), RULE_META);
     fs.writeSync(1, `${JSON.stringify(sarif, null, 2)}\n`);
     process.exit(findings.length > 0 ? 1 : 0);
@@ -1093,7 +1210,8 @@ function main() {
   }
 
   for (const finding of findings) {
-    console.log(`${finding.tag} ${finding.file}:${finding.line} — ${finding.text}`);
+    const fixSuffix = finding.fix ? `\n  fix: ${finding.fix}` : '';
+    console.log(`${finding.tag} ${finding.file}:${finding.line} — ${finding.text}${fixSuffix}`);
   }
 
   console.log('\nSummary:');
@@ -1104,7 +1222,7 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration };
+module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration, FIX_HINTS, manualWaitFixHint, fixHintFor };
 
 if (require.main === module) {
   main();

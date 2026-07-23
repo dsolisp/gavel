@@ -1,0 +1,29 @@
+{
+  // GitHub Copilot / VS Code customization discovery for gavel.
+  // Copilot only scans .github/{skills,agents,prompts} by default. Gavel keeps
+  // its canonical skills/, companion/skills/, and agents/ at the repo root, so
+  // we point Copilot at those directly — no duplication, no extra sync surface.
+  // Defaults are preserved (kept true) and gavel's root dirs are added.
+  "chat.agentSkillsLocations": {
+    ".github/skills": true,
+    ".claude/skills": true,
+    "skills": true,
+    "companion/skills": true
+  },
+  "chat.agentFilesLocations": {
+    ".github/agents": true,
+    ".claude/agents": true,
+    "agents": true
+  },
+  "chat.promptFilesLocations": {
+    ".github/prompts": true
+  },
+  "chat.instructionsFilesLocations": {
+    ".github/instructions": true,
+    ".github/copilot-instructions.md": true
+  },
+  // Monorepo case: if gavel is opened as a subfolder (e.g. inside a larger
+  // workspace) rather than the repo root, let Copilot discover these from the
+  // parent repository root as well.
+  "chat.useCustomizationsInParentRepositories": true
+}

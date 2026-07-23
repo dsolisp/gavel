@@ -116,6 +116,30 @@
       "expectedFindings": [{ "line": 12, "tag": "brittle-assert" }]
     },
     {
+      "file": "violating/SubjectFirstPaymentTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "subject-first .Should().Be(prose) — expected literal is prose even though the subject is a short token (#11)",
+      "expectedFindings": [{ "line": 11, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/AssertThatSubjectFirstTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "subject-first Assert.That(short, Is.EqualTo(prose)) — expected argument literal is prose (#11)",
+      "expectedFindings": [{ "line": 10, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/test_assert_comparison_prose.py",
+      "label": "violating",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "prose in the assert comparison with a trailing message — comparison is still brittle (#5)",
+      "expectedFindings": [{ "line": 3, "tag": "brittle-assert" }]
+    },
+    {
       "file": "clean/playwright-status.spec.ts",
       "label": "clean",
       "language": "ts",
@@ -212,6 +236,13 @@
       "language": "cs",
       "framework": "xunit",
       "rationale": "FluentAssertions .Should().Be(true) on boolean"
+    },
+    {
+      "file": "clean/test_assert_message.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "prose lives only in the assert error message; the numeric comparison is not brittle (#5)"
     }
   ]
 }

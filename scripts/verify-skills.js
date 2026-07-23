@@ -35,7 +35,6 @@ const CORE_SKILLS = [
   'gavel-init',
   'gavel-self-check',
   'gavel-ci-check',
-  'gavel-oms',
   'gavel-pr-prep',
 ];
 

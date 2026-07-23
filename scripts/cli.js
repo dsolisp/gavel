@@ -7,7 +7,7 @@ const { spawnSync } = require('child_process');
 const { RULES } = require('./self-check');
 const { parseConfigFlag, resolveGavelConfig } = require('./load-gavel-config');
 
-const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js' };
+const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js', adoption: 'adoption-scan.js', flakiness: 'flakiness.js' };
 const valueFlags = new Set(['--config', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format']);
 const severityRank = { info: 0, warning: 1, error: 2, blocker: 3 };
 const ruleSeverity = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
@@ -19,7 +19,7 @@ function publicCommandName() {
 
 function printHelp() {
   console.log('Usage: gavel <command> [args] [--config gavel.config.json]');
-  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, explain');
+  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, adoption, flakiness, explain');
 }
 
 function hasPositional(args) {
@@ -34,7 +34,7 @@ function hasPositional(args) {
 }
 
 function addDefaultRoot(command, args) {
-  if (['audit', 'self-check', 'detect', 'affected-tests'].includes(command) && !hasPositional(args)) {
+  if (['audit', 'self-check', 'detect', 'affected-tests', 'adoption'].includes(command) && !hasPositional(args)) {
     return [process.cwd(), ...args];
   }
   return args;

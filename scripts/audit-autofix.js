@@ -464,4 +464,8 @@ module.exports = {
   buildContentCache,
   removeMethodBlock,
   applyCandidate,
+  walkFiles,
+  relPath,
+  EXCLUDED_DIRS,
+  CODE_FILE_RE,
 };

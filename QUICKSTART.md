@@ -15,7 +15,15 @@ Claude Code:
 /plugin install gavel@gavel
 ```
 
-For Cursor, Windsurf, Cline, Copilot, Kiro, Gemini, and copied adapters: see [README.md#install](README.md#install). The plugin auto-loads the QA Constitution on every session.
+GitHub Copilot (VS Code): Copilot discovers customizations from `.github/skills`, `.github/agents`, and `.github/prompts` by default — but gavel keeps its canonical `skills/`, `companion/skills/`, and `agents/` at the repo root. The shipped [`.vscode/settings.json`](.vscode/settings.json) points Copilot at those, so on **workspace trust**:
+
+- The QA Constitution auto-loads from [`.github/copilot-instructions.md`](.github/copilot-instructions.md).
+- All 29 core + 4 companion skills appear as `/gavel-*` slash commands in Copilot Chat.
+- The 7 agents (including `gavel-orchestrator`) appear in the **agents dropdown**.
+
+Monorepo caveat: if you open a parent folder instead of the gavel repo root, add gavel's `.vscode/settings.json` keys to the workspace-root settings, or set `"chat.useCustomizationsInParentRepositories": true`. To install into another repo, copy `skills/` → `.github/skills/` and `agents/` → `.github/agents/`, or add the same location settings pointing at gavel's install path.
+
+For Cursor, Windsurf, Cline, Kiro, Gemini, and copied adapters: see [README.md#install](README.md#install). The plugin auto-loads the QA Constitution on every session.
 
 Upgrade later through your host's plugin/package update flow, or replace copied adapter files from the new release. See [README.md#upgrade](README.md#upgrade).
 
@@ -249,8 +257,8 @@ gavel analyze <report-path>
    ### Failures
    | Test ID | File | Classification | Notes |
    |---------|------|----------------|-------|
-   | TIC-123 | tests/users.spec.ts | test bug | Locator changed after UI refactor |
-   | TIC-456 | tests/billing.spec.ts | app bug | 500 response on valid payload |
+   | PROJ-123 | tests/users.spec.ts | test bug | Locator changed after UI refactor |
+   | PROJ-456 | tests/billing.spec.ts | app bug | 500 response on valid payload |
 
    ### Recommendations (ranked)
    1. Fix locator in users.spec.ts (test bug)
@@ -470,7 +478,7 @@ gavel off       # disable
 ## 12. What's next
 
 - See [examples/](examples/) for cross-framework patterns (Playwright, Selenium, Cypress, WebdriverIO)
-- See [skills/](skills/) for the full 30-skill catalog
+- See [skills/](skills/) for the full 29-skill catalog
 - See [AGENTS.md](AGENTS.md) for the complete ruleset (Minimalism Ladder + QA Ladder + Test Constitution)
 - See [skills/gavel-flake/SKILL.md](skills/gavel-flake/SKILL.md) for the flaky-test quarantine policy
 - See [skills/gavel-run/SKILL.md](skills/gavel-run/SKILL.md) for the verification gate and parallel execution

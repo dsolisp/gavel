@@ -198,6 +198,27 @@
       "language": "cs",
       "framework": "nunit",
       "rationale": "Relative path, not an absolute filesystem path"
+    },
+    {
+      "file": "clean/env-fallback-default.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "localhost URL is a fallback default inside process.env access, not a hardcoded value (#4)"
+    },
+    {
+      "file": "clean/test_env_fallback_default.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "localhost URL is a fallback default inside os.environ.get(), not a hardcoded value (#4)"
+    },
+    {
+      "file": "clean/test_getenv_fallback.py",
+      "label": "clean",
+      "language": "py",
+      "framework": "pytest",
+      "rationale": "IP:port URL is a fallback default inside os.getenv(), not a hardcoded value (#4)"
     }
   ]
 }

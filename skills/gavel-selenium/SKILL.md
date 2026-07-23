@@ -272,9 +272,9 @@ dotnet test --filter "Category=smoke"    # NUnit [Category] / xUnit [Trait("Cate
 ### Skip / Ignore Markers (C#)
 
 ```csharp
-[Ignore("TIC-123: broker sandbox down")]     // NUnit — reason + ticket required
-Assert.Ignore("TIC-456: known regression");   // same policy
-[Fact(Skip = "TIC-789: flaky under Grid")]     // xUnit — reason required
+[Ignore("PROJ-123: broker sandbox down")]     // NUnit — reason + ticket required
+Assert.Ignore("PROJ-456: known regression");   // same policy
+[Fact(Skip = "PROJ-789: flaky under Grid")]     // xUnit — reason required
 ```
 
 Bare `[Ignore]`, `Assert.Ignore()` without reason, or `[Fact(Skip = "")]` →

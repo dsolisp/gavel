@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="acme-suite" tests="3" failures="1" errors="0" skipped="0">
+  <testcase name="flakyLogin" classname="com.acme.LoginTests" file="src/test/java/com/acme/LoginTests.java" time="1.2">
+    <flakyFailure message="expected true but was false" type="java.lang.AssertionError">stacktrace line one</flakyFailure>
+  </testcase>
+  <testcase name="checkoutHardFail" classname="com.acme.CheckoutTests" file="src/test/java/com/acme/CheckoutTests.java" time="2.0">
+    <rerunFailure message="timeout" type="java.lang.AssertionError">rerun stacktrace</rerunFailure>
+    <failure message="timeout" type="java.lang.AssertionError">final stacktrace</failure>
+  </testcase>
+  <testcase name="stableHome" classname="com.acme.HomeTests" file="src/test/java/com/acme/HomeTests.java" time="0.4"/>
+</testsuite>

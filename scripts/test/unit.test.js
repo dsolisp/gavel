@@ -450,3 +450,97 @@ test('parseManualWaitDuration handles C# sleep APIs', () => {
   assert.equal(parseManualWaitDuration('await Task.Delay(TimeSpan.FromSeconds(2));'), 2000);
   assert.equal(parseManualWaitDuration('await page.WaitForTimeoutAsync(3000);'), 3000);
 });
+
+test('fix hints: static per-tag and context-aware per manual-wait subCase', () => {
+  const { FIX_HINTS, manualWaitFixHint, fixHintFor } = require('../self-check');
+
+  // Static hints resolve by tag and exclude the context-aware manual-wait tag.
+  assert.ok(FIX_HINTS['selector-leak'].length > 0);
+  assert.equal(FIX_HINTS['manual-wait'], undefined);
+  assert.equal(fixHintFor({ tag: 'selector-leak' }), FIX_HINTS['selector-leak']);
+  assert.equal(fixHintFor({ tag: 'not-a-rule' }), null);
+
+  // Context-aware manual-wait hint varies by subCase/replaceable (roadmap #2).
+  assert.match(manualWaitFixHint({ subCase: 'redundant' }), /remove/);
+  assert.match(manualWaitFixHint({ subCase: 'stale-read' }), /expect\.poll|pollUntil/);
+  assert.match(
+    manualWaitFixHint({ subCase: 'intentional', replaceable: true, suggestion: 'threading.Event.wait()' }),
+    /threading\.Event\.wait\(\).*gavel-refactor/,
+  );
+  assert.match(manualWaitFixHint({ subCase: 'intentional', replaceable: false }), /rename|gavel-ignore/);
+  assert.equal(manualWaitFixHint({ subCase: undefined }), null);
+  assert.equal(fixHintFor({ tag: 'manual-wait', subCase: 'redundant' }), manualWaitFixHint({ subCase: 'redundant' }));
+});
+
+test('self-check output carries fix hints in text, JSON, and SARIF', () => {
+  const scan = (args) => spawnSync(process.execPath, [path.join(root, 'scripts', 'self-check.js'), 'fixtures/self-check/violations', ...args], { cwd: root, encoding: 'utf8' });
+
+  const text = scan([]).stdout;
+  assert.match(text, /\n {2}fix: /);
+
+  const report = JSON.parse(scan(['--json']).stdout);
+  assert.ok(report.findings.some((f) => typeof f.fix === 'string' && f.fix.length > 0));
+
+  const sarif = JSON.parse(scan(['--format', 'sarif']).stdout);
+  const withFix = sarif.runs[0].results.filter((r) => r.fixes);
+  assert.ok(withFix.length > 0);
+  assert.ok(withFix.every((r) => typeof r.fixes[0].description.text === 'string' && r.fixes[0].description.text.length > 0));
+});
+
+test('toSarif emits a description-only fixes array only when a finding carries a fix', () => {
+  const { toSarif } = require('../to-sarif');
+  const sarif = toSarif([
+    { tag: 'selector-leak', severity: 'error', message: 'leak', file: 'a.spec.ts', line: 3, snippet: 'x', fix: 'extract to locator' },
+    { tag: 'no-di', severity: 'blocker', message: 'di', file: 'b.spec.ts', line: 4, snippet: 'y' },
+  ]);
+  const [first, second] = sarif.runs[0].results;
+  assert.deepEqual(first.fixes, [{ description: { text: 'extract to locator' } }]);
+  assert.equal(second.fixes, undefined);
+});
+
+test('adoption scanner reports unused helpers (#8) and unused fixtures (#9), never adopted ones', () => {
+  const { findUnusedHelpers, findUnusedFixtures, findAdoptionGaps } = require('../adoption-scan');
+  const fixture = path.join(root, 'fixtures/adoption');
+
+  const helpers = findUnusedHelpers(fixture);
+  const helperSymbols = helpers.map((h) => h.symbol).sort();
+  // waitForModal / retry_forever are defined but no spec calls them; the adopted
+  // waitForToast / retry_request must NOT be flagged.
+  assert.deepEqual(helperSymbols, ['retry_forever', 'waitForModal']);
+  assert.ok(helpers.every((h) => h.tag === 'unused-helper' && h.autofix === 'report-only'));
+  assert.equal(helpers.find((h) => h.symbol === 'waitForModal').line, 7);
+
+  const fixtures = findUnusedFixtures(fixture);
+  const fixtureSymbols = fixtures.map((f) => f.symbol).sort();
+  // adminPage (test.extend) / orphan_fixture (@pytest.fixture) are unused;
+  // authedPage / db_session are consumed by specs.
+  assert.deepEqual(fixtureSymbols, ['adminPage', 'orphan_fixture']);
+  assert.ok(fixtures.every((f) => f.tag === 'unused-fixture' && f.autofix === 'report-only'));
+
+  // Report-only surface: no blocker/fix severities leak into a merge gate.
+  assert.ok(findAdoptionGaps(fixture).every((g) => g.severity === 'report'));
+});
+
+test('flakiness scoring (#10): mixed outcomes are flaky, consistent-but-retried failures are not', () => {
+  const { scoreFlakiness } = require('../flakiness');
+
+  const pw = scoreFlakiness(fs.readFileSync(path.join(root, 'fixtures/reports/playwright/flaky.json'), 'utf8'));
+  assert.equal(pw.format, 'playwright');
+  assert.equal(pw.testCount, 3);
+  assert.equal(pw.flakyCount, 1);
+  const pwFlaky = pw.tests.find((t) => t.flaky);
+  assert.match(pwFlaky.test, /flaky login/);
+  assert.equal(pwFlaky.score, 0.5);
+  // A test that fails every retry is a real failure (score 1), not flake.
+  const pwHardFail = pw.tests.find((t) => /consistently fails/.test(t.test));
+  assert.equal(pwHardFail.flaky, false);
+  assert.equal(pwHardFail.score, 1);
+
+  const junit = scoreFlakiness(fs.readFileSync(path.join(root, 'fixtures/reports/junit/flaky-reruns.xml'), 'utf8'));
+  assert.equal(junit.format, 'junit');
+  assert.equal(junit.flakyCount, 1);
+  // Surefire <flakyFailure> = passed on rerun → flaky; <rerunFailure>+<failure> = still failing → not flaky.
+  assert.equal(junit.tests.find((t) => t.test === 'flakyLogin').flaky, true);
+  assert.equal(junit.tests.find((t) => t.test === 'checkoutHardFail').flaky, false);
+  assert.equal(junit.tests.find((t) => t.test === 'stableHome').flaky, false);
+});

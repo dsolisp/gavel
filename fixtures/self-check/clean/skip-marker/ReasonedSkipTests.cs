@@ -4,7 +4,7 @@ namespace Gavel.Fixtures;
 
 public class ReasonedSkipTests
 {
-    [Ignore("TIC-123: upstream broker unavailable")]
+    [Ignore("PROJ-123: upstream broker unavailable")]
     [Test]
     public void SkippedWithTicketReason()
     {

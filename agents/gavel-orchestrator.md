@@ -156,6 +156,46 @@ unused factories, diff-scoped `shrink`):
 Never delegate `--apply` for `review` or `report-only` findings.
 See `templates/apply-safe-workflow.md`.
 
+## Post-Refactor Review Gate (MANDATORY after bulk edits)
+
+Compile-clean and tests-green is **not** proof that a bulk refactor preserved
+behavior. Variable-scope regressions, no-op restore steps, and silently weakened
+assertions survive both gates and only a read of the diff catches them.
+
+**Trigger:** any refactor exceeding **>20 edits across >5 files** (e.g. mass
+locator extraction, sleep→poll migration, POM restructuring).
+
+```markdown
+**Delegate a review pass (gavel-review or parent agent) before DONE:**
+1. Read the full diff — not just the changed-line summary
+2. For each moved/rewrapped block, confirm variable capture order is unchanged
+   (hoist cross-step state to test-body scope before step-wrapping)
+3. Confirm no assertion was weakened, made conditional, or dropped
+4. Confirm removed waits were redundant, not load-bearing
+5. Return: reviewed file count, findings, and an explicit behavior-preserved verdict
+```
+
+Bulk refactor without this review → **INCOMPLETE**, regardless of green tests.
+
+## Parallel Delegation (bulk remediation)
+
+For large remediation fronts, sequential single-agent fixing is the bottleneck.
+Split the work across parallel implementers with **non-overlapping scope boundaries**.
+
+**Trigger:** **>50 violations across >20 files**.
+
+```markdown
+**Delegate in parallel (one implementer per scope shard):**
+1. Partition by directory/area so no two agents touch the same file
+2. Give every agent the *same* pattern instructions (identical remediation recipe)
+   so fixes stay consistent across shards
+3. Each agent: implement in layer order, compile, run affected tests, return evidence
+4. Orchestrator merges evidence and runs the Post-Refactor Review Gate on the union
+```
+
+Consistency rule: divergent fixes for the same violation class across shards are a
+defect — re-issue the shared recipe and re-delegate.
+
 ## Completion Contract (return to user)
 
 Use the standard result envelope in `templates/result-envelope.md`.

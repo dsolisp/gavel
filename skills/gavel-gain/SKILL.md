@@ -36,11 +36,15 @@ Render plain ASCII:
 
 ## Per-Framework Parsing
 
-- **Playwright**: parse `test-results/*.json` or `--reporter=json` output
+- **Playwright**: parse `test-results/*.json` or `--reporter=json` output       
 - **pytest**: parse JUnit XML from `--junitxml` or `pytest-json-report`
 - **JUnit/TestNG**: parse Surefire/Failsafe XML reports
-- **Cypress**: parse `cypress/results/*.json` from `cypress-multi-reporter`
+- **Cypress**: parse `cypress/results/*.json` from `cypress-multi-reporter`     
 - **WebdriverIO**: parse `wdio` reporter output
+
+**Flake count** comes from `gavel flakiness <report>` — it scores retry counts
+and pass/fail flips per test (`flakyCount`). Report-only; a test that fails every
+retry is a real failure, not flake.
 
 ## Honesty boundary
 

@@ -257,9 +257,9 @@ pwsh bin/Debug/net8.0/playwright.ps1 install   # first-time browser install
 ### Skip / ignore markers
 
 ```csharp
-[Ignore("TIC-123: upstream broker unavailable")]  // reason + ticket required
-Assert.Ignore("TIC-456: known regression");        // same policy
-// gavel-ignore: manual-wait — TIC-789 bot jitter; non-replaceable
+[Ignore("PROJ-123: upstream broker unavailable")]  // reason + ticket required
+Assert.Ignore("PROJ-456: known regression");        // same policy
+// gavel-ignore: manual-wait — PROJ-789 bot jitter; non-replaceable
 ```
 
 Bare `[Ignore]`, `Assert.Ignore()` without reason, or bare `// gavel-ignore` → `skip-marker` / `ignore-no-reason`.
