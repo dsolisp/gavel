@@ -92,6 +92,30 @@
       "expectedFindings": [{ "line": 8, "tag": "brittle-assert" }]
     },
     {
+      "file": "violating/InvalidCredentialsTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual on punctuated prose literal",
+      "expectedFindings": [{ "line": 11, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/WelcomeBannerTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.That(..., Is.EqualTo(prose)) on multi-word punctuated prose",
+      "expectedFindings": [{ "line": 11, "tag": "brittle-assert" }]
+    },
+    {
+      "file": "violating/PaymentRejectedTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "FluentAssertions .Should().Be(prose) on punctuated prose",
+      "expectedFindings": [{ "line": 12, "tag": "brittle-assert" }]
+    },
+    {
       "file": "clean/playwright-status.spec.ts",
       "label": "clean",
       "language": "ts",
@@ -167,6 +191,27 @@
       "language": "java",
       "framework": "testng",
       "rationale": "equality on short role token"
+    },
+    {
+      "file": "clean/StatusCodeTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual on numeric status code"
+    },
+    {
+      "file": "clean/CountZeroTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.That(..., Is.EqualTo(0)) on numeric zero"
+    },
+    {
+      "file": "clean/FeatureFlagTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "FluentAssertions .Should().Be(true) on boolean"
     }
   ]
 }

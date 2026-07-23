@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { RULES } = require('./self-check');
+const { RULES, TEST_FILE_RE } = require('./self-check');
 const { REVIEW_RULES } = require('./review-rules');
 
 const root = path.join(__dirname, '..');
@@ -104,6 +104,9 @@ const waitPatterns = [
   { name: 'waitForTimeout', predicate: (text) => /waitForTimeout\s*\(/.test(text) },
   { name: 'time.sleep', predicate: (text) => /time\.sleep\s*\(/.test(text) },
   { name: 'Thread.sleep', predicate: (text) => /Thread\.sleep\s*\(/.test(text) },
+  { name: 'Thread.Sleep', predicate: (text) => /Thread\.Sleep\s*\(/.test(text) },
+  { name: 'Task.Delay', predicate: (text) => /Task\.Delay\s*\(/.test(text) },
+  { name: 'WaitForTimeoutAsync', predicate: (text) => /WaitForTimeoutAsync\s*\(/.test(text) },
   { name: 'cy.wait', predicate: (text) => /cy\.wait\s*\(/.test(text) },
   { name: 'browser.pause', predicate: (text) => /browser\.pause\s*\(/.test(text) },
 ];
@@ -142,6 +145,46 @@ if (pollingLoopCount < 1) {
 console.log(
   `Self-check fixtures OK: ${EXPECTED_TAGS.length} rules detected (${report.violationCount} findings), clean samples clean.`,
 );
+
+// C# file surface (v0.10.0 item #1): *Tests.cs scanned; helper .cs not test-only
+const csharpNoDiFinding = report.findings.find(
+  (finding) => /no-di\/LoginTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!csharpNoDiFinding) {
+  console.error('C# file surface: expected no-di finding in violations/no-di/LoginTests.cs');
+  process.exit(1);
+}
+if (csharpNoDiFinding.tag !== 'no-di') {
+  console.error(`C# file surface: expected no-di on LoginTests.cs, got ${csharpNoDiFinding.tag}`);
+  process.exit(1);
+}
+
+const csharpManualWaitFinding = report.findings.find(
+  (finding) => /manual-wait\/ThreadSleepTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!csharpManualWaitFinding || csharpManualWaitFinding.tag !== 'manual-wait') {
+  console.error('C# manual-wait: expected manual-wait finding in violations/manual-wait/ThreadSleepTests.cs');
+  process.exit(1);
+}
+
+const csharpCases = [
+  { path: 'Tests/LoginTests.cs', expectTest: true },
+  { path: 'Tests/LoginTest.cs', expectTest: true },
+  { path: 'login.spec.cs', expectTest: true },
+  { path: 'login.test.cs', expectTest: true },
+  { path: 'Support/LoginHelper.cs', expectTest: false },
+  { path: 'Pages/LoginPage.cs', expectTest: false },
+  { path: 'Pages/Locators/LoginLocators.cs', expectTest: false },
+];
+for (const { path: samplePath, expectTest } of csharpCases) {
+  const matched = TEST_FILE_RE.test(samplePath);
+  if (matched !== expectTest) {
+    console.error(
+      `C# TEST_FILE_RE: ${samplePath} expected test=${expectTest}, got ${matched}`,
+    );
+    process.exit(1);
+  }
+}
 
 const diffRoot = path.join(root, 'fixtures', 'self-check', 'diff', 'assert-drop');
 for (const entry of fs.readdirSync(diffRoot, { withFileTypes: true }).filter((item) => item.isDirectory())) {

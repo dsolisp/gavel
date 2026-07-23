@@ -12,7 +12,7 @@ Test execution and configuration. Framework-adaptive via active profile.
 
 ## When to Use
 
-- Configure Playwright, Selenium, Cypress, or WebdriverIO for a project
+- Configure Playwright, Selenium, Appium, Cypress, or WebdriverIO for a project
 - Run tests locally with proper project settings
 - Debug using trace viewer or screenshots
 - Set up multi-project browser configurations
@@ -27,6 +27,24 @@ Test execution and configuration. Framework-adaptive via active profile.
 ## Per-Framework Quick Start
 
 See the active framework profile (`gavel-playwright`, `gavel-selenium`, etc.) for exact commands.
+
+### .NET test filters (dotnet)
+
+NUnit / xUnit / MSTest all run through `dotnet test`. Target a subset with `--filter`
+(same command for Playwright.NET, Selenium C#, and Appium.NET — the runner is identical):
+
+```bash
+# One class or one method
+dotnet test --filter "FullyQualifiedName~LoginTests"
+dotnet test --filter "FullyQualifiedName=Namespace.LoginTests.CanLogIn"
+
+# By category/trait — NUnit [Category] / MSTest [TestCategory] / xUnit [Trait]
+dotnet test --filter "TestCategory=smoke"      # NUnit / MSTest
+dotnet test --filter "Category=smoke"          # xUnit [Trait("Category","smoke")]
+
+# Compose (run smoke in one class)
+dotnet test --filter "FullyQualifiedName~Checkout&TestCategory=smoke"
+```
 
 ## Debugging
 
@@ -44,16 +62,19 @@ Before declaring work done, run these in order. Any failure blocks the merge.
 npx tsc --noEmit                    # TS
 mypy .                             # Python
 mvn compile                        # Java
+dotnet build                       # C# / .NET
 
 # 2. Lint
 npx eslint .                       # TS/JS
 ruff check .                       # Python
 mvn checkstyle:check               # Java
+dotnet format --verify-no-changes  # C# / .NET
 
 # 3. Test run (the actual suite)
 npx playwright test                # Playwright
 pytest                             # pytest
 mvn test                           # JUnit
+dotnet test                        # NUnit / xUnit / MSTest (Playwright.NET, Selenium C#, Appium.NET)
 
 # 4. Coverage threshold (hard gate)
 npx playwright test --coverage     # Playwright

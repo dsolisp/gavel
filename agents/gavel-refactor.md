@@ -84,6 +84,7 @@ When refactoring `manual-wait` violations at scale (20+ calls):
    - `waitForTimeout(60000)` → `waitForSafetyHalt(page, 1)` (safety protocol)
    - `waitForTimeout(2000)` → `waitForRecovery(page)` (session stabilization)
    - Python `time.sleep(N)` that is intentional + replaceable → `threading.Event` (see below)
+   - C# `Thread.Sleep` / `Task.Delay` / `WaitForTimeoutAsync` that is intentional + replaceable → `ManualResetEventSlim` / `TaskCompletionSource` (see below)
 
 5. **Report time impact**: sum removed milliseconds → "eliminated ~52s of dead sleep"
 
@@ -172,6 +173,30 @@ ready_event.wait(timeout=30)
 - **Genuinely non-replaceable intentional** waits — bot humanization with random jitter, safety halt protocols, or external hardware cool-downs where a rename + `gavel-ignore: manual-wait` with reason is correct.
 - **Any fixed delay with no signal source** — `_settle = threading.Event(); _settle.wait(timeout=N)` with no `.set()` caller is a sleep rename and silences the scanner without fixing the violation. Do not generate it.
 - **JS/TS Playwright** — use `expect(locator).toBeVisible()`, `expect.poll`, or named delay helpers; do not invent a Node `threading.Event` analogue.
+- **C# Playwright.NET** — use `Expect(...).ToBeVisibleAsync()`, `WaitForURLAsync`, `WaitForAsync`, or signal-driven `ManualResetEventSlim` / `TaskCompletionSource` with a wired producer; do not leave an unset event waiting the full timeout.
+
+## C# Sleep Replacement (`ManualResetEventSlim` / `TaskCompletionSource`, signal-driven only)
+
+**Order of preference** for replacing C# `Thread.Sleep`, `Task.Delay`, or `WaitForTimeoutAsync`:
+
+1. **Playwright.NET eventual wait** — `Expect(locator).ToBeVisibleAsync()`, `page.WaitForURLAsync`, `locator.WaitForAsync`. Always first when the wait targets an observable condition.
+2. **Signal-driven `ManualResetEventSlim` or `TaskCompletionSource`** — only when another callback/worker owns readiness and calls `Set()` / `TrySetResult`.
+3. **Rename + `gavel-ignore: manual-wait` with reason** — only for genuinely non-replaceable intentional waits.
+
+An event or TCS that is **never signaled** always waits the full timeout — that is `Thread.Sleep(N)` under another name and is **NOT an allowed remediation**:
+
+```csharp
+var ready = new ManualResetEventSlim(false);
+
+// producer — when the condition becomes true:
+ready.Set();
+
+// consumer — single block, no sleep loop:
+if (!ready.Wait(TimeSpan.FromSeconds(N)))
+    throw new TimeoutException("condition not met");
+```
+
+Profile reference: `skills/gavel-playwright/SKILL.md` (Playwright.NET → Manual-wait remediation). For Selenium C# and Appium.NET, the same order applies but the eventual-wait step uses `WebDriverWait` + `ExpectedConditions` (or `wait.Until(...)`) instead of Playwright `Expect(...)`; see `skills/gavel-selenium/SKILL.md` (Selenium C# section) and `skills/gavel-appium/SKILL.md` (mobile-native waits — never `Thread.Sleep` around gestures).
 
 ## Verification Gate
 
@@ -239,7 +264,7 @@ the correct remediation path:
 | `selector-leak` | Locator call in spec/action file instead of locator layer | Extract to POM locator class; use `gavel scaffold-pom` or manual migration |
 | `brittle-assert` | Boolean snapshot assertion (`isVisible().toBe(true)`) | Replace with auto-retrying: `await expect(locator).toBeVisible()`; add `gavel-ignore` only if `evaluate()` in shadow DOM with no locator alternative |
 | `no-step` | Test has no `test.step()` grouping | Wrap logical phases (setup → action → verify); `gavel-refactor` handles this |
-| `manual-wait` | Hard-coded sleep (`waitForTimeout`, `time.sleep`) | See wait-remediation classifier: redundant → no-op, stale-read-risk → `pollUntil`, intentional → rename (JS) or signal-driven `threading.Event` (Python + replaceable, `.set()` required) |
+| `manual-wait` | Hard-coded sleep (`waitForTimeout`, `time.sleep`, `Thread.Sleep`, `Task.Delay`, `WaitForTimeoutAsync`) | See wait-remediation classifier: redundant → no-op, stale-read-risk → `pollUntil` / `Expect`, intentional → rename (JS) or signal-driven `threading.Event` (Python) / `ManualResetEventSlim` (C#, `.Set()` required) |
 | `hardcoded-env` | Hard-coded URL, port, or credential in test | Extract to `process.env` or fixture config; add `gavel-ignore` only for type definitions |
 | `skip-marker` | `test.skip()` without category prefix | Add prefix: `SEED-DATA:`, `ENV-LIMIT:`, `HEADLESS:`, `WIP:` |
 | `assert-drop` | Assertion removed or weakened in diff | Restore assertion or document reason; never silently drop |

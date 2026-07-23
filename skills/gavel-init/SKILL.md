@@ -18,9 +18,9 @@ Bootstrap a new QA automation project. Create the minimum structure. Start testi
 ### Step 1: Detect stack
 
 Run `gavel-detect` first. If no framework is detected, ask the user:
-- Which automation framework? (Playwright, Selenium, Cypress, WebdriverIO)
-- Which test runner? (Playwright runner, pytest, JUnit, Mocha, etc.)
-- Which language? (TypeScript, JavaScript, Python, Java)
+- Which automation framework? (Playwright, Selenium, Appium, Cypress, WebdriverIO)
+- Which test runner? (Playwright runner, pytest, JUnit, NUnit/xUnit/MSTest, Mocha, etc.)
+- Which language? (TypeScript, JavaScript, Python, Java, C#)
 
 ### Step 2: Scaffold
 
@@ -123,6 +123,25 @@ features/
     <feature>.ts           -- Page objects
 ```
 
+#### .NET (C#) — Selenium / Appium / Playwright.NET
+
+Runner-agnostic (NUnit / xUnit / MSTest). Follow the active profile
+(`gavel-selenium`, `gavel-appium`, `gavel-playwright`) for locator idioms.
+
+```
+Tests/
+  <Feature>Tests.cs        -- First test class ([Test] / [Fact] / [TestMethod])
+Pages/
+  Locators/
+    <Feature>Locators.cs   -- Locator definitions (By.* / AppiumBy.*)
+  Actions/
+    <Feature>Actions.cs    -- Page actions (ctor-injected driver)
+Support/
+  Factories.cs             -- Test data factories
+  DriverFactory.cs         -- Driver/session setup (DI, not `new` in tests)
+<Project>.csproj
+```
+
 ### Step 3: First test
 
 Generate one passing smoke test to verify the scaffold works:
@@ -147,6 +166,9 @@ ruff check .
 
 # Java projects
 mvn compile -q
+
+# C# / .NET projects
+dotnet build
 ```
 
 ## Rules

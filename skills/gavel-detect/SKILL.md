@@ -22,9 +22,11 @@ Check these signals in order:
 | Signal | Framework |
 |--------|-----------|
 | `@playwright/test` in package.json, `playwright.config.*` | **Playwright** |
+| `Appium.WebDriver` in `*.csproj` (checked first — Appium depends on Selenium) | **Appium (C#)** |
+| `Microsoft.Playwright` / `Microsoft.Playwright.NUnit` (or MSTest/Xunit) in `*.csproj` (and no `Appium.WebDriver`) | **Playwright.NET** |
 | `selenium` in requirements.txt/pyproject.toml, `chromedriver` in PATH | **Selenium (Python)** |
 | `org.seleniumhq.selenium` in pom.xml/build.gradle | **Selenium (Java)** |
-| `Selenium.WebDriver` in .csproj | **Selenium (C#)** |
+| `Selenium.WebDriver` in .csproj (and no `Microsoft.Playwright*` / `Appium.WebDriver`) | **Selenium (C#)** |
 | `cypress` in package.json, `cypress.config.*` | **Cypress** |
 | `@wdio/cli` in package.json, `wdio.conf.*` | **WebdriverIO** |
 | `pytest-playwright` in Python deps | **pytest-playwright** |
@@ -42,6 +44,7 @@ Check these signals in order:
 | `@playwright/test` | **Playwright test runner** |
 | `mocha`/`jest`/`vitest` in package.json | **Mocha/Jest/Vitest** |
 | `pytest-playwright` + `pytest` | **pytest-playwright** |
+| `Microsoft.Playwright.NUnit` (or MSTest/Xunit) | **NUnit / MSTest / xUnit** |
 | `robotframework` | **Robot Framework** |
 
 ### Language
@@ -89,6 +92,8 @@ flag if project is more than one minor behind.
 | Framework | Typical package | As of 2026-07-01 |
 |-----------|-----------------|------------------|
 | Playwright | `playwright` / `@playwright/test` | 1.61.1 |
+| Playwright.NET | `Microsoft.Playwright` | 1.61.0 |
+| Appium.NET | `Appium.WebDriver` | 8.3.2 |
 | Cypress | `cypress` | 15.18.0 |
 | WebdriverIO | `webdriverio` | 9.29.0 |
 | Selenium (Py) | `selenium` | 4.45.0 |
@@ -107,9 +112,9 @@ After detection, run the freshness script when a target repo path is known:
 node scripts/check-profile-freshness.js <target-repo-root> --json
 ```
 
-Supports **Node** (`package.json`) and **Python** (`requirements.txt`, `pyproject.toml`)
-for Playwright, Cypress, WebdriverIO, Selenium, Cucumber.js, Behave, pytest,
-pytest-playwright, and Robot Framework.
+Supports **Node** (`package.json`), **Python** (`requirements.txt`, `pyproject.toml`),
+and **.NET** (`*.csproj` PackageReference) for Playwright, Playwright.NET, Cypress,
+WebdriverIO, Selenium, Cucumber.js, Behave, pytest, pytest-playwright, and Robot Framework.
 
 Interpret `freshness` status:
 
@@ -133,6 +138,8 @@ Golden fixtures: `fixtures/profiles/` (verified by `npm run verify`).
 
 Once detected, the matching profile is activated for the session:
 - Playwright -> `gavel-playwright`
+- Playwright.NET -> `gavel-playwright`
+- Appium (C#) -> `gavel-appium`
 - Selenium -> `gavel-selenium`
 - Cypress -> `gavel-cypress`
 - WebdriverIO -> `gavel-webdriverio`

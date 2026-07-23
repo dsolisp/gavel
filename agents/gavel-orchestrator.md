@@ -49,7 +49,7 @@ Before any agent writes a test, run the ladder:
 | New E2E tests (UI) | gavel-plan → gavel-generator → gavel-healer |
 | New API tests | gavel-plan → gavel-api-specialist |
 | Test planning | gavel-plan |
-| Stack detection | gavel-detect → activate profile (gavel-playwright, gavel-selenium, gavel-cypress, gavel-webdriverio, gavel-cucumber, gavel-robot) |
+| Stack detection | gavel-detect → activate profile (gavel-playwright, gavel-selenium, gavel-appium, gavel-cypress, gavel-webdriverio, gavel-cucumber, gavel-robot) |
 | Run tests / verification gate | gavel-run |
 | Fix failing tests | gavel-healer |
 | Clustered failures (same area/route/error) | gavel-analyze → gavel-impact → **gavel-healer (implement)** |

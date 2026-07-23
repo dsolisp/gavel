@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "no-di",
+  "samples": [
+    {
+      "file": "violating/direct-construction.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "new BadExamplePage(page) inside test body",
+      "expectedFindings": [{ "line": 12, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/LoginTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new LoginPage(page) inside NUnit test method",
+      "expectedFindings": [{ "line": 12, "tag": "no-di" }]
+    },
+    {
+      "file": "clean/fixture-injection.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "page object injected via Playwright fixture"
+    },
+    {
+      "file": "clean/FixtureInjectionTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "PageTest provides Page via DI — no new XxxPage in test body"
+    }
+  ]
+}

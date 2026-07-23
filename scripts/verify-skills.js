@@ -16,6 +16,7 @@ const CORE_SKILLS = [
   'gavel-detect',
   'gavel-playwright',
   'gavel-selenium',
+  'gavel-appium',
   'gavel-cypress',
   'gavel-webdriverio',
   'gavel-cucumber',

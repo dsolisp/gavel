@@ -19,7 +19,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 ## Constitution (WON'T DO)
 
-1. No manual sleeps/waits (waitForTimeout, time.sleep, Thread.sleep)
+1. No manual sleeps/waits (`waitForTimeout`, `time.sleep`, `Thread.sleep`, `Thread.Sleep`, `Task.Delay`, `WaitForTimeoutAsync`)
 2. No CSS/XPath selectors unless accessibility locators are impossible
 3. No skipping re-run after fix
 4. No skip/fail markers without documented root cause
@@ -78,7 +78,7 @@ When gavel-analyze or gavel-impact classifies **test-maintenance-drift**:
 
 ## Manual Wait Remediation
 
-When healing `manual-wait` violations (`waitForTimeout`, `time.sleep`, `Thread.sleep`, `browser.pause`):
+When healing `manual-wait` violations (`waitForTimeout`, `time.sleep`, `Thread.sleep`, `Thread.Sleep`, `Task.Delay`, `WaitForTimeoutAsync`, `browser.pause`):
 
 1. **Classify each wait** by reading 1-3 lines after the call (and scanner fields when present: `subCase`, `replaceable`, `suggestion`):
 
@@ -86,7 +86,7 @@ When healing `manual-wait` violations (`waitForTimeout`, `time.sleep`, `Thread.s
    |----------------------------|---------------|-----|
    | `.isVisible(`, `.waitFor(`, `expect(`, locator with `{ timeout:` | **redundant** | Remove or no-op — subsequent code already waits |
    | `.evaluate(`, `.textContent()`, `.getAttribute()`, `.inputValue()` | **stale-read-risk** | Replace with `pollUntil` / `expect.poll` for the specific DOM state |
-   | `subCase: intentional` + `replaceable: true` (Python `time.sleep`) | **intentional + replaceable** | Replace with universal pattern — see below |
+   | `subCase: intentional` + `replaceable: true` (Python `time.sleep` or C# with `suggestion: ManualResetEventSlim.Wait()`) | **intentional + replaceable** | Replace with universal pattern — see below |
    | Bot/persona/simulation context (file: `persona`, `bot`, `overnight`) | **intentional** (non-replaceable) | Keep — rename to `humanDelay` for clarity |
    | Safety halt / recovery / cool-down | **intentional** (non-replaceable) | Keep — rename to `waitForSafetyHalt` / `waitForRecovery` |
    | `frame.evaluate()` or `page.mouse.click(x,y)` followed by wait | **iframe-interaction** | Replace with `frame.waitForSelector()` or `frame.waitForFunction()` |
@@ -112,7 +112,24 @@ if not ready.wait(timeout=N):
     raise TimeoutError("condition not met")
 ```
 
-Prefer a framework-native eventual wait (`expect(locator).to_be_visible(timeout=...)`, `wait_for_function`, `WebDriverWait`) when the wait targets an observable condition. Use `threading.Event` only when another thread/callback owns the readiness signal. Do **not** use this for non-replaceable intentional waits (bot jitter, safety halt) — rename + reason, or `gavel-ignore: manual-wait` with a ticket. JS/TS Playwright waits use native `expect` / named helpers, not `threading.Event`.
+Prefer a framework-native eventual wait (`expect(locator).to_be_visible(timeout=...)`, `Expect(locator).ToBeVisibleAsync()`, `wait_for_function`, `WebDriverWait`) when the wait targets an observable condition. Use `threading.Event` (Python) or `ManualResetEventSlim` / `TaskCompletionSource` (C#) only when another thread/callback owns the readiness signal. Do **not** use this for non-replaceable intentional waits (bot jitter, safety halt) — rename + reason, or `gavel-ignore: manual-wait` with a ticket. JS/TS and C# Playwright waits use native `Expect` / named helpers first; do not invent sleep renames.
+
+### Universal C# pattern (`intentional` + `replaceable: true`)
+
+When the finding is C# `Thread.Sleep` / `Task.Delay` / `WaitForTimeoutAsync` with `subCase: intentional`, `replaceable: true`, or `suggestion: ManualResetEventSlim.Wait()`, mirror the Python signal-driven rule from `agents/gavel-refactor.md`. A `ManualResetEventSlim` or `TaskCompletionSource` that is never `Set()` / completed is just `Thread.Sleep` under another name and is **NOT** an allowed remediation:
+
+```csharp
+var ready = new ManualResetEventSlim(false);
+
+// producer (callback / worker / watcher) — when the condition becomes true:
+ready.Set();
+
+// consumer — single block, no sleep loop:
+if (!ready.Wait(TimeSpan.FromSeconds(N)))
+    throw new TimeoutException("condition not met");
+```
+
+Prefer `Expect(...)` / `WaitForURLAsync` / `WaitForAsync` when the wait targets an observable UI condition. Profile details: `skills/gavel-playwright/SKILL.md` (Playwright.NET section).
 
 ## Common Failure Patterns
 

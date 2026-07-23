@@ -35,13 +35,41 @@ function detectStack(repoRoot) {
   if (fileExists(root, ['pytest.ini', 'pyproject.toml', 'requirements.txt'])) add('pytest', 'pytest config or Python dependency file');
   if (fileExists(root, ['pom.xml', 'build.gradle', 'build.gradle.kts'])) add('junit', 'JVM test build file');
 
+  const { detectDotnetFramework } = require('./check-profile-freshness');
+  const dotnet = detectDotnetFramework(root);
+  const DOTNET_FRAMEWORK_LABELS = {
+    appium_dotnet: 'appium-dotnet',
+    playwright_dotnet: 'playwright-dotnet',
+    selenium_dotnet: 'selenium-csharp',
+  };
+  const seleniumCsprojFallback = !dotnet && hasSeleniumCsproj(root);
+  let dotnetProfile;
+  if (dotnet) {
+    // .NET framework leads the stack; its profile drives the audit.
+    frameworks.unshift(DOTNET_FRAMEWORK_LABELS[dotnet.framework] || dotnet.framework);
+    evidence.unshift(`${dotnet.package} in *.csproj → ${dotnet.profile}`);
+    dotnetProfile = dotnet.profile;
+  } else if (seleniumCsprojFallback) {
+    // ChromeDriver-only projects without the base Selenium.WebDriver package.
+    frameworks.unshift('selenium-csharp');
+    evidence.unshift('Selenium.WebDriver(.ChromeDriver) in *.csproj → gavel-selenium');
+    dotnetProfile = 'gavel-selenium';
+  }
+
   return {
     repo: root,
     primary: frameworks[0] || 'unknown',
-    frameworks,
+    frameworks: [...new Set(frameworks)],
     evidence,
+    profile: dotnetProfile,
     note: frameworks.length === 0 ? 'No known test stack markers found.' : 'Static detection only; no tests or browsers were run.',
   };
+}
+
+function hasSeleniumCsproj(repoRoot) {
+  const { collectCsprojDeps } = require('./check-profile-freshness');
+  const deps = collectCsprojDeps(repoRoot);
+  return Boolean(deps['Selenium.WebDriver'] || deps['Selenium.WebDriver.ChromeDriver']);
 }
 
 function main() {
@@ -58,6 +86,7 @@ function main() {
   console.log(`Gavel detect — ${result.repo}`);
   console.log(`Primary stack: ${result.primary}`);
   if (result.frameworks.length > 0) console.log(`Detected: ${result.frameworks.join(', ')}`);
+  if (result.profile) console.log(`Profile: ${result.profile}`);
   for (const item of result.evidence) console.log(`- ${item}`);
   console.log(result.note);
 }

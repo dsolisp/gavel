@@ -28,6 +28,9 @@ pytest <path> -k "<test-name>" -v
 # JUnit/TestNG
 mvn test -Dtest=<TestClass>#<method>
 
+# Playwright.NET / Selenium C# / Appium.NET (NUnit / xUnit / MSTest)
+dotnet test --filter "FullyQualifiedName~<TestClass>"
+
 # Cypress
 npx cypress run --spec <spec> --grep "<test-name>"
 
@@ -58,7 +61,7 @@ For **env issues**: check if the app/service is running. Check env vars and conf
 
 For **assertion mismatch**: read the actual vs expected. Is the test wrong or the app wrong?
 
-For **timing / `manual-wait`**: if the failure or nearby code uses Python `time.sleep`, check scanner fields `subCase` and `replaceable`. When recommending a next-step fix for `intentional` + `replaceable: true`, point healers at the **signal-driven** Python pattern. An `Event` that is never `.set()` is just `time.sleep` under another name and is NOT an allowed remediation — the Event must be owned by the code that flips readiness:
+For **timing / `manual-wait`**: if the failure or nearby code uses Python `time.sleep` or C# `Thread.Sleep` / `Task.Delay` / `WaitForTimeoutAsync`, check scanner fields `subCase`, `replaceable`, and `suggestion`. When recommending a next-step fix for `intentional` + `replaceable: true`, point healers at the **signal-driven** pattern. An `Event` / `ManualResetEventSlim` that is never `.set()` / `Set()` is just sleep under another name and is NOT an allowed remediation — the signal must be owned by the code that flips readiness:
 
 ```python
 import threading
@@ -73,7 +76,18 @@ if not ready.wait(timeout=N):
     raise TimeoutError("condition not met")
 ```
 
-Contexts: UI settle, process startup, polling interval — but only when a signal source is wired. Prefer framework-native eventual assertions (`expect(locator).to_be_visible(timeout=...)`, `wait_for_function`, `WebDriverWait`) when the wait targets an observable condition. See `agents/gavel-refactor.md` (Python Sleep Replacement) and `agents/gavel-healer.md` (Manual Wait Remediation). Not for JS/TS Playwright (`expect` / named helpers). Not for non-replaceable intentional waits (bot jitter, safety halt).
+```csharp
+var ready = new ManualResetEventSlim(false);
+
+// producer — when the condition becomes true:
+ready.Set();
+
+// consumer — single block, no sleep loop:
+if (!ready.Wait(TimeSpan.FromSeconds(N)))
+    throw new TimeoutException("condition not met");
+```
+
+Contexts: UI settle, process startup, polling interval — but only when a signal source is wired. Prefer framework-native eventual assertions (`expect(locator).to_be_visible(timeout=...)`, `Expect(locator).ToBeVisibleAsync()`, `wait_for_function`, `WebDriverWait` + `ExpectedConditions` / `wait.Until(...)` for Selenium C# and Appium.NET) when the wait targets an observable condition. See `agents/gavel-refactor.md` (Python / C# Sleep Replacement) and `agents/gavel-healer.md` (Manual Wait Remediation). Not for non-replaceable intentional waits (bot jitter, safety halt).
 
 ### Step 4: Verdict
 

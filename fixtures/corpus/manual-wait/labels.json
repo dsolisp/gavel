@@ -104,6 +104,61 @@
       "language": "ts",
       "framework": "playwright",
       "rationale": "tagged gavel-ignore: manual-wait with reason suppresses finding"
+    },
+    {
+      "file": "violating/ThreadSleepTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional — Thread.Sleep in NUnit",
+      "expectedFindings": [{ "line": 11, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "violating/TaskDelayTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional — fixed Task.Delay in NUnit",
+      "expectedFindings": [{ "line": 12, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "violating/WaitForTimeoutAsyncTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional — WaitForTimeoutAsync in Playwright.NET",
+      "expectedFindings": [{ "line": 12, "tag": "manual-wait", "subCase": "intentional", "replaceable": false }]
+    },
+    {
+      "file": "violating/RedundantExpectPollTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=redundant — Thread.Sleep before ToBeVisibleAsync",
+      "expectedFindings": [{ "line": 14, "tag": "manual-wait", "subCase": "redundant" }]
+    },
+    {
+      "file": "violating/StaleReadEvaluateTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=stale-read — Thread.Sleep before EvaluateAsync",
+      "expectedFindings": [{ "line": 13, "tag": "manual-wait", "subCase": "stale-read" }]
+    },
+    {
+      "file": "violating/ReplaceablePollingLoopTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional, replaceable=true, pollingLoop=true — while (!ready) + Thread.Sleep",
+      "expectedFindings": [{ "line": 14, "tag": "manual-wait", "subCase": "intentional", "replaceable": true, "pollingLoop": true, "suggestion": "ManualResetEventSlim.Wait()" }]
+    },
+    {
+      "file": "clean/NativeWaitsTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "native Expect.ToBeVisibleAsync; comment mentioning Thread.Sleep must not fire"
     }
   ]
 }

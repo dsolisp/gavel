@@ -7,13 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Planned — v0.10.0 Playwright.NET Language Surface
+## [0.10.0] - 2026-07-20
 
-Prep only (no scanner behavior yet). Public design notes: [docs/contracts/playwright-dotnet-v0.10.0.md](docs/contracts/playwright-dotnet-v0.10.0.md).
+### Added
 
-- Next release theme: Playwright for .NET (`Microsoft.Playwright`); Remediation Loop and Assertion Integrity shift later
-- Contract covers `.cs` discovery, detect/freshness, API→rule map, backward compatibility; zero new rule tags
+- **C# file surface (v0.10.0 #1)**: `walkFiles` includes `.cs`; `TEST_FILE_RE` matches `*Test.cs` / `*Tests.cs` / `*.spec.cs` / `*.test.cs` without classifying helpers as tests; self-check fixtures `LoginTests.cs` / `LoginHelper.cs`
+- **Playwright.NET detect + freshness (v0.10.0 #2)**: `playwright_dotnet` key reads `Microsoft.Playwright*` from `*.csproj`; routes to `gavel-playwright`; golden fixture `fixtures/profiles/playwright-dotnet-fresh/`
+- **manual-wait C# APIs (v0.10.0 #3)**: detect `Thread.Sleep`, `Task.Delay`, `WaitForTimeoutAsync`; durationMs + subCase/replaceability for C#; corpus + self-check fixtures with `language: cs`
+- **C# rule coverage (v0.10.0 ecosystem)**: widened existing rule regexes (zero new tags) to recognize C# idioms — `brittle-assert` (`Assert.AreEqual`, `Is.EqualTo`, FluentAssertions `.Should().Be(...)` with the prose/imported FP guard preserved), `expect-in-action` (`Assert.*` / `.Should()` in page/action/locator files), `selector-leak` (`FindElement`, `AppiumBy.*`, `MobileBy.*`), `skip-marker` (xUnit `[Fact(Skip=)]` / `[Theory(Skip=)]`)
+- **gavel-appium profile (v0.10.0 ecosystem)**: new `gavel-appium` skill for Appium.NET mobile-native tests — accessibility-first locators (`AppiumBy.AccessibilityId` > `AndroidUIAutomator`/`IosNsPredicate` > XPath), native waits, DI, gestures; registered in `plugin.yaml`, `verify-skills.js`, and `gavel-detect`
+- **Appium + Selenium C# detect + freshness (v0.10.0 ecosystem)**: `appium_dotnet` (`Appium.WebDriver`, pin 8.3.2 → `gavel-appium`) and `selenium_dotnet` (`Selenium.WebDriver`, pin 4.45.0 → `gavel-selenium`) freshness keys; detection precedence Appium → Playwright → Selenium; golden fixtures `fixtures/profiles/appium-dotnet-fresh/` + `fixtures/profiles/selenium-dotnet-fresh/`
+- **Selenium C# full audit (v0.10.0 ecosystem)**: Selenium C# promoted from detect-only to full constitution audit; `gavel-selenium` gains a C# section (`driver.FindElement(By.*)`, `WebDriverWait`/`ExpectedConditions`, DI, run commands)
+- **extract-tags xUnit `[Trait]` (v0.10.0 ecosystem)**: `[Trait("Category", "...")]` recognized alongside NUnit `[Category]` / MSTest `[TestCategory]`
+- **.NET sample repos (v0.10.0 ecosystem)**: `fixtures/sample-repos/appium-dotnet/` and `fixtures/sample-repos/selenium-dotnet/` (9 files each) demonstrating good/bad NUnit specs
+- **.NET ecosystem corpus (v0.10.0 ecosystem)**: `language: cs` corpus samples for `brittle-assert`, `expect-in-action`, `selector-leak`, `hardcoded-env` at 100% precision, zero false negatives
+- **gavel-run .NET commands (v0.10.0 polish)**: 4-line verification gate gains `dotnet build` / `dotnet format --verify-no-changes` / `dotnet test`; new `dotnet test --filter` recipe (FQN + `[Category]`/`[TestCategory]`/`[Trait]`) shared across Playwright.NET, Selenium C#, Appium.NET
+- **xUnit skip corpus (v0.10.0 polish)**: `[Fact(Skip=)]` violating + reasoned `cs` samples added to the `skip-marker` corpus (detection shipped earlier in v0.10.0; now precision-gated at 100%)
+- **SpecFlow/Reqnroll fixture (v0.10.0 polish)**: `Checkout.feature` + thin `[Binding]` `CheckoutSteps.cs` affected-tests fixture proving `.feature` `@tag` discovery via the cucumber pattern
+- **Appium/.NET agent wiring (v0.10.0 polish)**: `gavel-init` scaffolds a .NET (C#) structure and lists Appium/C# in the stack questions; `gavel-heal` isolation filter + eventual-wait guidance generalized to Selenium C# / Appium.NET
+- **extract-tags runner-label honesty (v0.10.0 polish)**: documented that `.cs` reports the `nunit` family label while tag extraction stays runner-agnostic (NUnit `[Category]` / MSTest `[TestCategory]` / xUnit `[Trait]`)
 
+### Design notes — v0.10.0 .NET Ecosystem Parity
+
+Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts/dotnet-ecosystem-v0.10.0.md) (supersedes [playwright-dotnet-v0.10.0.md](docs/contracts/playwright-dotnet-v0.10.0.md)). Scope: gavel-appium profile, Selenium C# full audit, C# common libraries (NUnit/xUnit/MSTest/SpecFlow/Reqnroll/FluentAssertions) — all via widened regexes, zero new rule tags.
 ## [0.9.0] - 2026-07-16
 
 ### Added
@@ -232,7 +248,9 @@ Prep only (no scanner behavior yet). Public design notes: [docs/contracts/playwr
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/dsolisp/gavel/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/dsolisp/gavel/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/dsolisp/gavel/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/dsolisp/gavel/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/dsolisp/gavel/compare/v0.7.0...v0.7.1

@@ -402,3 +402,51 @@ test('corpus labels schema accepts valid docs and rejects unknown fields', () =>
   assert.ok(validateLabels({}).some((error) => error.includes('missing required field')));
   assert.ok(validateLabels({ ...valid, extra: true }).some((error) => error.includes('unknown field')));
 });
+
+test('TEST_FILE_RE recognizes C# test naming without helpers', () => {
+  const { TEST_FILE_RE } = require('../self-check');
+  assert.equal(TEST_FILE_RE.test('Tests/LoginTests.cs'), true);
+  assert.equal(TEST_FILE_RE.test('Tests/LoginTest.cs'), true);
+  assert.equal(TEST_FILE_RE.test('login.spec.cs'), true);
+  assert.equal(TEST_FILE_RE.test('Support/LoginHelper.cs'), false);
+  assert.equal(TEST_FILE_RE.test('Pages/LoginPage.cs'), false);
+  assert.equal(TEST_FILE_RE.test('tests/login.spec.ts'), true);
+});
+
+test('extract-tags discovers C# test files and NUnit Category tags', () => {
+  const { extractTags, detectFramework, isTestFile } = require('../extract-tags');
+  const fixture = path.join(root, 'fixtures/affected-tests');
+
+  assert.equal(isTestFile('Tests/LoginTests.cs'), true);
+  assert.equal(isTestFile('Tests/LoginTest.cs'), true);
+  assert.equal(isTestFile('login.spec.cs'), true);
+  assert.equal(isTestFile('Support/LoginHelper.cs'), false);
+  assert.equal(detectFramework('Tests/LoginTests.cs'), 'nunit');
+
+  const tagMap = extractTags(fixture, 'auto');
+  const smokeFiles = tagMap.get('smoke') || [];
+  const ciFastFiles = tagMap.get('ci.fast') || [];
+  assert.ok(smokeFiles.some((file) => file.endsWith('LoginTests.cs')));
+  assert.ok(ciFastFiles.some((file) => file.endsWith('LoginTests.cs')));
+});
+
+test('playwright_dotnet freshness reads Microsoft.Playwright from csproj', () => {
+  const { detectFramework } = require('../check-profile-freshness');
+  const { detectStack } = require('../detect');
+  const fixture = path.join(root, 'fixtures/profiles/playwright-dotnet-fresh');
+  const freshness = detectFramework(fixture);
+  assert.equal(freshness.framework, 'playwright_dotnet');
+  assert.equal(freshness.profile, 'gavel-playwright');
+  assert.equal(freshness.installed, '1.61.0');
+  const stack = detectStack(fixture);
+  assert.equal(stack.primary, 'playwright-dotnet');
+  assert.equal(stack.profile, 'gavel-playwright');
+});
+
+test('parseManualWaitDuration handles C# sleep APIs', () => {
+  const { parseManualWaitDuration } = require('../self-check');
+  assert.equal(parseManualWaitDuration('Thread.Sleep(1500);'), 1500);
+  assert.equal(parseManualWaitDuration('await Task.Delay(2000);'), 2000);
+  assert.equal(parseManualWaitDuration('await Task.Delay(TimeSpan.FromSeconds(2));'), 2000);
+  assert.equal(parseManualWaitDuration('await page.WaitForTimeoutAsync(3000);'), 3000);
+});
