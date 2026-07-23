@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "selector-leak",
+  "samples": [
+    {
+      "file": "violating/pages/BadExamplePage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "getByRole inside page/actions layer instead of locator class",
+      "expectedFindings": [{ "line": 7, "tag": "selector-leak" }]
+    },
+    {
+      "file": "violating/pages/actions/BadLoginActions.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByRole inside actions class instead of locator class",
+      "expectedFindings": [{ "line": 10, "tag": "selector-leak" }]
+    },
+    {
+      "file": "violating/pages/actions/SeleniumLoginActions.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "selenium-dotnet",
+      "rationale": "driver.FindElement(By.*) inside actions class instead of locator class",
+      "expectedFindings": [{ "line": 12, "tag": "selector-leak" }]
+    },
+    {
+      "file": "violating/pages/actions/AppiumLoginActions.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "appium",
+      "rationale": "FindElement(AppiumBy.*) inside actions class instead of locator class",
+      "expectedFindings": [{ "line": 13, "tag": "selector-leak" }]
+    },
+    {
+      "file": "clean/pages/locators/ExamplePageLocators.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "getByRole allowed in dedicated locator class"
+    },
+    {
+      "file": "clean/pages/locators/LoginLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByRole allowed in dedicated locator class"
+    },
+    {
+      "file": "clean/pages/locators/SeleniumLoginLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "selenium-dotnet",
+      "rationale": "driver.FindElement(By.*) allowed in dedicated locator class"
+    },
+    {
+      "file": "clean/pages/locators/AppiumLoginLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "appium",
+      "rationale": "FindElement(AppiumBy.*) allowed in dedicated locator class"
+    }
+  ]
+}

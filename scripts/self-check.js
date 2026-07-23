@@ -15,8 +15,10 @@ let config = {};
 let allowlist = [];
 let scanRoot = '';
 
-// Matches *.spec.*, *.test.*, *.cy.{js,ts} (Cypress), and Python test_*/#*_test files
-const TEST_FILE_RE = /\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$/;
+// Matches *.spec.*, *.test.*, *.cy.{js,ts} (Cypress), Python test_*/#_test,
+// and C# *Test.cs / *Tests.cs (NUnit/xUnit/MSTest) plus *.spec.cs / *.test.cs
+const TEST_FILE_RE =
+  /\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|cs|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$|(^|\/)[^/]+Tests?\.cs$/;
 const LOCATOR_FILE_RE = /locators?\//i;
 const ACTION_PAGE_FILE_RE = /(?:pages?|actions?)\//i;
 
@@ -192,7 +194,7 @@ function literalSelector(line) {
 
 function locatorExpressions(content, filePath) {
   const lines = content.split('\n');
-  return findMatches(content, /(?:\.\s*locator|querySelector(?:All)?|\$(?:\$)?)\s*\(\s*['"`]/, filePath)
+  return findMatches(content, /(?:\.\s*(?:locator|Locator)|(?:querySelector(?:All)?|QuerySelector(?:All)?)|\$(?:\$)?)\s*\(\s*['"`]/, filePath)
     .map(({ line }) => ({ line, selector: literalSelector(lines[line - 1]) }))
     .filter(({ selector }) => selector !== undefined);
 }
@@ -252,8 +254,12 @@ function sameFileConstants(content) {
   return names;
 }
 
+// Equality-assertion shapes across ecosystems. C# forms: classic Assert.AreEqual,
+// NUnit constraint Assert.That(x, Is.EqualTo(y)), and FluentAssertions .Should().Be().
+const EQUALITY_ASSERTION_RE = /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s|\bAssert\.AreEqual\s*\(|\bIs\.EqualTo\s*\(|\.Should\(\)\.Be\s*\(/;
+
 function isEqualityAssertion(line) {
-  return /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s/.test(line);
+  return EQUALITY_ASSERTION_RE.test(line);
 }
 
 function importedConstantAssertion(line, imported, constants) {
@@ -266,7 +272,7 @@ function findBrittleAssertMatches(filePath, content) {
   const lines = content.split('\n');
   const imported = importedConstants(content);
   const constants = sameFileConstants(content);
-  return findMatches(content, /\.(?:toBe|toEqual|isEqualTo)\s*\(|\bassert\.(?:equal|strictEqual|deepEqual)\s*\(|\b(?:assertEquals|assertEqual|equal_to)\s*\(|\bassert\s+.+\s==\s/, filePath)
+  return findMatches(content, EQUALITY_ASSERTION_RE, filePath)
     .filter(({ line }) => isEqualityAssertion(lines[line - 1]))
     .filter(({ line }) => proseLiteral(lines[line - 1]) || importedConstantAssertion(lines[line - 1], imported, constants))
     .map(({ line }) => ({ line, text: lines[line - 1].trim() }));
@@ -278,8 +284,10 @@ function findBrittleAssertMatches(filePath, content) {
 //   intentional — neither; may be a legitimate bot/animation/safety delay.
 function classifyManualWaitSubCase(lines, lineNumber) {
   const context = lines.slice(lineNumber, lineNumber + 3).join('\n');
-  const redundantPattern = /waitFor(?!Timeout)\w+\s*\(|expect\.poll\s*\(|cy\.wait\s*\(\s*['"`@]/;
-  const staleReadPattern = /evaluate\s*\(|innerHTML|textContent|getAttribute|\$eval/;
+  const redundantPattern =
+    /waitFor(?!Timeout)\w+\s*\(|WaitFor(?!Timeout)\w+Async\s*\(|expect\.poll\s*\(|Expect\.Poll|ToBeVisibleAsync\s*\(|cy\.wait\s*\(\s*['"`@]/;
+  const staleReadPattern =
+    /evaluate\s*\(|EvaluateAsync\s*\(|innerHTML|InnerText|textContent|TextContent|getAttribute|GetAttributeAsync|\$eval/;
   if (redundantPattern.test(context)) return 'redundant';
   if (staleReadPattern.test(context)) return 'stale-read';
   return 'intentional';
@@ -300,16 +308,22 @@ function classifyReplaceability(lines, lineNumber) {
   if (/threading\.Event|Event\(\)/.test(context) && /\.set\(\)/.test(context)) {
     return { replaceable: false };
   }
+  if (/ManualResetEventSlim|EventWaitHandle/.test(context) && /\.Set\(\)/.test(context)) {
+    return { replaceable: false };
+  }
 
-  // Polling loop: while condition + time.sleep (covers `while not flag:` too)
+  // Polling loop: while condition + sleep (Python time.sleep or C# Thread.Sleep)
   const prevLines = lines.slice(Math.max(0, lineNumber - 3), lineNumber).join('\n');
   if (/\bwhile\b.*:/.test(prevLines) && /time\.sleep/.test(currentLine)) {
     return { replaceable: true, suggestion: 'threading.Event.wait()' };
   }
+  if (/\bwhile\s*\(/.test(prevLines) && /Thread\.Sleep/.test(currentLine)) {
+    return { replaceable: true, suggestion: 'ManualResetEventSlim.Wait()' };
+  }
 
-  // After API call or assertion — likely replaceable with expect.poll()
-  if (/\b(?:fetch|axios|request|supertest|\.(?:get|post|put|patch|delete))\s*\(/.test(prevLines)
-    || /\b(?:expect|assert)\b/.test(prevLines)) {
+  // After API call or assertion — likely replaceable with expect.poll() / Expect.Poll
+  if (/\b(?:fetch|axios|request|supertest|HttpClient|GetAsync|PostAsync|\.(?:get|post|put|patch|delete))\s*\(/.test(prevLines)
+    || /\b(?:expect|assert|Expect|Assert)\b/.test(prevLines)) {
     return { replaceable: true, suggestion: 'expect.poll()' };
   }
 
@@ -322,36 +336,56 @@ function classifyReplaceability(lines, lineNumber) {
 // a boolean variable/state (not a counter/timer), and no threading.Event or
 // time.monotonic() appears within 10 lines.
 function isPollingLoop(lines, lineNumber) {
+  const currentLine = lines[lineNumber] || '';
+  const isPythonSleep = /time\.sleep/.test(currentLine);
+  const isCSharpSleep = /Thread\.Sleep/.test(currentLine);
+  if (!isPythonSleep && !isCSharpSleep) {
+    return false;
+  }
+
   const prevLines = lines.slice(Math.max(0, lineNumber - 3), lineNumber);
-  const whileLine = prevLines.find((line) => /\bwhile\b.*:/.test(line));
+  const whileLine = prevLines.find((line) =>
+    (isPythonSleep && /\bwhile\b.*:/.test(line)) || (isCSharpSleep && /\bwhile\s*\(/.test(line)),
+  );
   if (!whileLine) return false;
 
-  const conditionMatch = whileLine.match(/\bwhile\s+(.+):/);
-  if (!conditionMatch) return false;
-  const condition = conditionMatch[1].trim();
+  let condition;
+  if (isPythonSleep) {
+    const conditionMatch = whileLine.match(/\bwhile\s+(.+):/);
+    if (!conditionMatch) return false;
+    condition = conditionMatch[1].trim();
+    if (!/^(not\s+)?(?:[A-Za-z_][A-Za-z0-9_.]*|True|False)$/.test(condition)) return false;
+    if (/\b(?:\d+|time\.|monotonic|counter|count|index|attempt|len\(|range\()/.test(condition)) return false;
+  } else {
+    const conditionMatch = whileLine.match(/\bwhile\s*\(([^)]+)\)/);
+    if (!conditionMatch) return false;
+    condition = conditionMatch[1].trim();
+    if (!/^!?\s*[A-Za-z_][A-Za-z0-9_.]*(\s*(==|!=)\s*(false|true))?$/.test(condition)) return false;
+    if (/\b(?:DateTime|TimeSpan|counter|Count|Attempt|\d+)/i.test(condition)) return false;
+  }
 
-  // Boolean variable/state (identifier, attribute, or True/False literal); reject compound/call expressions.
-  if (!/^(not\s+)?(?:[A-Za-z_][A-Za-z0-9_.]*|True|False)$/.test(condition)) return false;
-
-  // Reject counters/timers.
-  if (/\b(?:\d+|time\.|monotonic|counter|count|index|attempt|len\(|range\()/.test(condition)) return false;
-
-  // No threading.Event or time.monotonic() within 10 lines.
   const start = Math.max(0, lineNumber - 5);
   const end = Math.min(lines.length, lineNumber + 6);
   const context = lines.slice(start, end).join('\n');
-  if (/threading\.Event|time\.monotonic/.test(context)) return false;
+  if (/threading\.Event|time\.monotonic|ManualResetEventSlim|EventWaitHandle/.test(context)) return false;
 
   return true;
 }
 
 // Parse the duration of a manual-wait call from its source line.
-//   waitForTimeout(3000), browser.pause(2000), Thread.sleep(1500), cy.wait(5000) → ms
-//   time.sleep(2) → 2000ms (seconds converted to ms)
+//   waitForTimeout(3000), browser.pause(2000), Thread.sleep(1500), Thread.Sleep(1500),
+//   WaitForTimeoutAsync(3000), Task.Delay(3000), cy.wait(5000) → ms
+//   time.sleep(2), Task.Delay(TimeSpan.FromSeconds(2)) → seconds converted to ms
 //   Variables/expressions/unparseable arguments → null (unknown)
 function parseManualWaitDuration(text) {
-  const msMatch = text.match(/(?:waitForTimeout|browser\.pause|Thread\.sleep|cy\.wait)\s*\(\s*(\d+)\s*\)?/);
+  const msMatch = text.match(
+    /(?:waitForTimeout|WaitForTimeoutAsync|browser\.pause|Thread\.sleep|Thread\.Sleep|cy\.wait)\s*\(\s*(\d+)\s*\)?/,
+  );
   if (msMatch) return Number(msMatch[1]);
+  const taskDelayMsMatch = text.match(/Task\.Delay\s*\(\s*(\d+)\s*\)/);
+  if (taskDelayMsMatch) return Number(taskDelayMsMatch[1]);
+  const taskDelaySecMatch = text.match(/Task\.Delay\s*\(\s*TimeSpan\.FromSeconds\s*\(\s*(\d+(?:\.\d+)?)\s*\)/);
+  if (taskDelaySecMatch) return Math.round(Number(taskDelaySecMatch[1]) * 1000);
   const secMatch = text.match(/time\.sleep\s*\(\s*(\d+(?:\.\d+)?)\s*\)?/);
   if (secMatch) return Math.round(Number(secMatch[1]) * 1000);
   return null;
@@ -474,7 +508,7 @@ const RULES = [
     remediation: 'Move assertions into spec files; locator, action, and page classes stay assertion-free (AGENTS.md: Page Object Discipline).',
     test: (filePath, content) => {
       if (LOCATOR_FILE_RE.test(filePath) || /pages?\//i.test(filePath) || /actions?\//i.test(filePath)) {
-        return findMatches(content, /\b(expect|assertEquals|assertThat)\s*\(|\bassert\s*\(|\bassert\s+[a-zA-Z(]/g, filePath);
+        return findMatches(content, /\b(expect|Expect|assertEquals|assertThat)\s*\(|\bassert\s*\(|\bassert\s+[a-zA-Z(]|\bAssert\.[A-Za-z]\w*\s*\(|\.Should\s*\(\s*\)/g, filePath);
       }
       return [];
     },
@@ -496,7 +530,7 @@ const RULES = [
       }
       const matches = findMatches(
         content,
-        /\.(getByRole|getByText|getByLabel|getByPlaceholder|getByTestId|locator|findElement(s)?|find_element(s)?)\s*\(|querySelector(All)?\s*\(|\.closest\s*\(|\.matches\s*\(|\$\$\s*\(|page\.\$\s*\(|\$\s*\(/g,
+        /\.(?:getByRole|GetByRole|getByText|GetByText|getByLabel|GetByLabel|getByPlaceholder|GetByPlaceholder|getByTestId|GetByTestId|locator|Locator|findElement(?:s)?|FindElement(?:s)?|find_element(?:s)?)\s*\(|(?:querySelector(?:All)?|QuerySelector(?:All)?)\s*\(|\.closest\s*\(|\.matches\s*\(|\$\$\s*\(|page\.\$\s*\(|\$\s*\(|\bAppiumBy\.[A-Za-z]|\bMobileBy\.[A-Za-z]/g,
         filePath,
       );
       // Python locator-constant unpacking: find_element(*locators.NAME) is NOT a leak
@@ -518,7 +552,7 @@ const RULES = [
       const lines = content.split('\n');
       return findMatches(
         content,
-        /waitForTimeout\s*\(|page\.waitForTimeout|time\.sleep\s*\(|Thread\.sleep\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(/g,
+        /waitForTimeout\s*\(|page\.waitForTimeout|WaitForTimeoutAsync\s*\(|page\.WaitForTimeoutAsync|time\.sleep\s*\(|Thread\.sleep\s*\(|Thread\.Sleep\s*\(|Task\.Delay\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(/g,
         filePath,
       ).map((hit) => {
         let subCase = classifyManualWaitSubCase(lines, hit.line);
@@ -530,7 +564,9 @@ const RULES = [
         if (isPollingLoop(lines, hit.line - 1)) {
           result.subCase = 'intentional';
           result.pollingLoop = true;
-          result.suggestion = 'threading.Event.wait()';
+          result.suggestion = filePath.endsWith('.cs')
+            ? 'ManualResetEventSlim.Wait()'
+            : 'threading.Event.wait()';
         }
         if (result.subCase === 'intentional') {
           const replaceability = classifyReplaceability(lines, hit.line - 1);
@@ -568,6 +604,10 @@ const RULES = [
     remediation: 'Group multi-test specs with the runner\'s native step primitive, e.g. test.step() (AGENTS.md: Test Constitution MUST DO #4).',
     test: (filePath, content) => {
       if (!TEST_FILE_RE.test(filePath) || filePath.endsWith('.feature')) {
+        return [];
+      }
+      // gavel: no-step — NUnit/Playwright.NET has no test.step() analog in v0.10.0; defer C# grouping
+      if (filePath.endsWith('.cs')) {
         return [];
       }
       const testCount = (content.match(/\b(?:test|it)\s*\(/g) || []).length;
@@ -655,7 +695,7 @@ const RULES = [
       const skipPrefixes = getSkipPrefixes();
       for (let i = 0; i < lines.length; i += 1) {
         const line = lines[i];
-        if (!/\btest\.skip\s*\(|\btest\.fixme\s*\(|\bit\.skip\s*\(|\b@wip\b|\b@quarantine\b|\b@flaky\b|@pytest\.mark\.skip\b/.test(line)) {
+        if (!/\btest\.skip\s*\(|\btest\.fixme\s*\(|\bit\.skip\s*\(|\b@wip\b|\b@quarantine\b|\b@flaky\b|@pytest\.mark\.skip\b|\[Ignore(?:\("|\])|\bAssert\.Ignore\s*\(|\[Fact\s*\(\s*Skip\s*=|\[Theory\s*\(\s*Skip\s*=/.test(line)) {
           continue;
         }
         const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
@@ -831,7 +871,7 @@ function walkFiles(dir, files = []) {
       walkFiles(fullPath, files);
       continue;
     }
-    if (/\.(ts|tsx|js|jsx|py|java|feature)$/.test(entry.name)) {
+    if (/\.(ts|tsx|js|jsx|py|java|cs|feature)$/.test(entry.name)) {
       files.push(fullPath);
     }
   }
@@ -1064,7 +1104,7 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { RULES, findMatches };
+module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration };
 
 if (require.main === module) {
   main();

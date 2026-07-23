@@ -68,6 +68,29 @@ const PROFILE_RELEASES = {
     profile: 'gavel-run',
     current: '8.4.0',
   },
+  playwright_dotnet: {
+    ecosystem: 'dotnet',
+    packages: [
+      'Microsoft.Playwright',
+      'Microsoft.Playwright.NUnit',
+      'Microsoft.Playwright.MSTest',
+      'Microsoft.Playwright.Xunit',
+    ],
+    profile: 'gavel-playwright',
+    current: '1.61.0',
+  },
+  appium_dotnet: {
+    ecosystem: 'dotnet',
+    packages: ['Appium.WebDriver'],
+    profile: 'gavel-appium',
+    current: '8.3.2',
+  },
+  selenium_dotnet: {
+    ecosystem: 'dotnet',
+    packages: ['Selenium.WebDriver'],
+    profile: 'gavel-selenium',
+    current: '4.45.0',
+  },
 };
 
 function parseSemver(version) {
@@ -149,6 +172,76 @@ function parsePyprojectToml(repoRoot) {
   return deps;
 }
 
+const EXCLUDED_DOTNET_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'bin',
+  'obj',
+  'packages',
+  '.vs',
+  'dist',
+  'build',
+  'coverage',
+]);
+
+function walkCsprojFiles(dir, files = []) {
+  if (!fs.existsSync(dir)) {
+    return files;
+  }
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (EXCLUDED_DOTNET_DIRS.has(entry.name)) {
+      continue;
+    }
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkCsprojFiles(fullPath, files);
+      continue;
+    }
+    if (entry.name.endsWith('.csproj')) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+function parseCsprojPackages(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const deps = {};
+
+  const selfClosingRe = /<PackageReference\b([^>]*)\/?>/gi;
+  let match = selfClosingRe.exec(content);
+  while (match) {
+    const attrs = match[1];
+    const include = attrs.match(/\bInclude="([^"]+)"/i);
+    const version = attrs.match(/\bVersion="([^"]+)"/i);
+    if (include && version) {
+      deps[include[1]] = version[1];
+    }
+    match = selfClosingRe.exec(content);
+  }
+
+  const childRe =
+    /<PackageReference\b([^>]*)>\s*<Version>([^<]+)<\/Version>/gi;
+  match = childRe.exec(content);
+  while (match) {
+    const include = match[1].match(/\bInclude="([^"]+)"/i);
+    if (include && !deps[include[1]]) {
+      deps[include[1]] = match[2].trim();
+    }
+    match = childRe.exec(content);
+  }
+
+  return deps;
+}
+
+function collectCsprojDeps(repoRoot) {
+  const deps = {};
+  for (const filePath of walkCsprojFiles(repoRoot)) {
+    Object.assign(deps, parseCsprojPackages(filePath));
+  }
+  return deps;
+}
+
 function detectNodeFramework(packageJson) {
   if (!packageJson) {
     return null;
@@ -183,8 +276,32 @@ function detectPythonFramework(repoRoot) {
   return null;
 }
 
+function detectDotnetFramework(repoRoot) {
+  const deps = collectCsprojDeps(repoRoot);
+  // Precedence: Appium.WebDriver (a superset of the Selenium C# client) → Playwright.NET
+  // → Selenium.WebDriver. An Appium repo also carries Selenium.WebDriver transitively,
+  // so the most specific package must win first.
+  const order = ['appium_dotnet', 'playwright_dotnet', 'selenium_dotnet'];
+  for (const framework of order) {
+    const meta = PROFILE_RELEASES[framework];
+    if (!meta) {
+      continue;
+    }
+    for (const pkg of meta.packages) {
+      if (deps[pkg]) {
+        return { framework, package: pkg, installed: deps[pkg], ...meta };
+      }
+    }
+  }
+  return null;
+}
+
 function detectFramework(repoRoot) {
-  return detectNodeFramework(readPackageJson(repoRoot)) || detectPythonFramework(repoRoot);
+  return (
+    detectDotnetFramework(repoRoot)
+    || detectNodeFramework(readPackageJson(repoRoot))
+    || detectPythonFramework(repoRoot)
+  );
 }
 
 function main() {
@@ -204,7 +321,7 @@ function main() {
     const output = {
       repo: resolved,
       detected: false,
-      message: 'No supported framework package detected in package.json, requirements.txt, or pyproject.toml.',
+      message: 'No supported framework package detected in package.json, requirements.txt, pyproject.toml, or *.csproj.',
     };
     console.log(jsonOutput ? JSON.stringify(output, null, 2) : output.message);
     process.exit(0);
@@ -244,7 +361,10 @@ if (require.main === module) {
 module.exports = {
   compareFreshness,
   detectFramework,
+  detectDotnetFramework,
   PROFILE_RELEASES,
   parseRequirementsTxt,
   parsePyprojectToml,
+  parseCsprojPackages,
+  collectCsprojDeps,
 };

@@ -41,6 +41,12 @@ const FRAMEWORK_COMMANDS = {
       .join(',');
     return `mvn test -Dtest=${classes}`;
   },
+  nunit: (files) => {
+    const filters = files
+      .map((file) => path.basename(file, path.extname(file)))
+      .join('|');
+    return `dotnet test --filter "FullyQualifiedName~${filters}"`;
+  },
 };
 
 function parseArgs(argv) {
@@ -268,7 +274,7 @@ function main() {
 
   if (!repoRoot) {
     console.error(
-      'Usage: node scripts/affected-tests.js <repo-root> (--tag <name> | --git | --changed a.ts,b.ts) [--framework playwright] [--tag-framework auto|playwright|pytest|junit|cucumber] [--json]',
+      'Usage: node scripts/affected-tests.js <repo-root> (--tag <name> | --git | --changed a.ts,b.ts) [--framework playwright] [--tag-framework auto|playwright|pytest|junit|nunit|cucumber] [--json]',
     );
     process.exit(2);
   }

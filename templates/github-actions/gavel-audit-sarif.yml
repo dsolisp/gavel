@@ -31,7 +31,7 @@ jobs:
       - name: Run Gavel audit (SARIF)
         id: gavel
         continue-on-error: true
-        run: npx --yes @dsolisp/gavel@0.9.0 audit --format sarif > gavel.sarif
+        run: npx --yes @dsolisp/gavel@0.10.0 audit --format sarif > gavel.sarif
 
       - name: Upload SARIF to Code Scanning
         if: always() && hashFiles('gavel.sarif') != ''

@@ -2,7 +2,7 @@
 // gavel — multi-framework tag extraction for test discovery
 //
 // Usage:
-//   node scripts/extract-tags.js <repo-root> [--framework auto|playwright|pytest|junit|cucumber]
+//   node scripts/extract-tags.js <repo-root> [--framework auto|playwright|pytest|junit|nunit|cucumber]
 //   node scripts/extract-tags.js <repo-root> --tag smoke
 
 const fs = require('fs');
@@ -18,6 +18,7 @@ const EXCLUDED_DIRS = new Set([
 //   TS/JS   — login.spec.ts, login.test.tsx
 //   pytest  — test_login.py, login_test.py (PEP 8 discovery convention)
 //   JUnit   — LoginTest.java, TestLogin.java, LoginTests.java, LoginIT.java
+//   NUnit   — LoginTest.cs, LoginTests.cs, login.spec.cs, login.test.cs
 //   Cucumber/Behave — any *.feature file (tags live above Feature/Scenario)
 function isTestFile(filePath) {
   const base = path.basename(filePath);
@@ -26,6 +27,8 @@ function isTestFile(filePath) {
     /^test_[\w-]+\.py$/.test(base) ||
     /^[\w-]+_test\.py$/.test(base) ||
     /\.(spec|test)\.py$/.test(base) ||
+    /^(Test[\w-]+|[\w-]+Tests?)\.cs$/.test(base) ||
+    /\.(spec|test)\.cs$/.test(base) ||
     /^(Test[A-Z]\w*|[A-Z]\w*(Test|Tests|IT))\.java$/.test(base) ||
     /\.feature$/.test(base)
   );
@@ -42,6 +45,10 @@ const FRAMEWORK_TAG_PATTERNS = {
   junit: [
     /@Tag\s*\(\s*['"]([\w][\w.-]*)['"]\s*\)/g,
     /@Category\s*\(\s*([^)]+)\s*\)/g,
+  ],
+  nunit: [
+    /\[(?:Category|TestCategory)\s*\(\s*([^)]+)\s*\)\]/g,
+    /\[Trait\s*\(\s*"[^"]+"\s*,\s*"([^"]+)"\s*\)\]/g,
   ],
   cucumber: [
     /^\s*((?:@[\w][\w.-]*(?:\s+|$))+)/gm,
@@ -72,6 +79,12 @@ function detectFramework(filePath) {
   if (/\.py$/.test(filePath)) return 'pytest';
   if (/\.feature$/.test(filePath)) return 'cucumber';
   if (/\.java$/.test(filePath)) return 'junit';
+  // All C# runners report under the `nunit` label — it is a C#-family key, not a
+  // claim the file is NUnit. Tag extraction is runner-agnostic: the `nunit` pattern
+  // set matches NUnit [Category], MSTest [TestCategory], and xUnit [Trait] alike.
+  // A PackageReference sniff to name the exact runner is intentionally out of scope
+  // (it would add a freshness/profile surface — see dotnet-ecosystem-v0.10.0 non-goals).
+  if (/\.cs$/.test(filePath)) return 'nunit';
   if (/\.(ts|tsx|js|jsx)$/.test(filePath)) return 'playwright';
   return 'playwright';
 }
@@ -83,6 +96,15 @@ function addTag(tags, rawTag) {
   const tagMatches = [...raw.matchAll(/@([\w][\w.-]*)/g)];
   if (tagMatches.length > 0) {
     for (const match of tagMatches) {
+      const tag = match[1].toLowerCase();
+      if (!RESERVED_TAGS.has(tag)) tags.add(tag);
+    }
+    return;
+  }
+
+  const quoted = [...raw.matchAll(/["']([\w][\w.-]*)["']/g)];
+  if (quoted.length > 0) {
+    for (const match of quoted) {
       const tag = match[1].toLowerCase();
       if (!RESERVED_TAGS.has(tag)) tags.add(tag);
     }
@@ -125,7 +147,7 @@ function main() {
   const jsonOutput = args.includes('--json');
 
   if (!repoRoot) {
-    console.error('Usage: node scripts/extract-tags.js <repo-root> [--framework auto|playwright|pytest|junit|cucumber] [--tag <name>] [--json]');
+    console.error('Usage: node scripts/extract-tags.js <repo-root> [--framework auto|playwright|pytest|junit|nunit|cucumber] [--tag <name>] [--json]');
     process.exit(2);
   }
 

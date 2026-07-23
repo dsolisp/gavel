@@ -60,6 +60,9 @@ if (behaveStale.status === 0) {
 for (const [label, fixturePath] of [
   ['pytest-playwright', 'fixtures/profiles/pytest-playwright-fresh'],
   ['robot', 'fixtures/profiles/robot-fresh'],
+  ['playwright-dotnet', 'fixtures/profiles/playwright-dotnet-fresh'],
+  ['appium-dotnet', 'fixtures/profiles/appium-dotnet-fresh'],
+  ['selenium-dotnet', 'fixtures/profiles/selenium-dotnet-fresh'],
 ]) {
   const result = run(process.execPath, [
     path.join(root, 'scripts/check-profile-freshness.js'),
@@ -68,7 +71,22 @@ for (const [label, fixturePath] of [
   ]);
   if (result.status !== 0) {
     console.error(`Expected fresh ${label} fixture to pass freshness check.`);
+    console.error(result.stdout || result.stderr);
     process.exit(1);
+  }
+  const dotnetExpectations = {
+    'playwright-dotnet': { framework: 'playwright_dotnet', profile: 'gavel-playwright' },
+    'appium-dotnet': { framework: 'appium_dotnet', profile: 'gavel-appium' },
+    'selenium-dotnet': { framework: 'selenium_dotnet', profile: 'gavel-selenium' },
+  };
+  if (dotnetExpectations[label]) {
+    const { framework, profile } = dotnetExpectations[label];
+    const payload = JSON.parse(result.stdout);
+    if (payload.framework !== framework || payload.profile !== profile) {
+      console.error(`${label} fixture must resolve to ${framework} → ${profile}`);
+      console.error(result.stdout);
+      process.exit(1);
+    }
   }
 }
 
@@ -85,6 +103,7 @@ const requiredProfileSnippets = [
   ['skills/gavel-playwright/SKILL.md', 'getByRole'],
   ['skills/gavel-cypress/SKILL.md', 'cy.get'],
   ['skills/gavel-selenium/SKILL.md', 'find_element'],
+  ['skills/gavel-appium/SKILL.md', 'AppiumBy'],
   ['skills/gavel-webdriverio/SKILL.md', '$'],
   ['skills/gavel-cucumber/SKILL.md', 'Given'],
 ];

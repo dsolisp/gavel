@@ -123,7 +123,60 @@ if (!tagMap['e2e-smoke'].some((f) => f.endsWith('login.feature'))) {
   process.exit(1);
 }
 
+// SpecFlow/Reqnroll: a .feature paired with a thin [Binding] Steps.cs. Its @tags
+// are discovered via the same cucumber pattern (contract: dotnet-ecosystem-v0.10.0
+// extract-tags table). Steps.cs is a binding, not a spec, so it is not a tag source.
+if (!tagMap['checkout-smoke'] || !tagMap['checkout-smoke'].some((f) => f.endsWith('Checkout.feature'))) {
+  console.error('extract-tags did not find @checkout-smoke in Checkout.feature (SpecFlow/Reqnroll naming).');
+  process.exit(1);
+}
+
+if (!tagMap['payments.regression'] || !tagMap['payments.regression'].some((f) => f.endsWith('Checkout.feature'))) {
+  console.error('extract-tags did not find dotted SpecFlow tag @payments.regression in Checkout.feature.');
+  process.exit(1);
+}
+
+const hasNunitFile = tagMap.smoke.some((f) => f.endsWith('LoginTests.cs'));
+if (!hasNunitFile) {
+  console.error('extract-tags did not find [Category("smoke")] in LoginTests.cs (NUnit naming).');
+  process.exit(1);
+}
+
+if (!tagMap['ci.fast'].some((f) => f.endsWith('LoginTests.cs'))) {
+  console.error('extract-tags did not find dotted NUnit tag [Category("ci.fast")].');
+  process.exit(1);
+}
+
+if (!tagMap['e2e-smoke'].some((f) => f.endsWith('LoginTests.cs'))) {
+  console.error('extract-tags did not find hyphenated NUnit tag [Category("e2e-smoke")].');
+  process.exit(1);
+}
+
+// Test 6: --tag smoke --tag-framework nunit should find only the C# file
+const smokeNunit = runJson(process.execPath, [
+  path.join(root, 'scripts/affected-tests.js'),
+  fixtureRoot,
+  '--tag', 'smoke',
+  '--tag-framework', 'nunit',
+  '--json',
+]);
+
+const hasCsFile = smokeNunit.affectedSpecs.some((f) => f.endsWith('.cs'));
+if (!hasCsFile) {
+  console.error('Tag discovery @smoke --tag-framework nunit did not find LoginTests.cs.');
+  process.exit(1);
+}
+if (smokeNunit.affectedSpecs.some((f) => f.endsWith('.ts') || f.endsWith('.py') || f.endsWith('.java'))) {
+  console.error('Tag discovery @smoke --tag-framework nunit should not find non-.cs files.');
+  process.exit(1);
+}
+if (!smokeNunit.recommendedCommand.startsWith('dotnet test')) {
+  console.error('Tag discovery @smoke --tag-framework nunit should recommend dotnet test command.');
+  process.exit(1);
+}
+
 console.log(
-  'Affected-tests tag fixtures OK: smoke (auto), smoke (pytest), regression, extract-tags, ' +
-    'real-world naming (test_*.py, *Test.java, *.feature), dotted/hyphenated tags, multi-tag lines.',
+  'Affected-tests tag fixtures OK: smoke (auto), smoke (pytest), smoke (nunit), regression, extract-tags, ' +
+    'real-world naming (test_*.py, *Test.java, *Tests.cs, *.feature), dotted/hyphenated tags, multi-tag lines, ' +
+    'SpecFlow/Reqnroll (.feature + Steps.cs).',
 );

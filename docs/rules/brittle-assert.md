@@ -95,6 +95,17 @@ expect(message).toBe(NOT_FOUND); // same-file constant — clean
 
 Deliberate shallow provenance (v1): only same-file bindings. Imported constants are treated as literals unless allowlisted.
 
+## Known limitations (false negatives)
+
+`proseLiteral` (`scripts/self-check.js`) inspects only the **first** quoted literal on the line. Assertions whose *actual* is a literal and whose *expected* is prose are therefore missed:
+
+| Pattern | Why it is missed | Status |
+|---------|------------------|--------|
+| `"actual".Should().Be("Payment rejected.")` (FluentAssertions, subject-first) | First literal is the short-token subject; argument-position prose is not inspected | Deferred — roadmap v0.11.0 #11 |
+| `Assert.That("actual", Is.EqualTo("Welcome home!"))` (NUnit, subject-first) | Same — first literal `"actual"` clears the prose guard; the `Is.EqualTo(...)` argument is not checked | Deferred — roadmap v0.11.0 #11 |
+
+Surfaced by the v0.10.0 .NET ecosystem Tier-R cross-review. Not widened in v0.10.0: `proseLiteral` is language-agnostic and shared by every language, so inspecting the argument position needs corpus proof against cross-language FPs before it ships.
+
 ## Corpus path
 
 `fixtures/corpus/brittle-assert/`

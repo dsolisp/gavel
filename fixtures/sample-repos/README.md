@@ -11,6 +11,7 @@ Minimal golden repos per supported framework. Each repo demonstrates:
 | Framework | Language | Path | Good / Bad pair | Rules fired |
 |-----------|----------|------|-----------------|-------------|
 | Playwright | TypeScript | [`playwright/`](./playwright/) | `login.good.spec.ts` vs `login.bad.spec.ts` | 7 of 9 (40 findings) |
+| Playwright.NET | C# | [`playwright-dotnet/`](./playwright-dotnet/) | `LoginGoodTests.cs` vs `LoginBadTests.cs` | 5 of 9 (28 findings) |
 | Cypress | JavaScript | [`cypress/`](./cypress/) | `login.good.cy.js` vs `login.bad.cy.js` | 7 of 9 (12 findings) |
 | Selenium | Python | [`selenium/`](./selenium/) | `test_login_good.py` vs `test_login_bad.py` | 5 of 9 (36 findings) |
 | WebdriverIO | TypeScript | [`webdriverio/`](./webdriverio/) | `login.good.spec.ts` vs `login.bad.spec.ts` | 7 of 9 (32 findings) |
@@ -30,6 +31,7 @@ From the gavel repo root, point self-check at any sample:
 
 ```bash
 node scripts/self-check.js fixtures/sample-repos/playwright
+node scripts/self-check.js fixtures/sample-repos/playwright-dotnet
 node scripts/self-check.js fixtures/sample-repos/cypress
 node scripts/self-check.js fixtures/sample-repos/selenium
 node scripts/self-check.js fixtures/sample-repos/webdriverio

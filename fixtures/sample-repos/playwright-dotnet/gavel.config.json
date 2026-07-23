@@ -1,0 +1,6 @@
+{
+  "reportOnlyExits": true,
+  "allowlist": [],
+  "criticalAreas": ["login", "auth"],
+  "criticalTags": ["no-di", "expect-in-action"]
+}

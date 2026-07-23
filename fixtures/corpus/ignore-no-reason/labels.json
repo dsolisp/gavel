@@ -39,6 +39,21 @@
       "language": "py",
       "framework": "pytest",
       "rationale": "utility module outside test_* naming — context-aware rule skips"
+    },
+    {
+      "file": "violating/BareIgnoreTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "bare gavel-ignore in a C# test file without tag or reason",
+      "expectedFindings": [{ "line": 7, "tag": "ignore-no-reason" }]
+    },
+    {
+      "file": "clean/TaggedIgnoreTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "tagged gavel-ignore with reason is not bare"
     }
   ]
 }

@@ -46,6 +46,36 @@
       "language": "py",
       "framework": "pytest",
       "rationale": "recognized ENV_LIMIT prefix in skip string suppresses skip-marker"
+    },
+    {
+      "file": "violating/UnreasonedSkipTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "[Ignore] without reason or recognized prefix",
+      "expectedFindings": [{ "line": 7, "tag": "skip-marker" }]
+    },
+    {
+      "file": "clean/ReasonedSkipTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "[Ignore(\"TIC-123: ...\")] with ticket reason"
+    },
+    {
+      "file": "violating/XunitSkipTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "[Fact(Skip = \"temporarily off\")] with no ticket or recognized prefix",
+      "expectedFindings": [{ "line": 7, "tag": "skip-marker" }]
+    },
+    {
+      "file": "clean/XunitReasonedSkipTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "[Fact(Skip = \"TIC-456: ...\")] carries a ticket reason"
     }
   ]
 }

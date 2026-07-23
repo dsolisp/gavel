@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "expect-in-action",
+  "samples": [
+    {
+      "file": "violating/pages/actions/bad-login.actions.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "expect() assertion inside an action class instead of a spec",
+      "expectedFindings": [{ "line": 6, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/actions/BadLoginActions.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual inside an action class instead of a spec",
+      "expectedFindings": [{ "line": 13, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "clean/pages/actions/good-login.actions.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "action delegates to a locator and returns without asserting"
+    },
+    {
+      "file": "clean/pages/actions/GoodLoginActions.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "action delegates to a locator and returns without asserting"
+    }
+  ]
+}

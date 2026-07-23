@@ -1,6 +1,14 @@
 # Contract: Playwright.NET Language Surface (v0.10.0)
 
-**Status:** Design contract — implementation not yet shipped.  
+> **SUPERSEDED (v0.10.0):** This contract is superseded by
+> [`dotnet-ecosystem-v0.10.0.md`](./dotnet-ecosystem-v0.10.0.md), which widens the
+> .NET surface to the full ecosystem — Appium (`gavel-appium`), Selenium C# full
+> constitution audit (`gavel-selenium`), and the C# common libraries
+> (NUnit/xUnit/MSTest/SpecFlow/Reqnroll/FluentAssertions). Retained for historical
+> reference; the Playwright.NET decisions below still hold, but the "Selenium C#
+> audit — out of scope" and "detect-only" notes are no longer accurate.
+
+**Status:** Design contract — items #1–#2 implemented on branch; rule ports and remaining prompts open.  
 **Date:** 2026-07-20  
 **Release:** v0.10.0  
 **Audience:** Contributors implementing or reviewing the Playwright.NET language surface
@@ -57,6 +65,12 @@ Extend the extension filter to include `.cs`:
 ```
 
 ### `TEST_FILE_RE`
+
+Shipped regex (v0.10.0 item #1):
+
+```js
+/\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|cs|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$|(^|\/)[^/]+Tests?\.cs$/
+```
 
 Must match at least:
 
@@ -176,7 +190,7 @@ Self-check on the sample must produce known bad findings and zero unexpected fin
 |------------|----------|
 | File naming | `*Test.cs`, `*Tests.cs` discovered as test specs |
 | NUnit | `[Category("smoke")]` → tag `smoke` |
-| Framework label | `nunit` (or `dotnet`) when reporting tag framework |
+| Framework label | `nunit` when reporting tag framework (Playwright.NET / NUnit `[Category]`) |
 
 ---
 

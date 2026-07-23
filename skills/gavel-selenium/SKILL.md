@@ -193,3 +193,104 @@ def test_shows_success(driver):
 ```
 
 *Reference:* AGENTS.md — Selector Boundary Rule, Page Object Discipline.
+
+---
+
+## Selenium C# (.NET)
+
+NUnit / xUnit / MSTest over `Selenium.WebDriver`. Detected via `gavel-detect`
+when `Selenium.WebDriver` appears in `*.csproj` (and no `Microsoft.Playwright*`
+or `Appium.WebDriver`). Cross-framework POM rules: `gavel` + `gavel-e2e`.
+**Pin:** `Selenium.WebDriver` **4.45.0**.
+
+### Locators (C#)
+
+```csharp
+driver.FindElement(By.CssSelector("[role='button'][aria-label='Submit']"));  // preferred
+driver.FindElement(By.Id("submit"));                                          // stable id
+driver.FindElement(By.XPath("//button[@aria-label='Submit']"));               // last resort
+// NEVER: raw By.* / FindElement chains outside a locator class (selector-leak)
+```
+
+Locator classes live under `Pages/Locators/` (or `locators/`). Actions and specs
+call named locator members — no inline `FindElement` / `By.*` outside that layer.
+
+### Waits and Assertions (C#)
+
+```csharp
+var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+var alert = wait.Until(ExpectedConditions.ElementIsVisible(By.CssSelector("[role='alert']")));
+Assert.That(alert.Text, Is.EqualTo("Success"));
+```
+
+**Prohibited:** `Thread.Sleep`, `Task.Delay` with fixed duration (`manual-wait`).
+Prefer `WebDriverWait` + `ExpectedConditions` on observable state. Signal-driven
+`ManualResetEventSlim` / `TaskCompletionSource` is allowed only when a readiness
+owner calls `Set()` — an unset gate is a renamed sleep.
+
+### DI via Fixtures (C#)
+
+Inject the driver / page objects via NUnit `[SetUp]`, xUnit `IClassFixture<T>` /
+constructor injection, or MSTest `[TestInitialize]` — never `new DashboardPage(driver)`
+inside a test body (`no-di`).
+
+```csharp
+public class DashboardTests : IClassFixture<DriverFixture>
+{
+    private readonly DashboardPage _page;
+    public DashboardTests(DriverFixture fixture) => _page = fixture.DashboardPage;
+
+    [Fact]
+    public void ShowsMetrics() => Assert.That(_page.Actions.MetricsVisible(), Is.True);
+}
+```
+
+### POM: Class-Based Composition (C#)
+
+```csharp
+public sealed class DashboardPage
+{
+    public DashboardPage(IWebDriver driver)
+    {
+        Locators = new DashboardLocators(driver);
+        Actions = new DashboardActions(Locators);
+    }
+    public DashboardLocators Locators { get; }
+    public DashboardActions Actions { get; }
+}
+```
+
+### Run Commands (C#)
+
+```bash
+dotnet build
+dotnet test
+dotnet test --filter "FullyQualifiedName~DashboardTests"
+dotnet test --filter "Category=smoke"    # NUnit [Category] / xUnit [Trait("Category","smoke")]
+```
+
+### Skip / Ignore Markers (C#)
+
+```csharp
+[Ignore("TIC-123: broker sandbox down")]     // NUnit — reason + ticket required
+Assert.Ignore("TIC-456: known regression");   // same policy
+[Fact(Skip = "TIC-789: flaky under Grid")]     // xUnit — reason required
+```
+
+Bare `[Ignore]`, `Assert.Ignore()` without reason, or `[Fact(Skip = "")]` →
+`skip-marker` / `ignore-no-reason`.
+
+### C# Anti-Patterns
+
+**Selector leak** — `driver.FindElement(By.*)` in a spec or action. Move the
+strategy into a locator class; specs call named members.
+
+**Manual wait** — `Thread.Sleep(3000)` before reading state. Replace with
+`WebDriverWait` + `ExpectedConditions` on the target condition.
+
+**No DI** — `new DashboardPage(driver)` in a `[Test]` / `[Fact]` body. Inject via
+`[SetUp]` / `IClassFixture<T>` / `[TestInitialize]`.
+
+*Reference:* AGENTS.md — Selector Boundary Rule, QA Ladder rung 3 (native waits),
+Page Object Discipline.
+
