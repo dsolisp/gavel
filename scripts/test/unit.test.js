@@ -49,7 +49,9 @@ test('buildSuiteHealthSummary counts dead code and constitution tags', () => {
     { tag: 'manual-wait', severity: 'blocker', autofix: 'review', file: 'tests/wait.spec.ts' },
     { tag: 'bare-test-fail', severity: 'fix', autofix: 'review', file: 'tests/fail.spec.ts' },
   ];
-  const summary = buildSuiteHealthSummary(autofix, selfCheck, root);
+  // Use audit-autofix fixture root (TS-only, no .cs files) so C# detection does not null counts.
+  const tsRoot = path.join(root, 'fixtures/audit-autofix');
+  const summary = buildSuiteHealthSummary(autofix, selfCheck, tsRoot);
   assert.equal(summary.deadPoms, 1);
   assert.equal(summary.manualWaits, 1);
   assert.equal(summary.bareTestFail, 1);
@@ -59,6 +61,46 @@ test('buildSuiteHealthSummary counts dead code and constitution tags', () => {
   const formatted = formatSuiteHealth(summary);
   assert.doesNotMatch(formatted, /Weighted violations/);
   assert.doesNotMatch(formatted, /By path category/);
+});
+
+test('buildSuiteHealthSummary reports n/a (csharp) for C# repos', () => {
+  const csharpRoot = path.join(root, 'fixtures/sample-repos/playwright-dotnet');
+  const summary = buildSuiteHealthSummary([], [], csharpRoot);
+  assert.equal(summary.deadPoms, null);
+  assert.equal(summary.deadLocators, null);
+  assert.equal(summary.unusedFactories, null);
+  assert.equal(summary.deadCodeStatus, 'n/a (csharp)');
+  assert.equal(summary.safeAutofixCandidates, null);
+  assert.equal(summary.safeAutofixStatus, 'n/a (csharp)');
+  const formatted = formatSuiteHealth(summary);
+  assert.match(formatted, /Dead POMs: n\/a \(csharp\)/);
+  assert.match(formatted, /Dead locators: n\/a \(csharp\)/);
+  assert.match(formatted, /Unused factories: n\/a \(csharp\)/);
+  assert.match(formatted, /Safe autofix candidates: n\/a \(csharp\)/);
+  assert.doesNotMatch(formatted, /Dead POMs: 0/);
+});
+
+test('audit-report on C# sample repo prints n/a (csharp) and not Dead POMs: 0', () => {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(root, 'scripts/audit-report.js'), 'fixtures/sample-repos/playwright-dotnet'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Dead POMs: n\/a \(csharp\)/);
+  assert.match(result.stdout, /Dead locators: n\/a \(csharp\)/);
+  assert.doesNotMatch(result.stdout, /Dead POMs: 0/);
+
+  const jsonResult = spawnSync(
+    process.execPath,
+    [path.join(root, 'scripts/audit-report.js'), 'fixtures/sample-repos/playwright-dotnet', '--json'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  const payload = JSON.parse(jsonResult.stdout);
+  assert.equal(payload.suiteHealth.deadPoms, null);
+  assert.equal(payload.suiteHealth.deadCodeStatus, 'n/a (csharp)');
+  assert.equal(payload.suiteHealth.safeAutofixCandidates, null);
+  assert.equal(payload.suiteHealth.safeAutofixStatus, 'n/a (csharp)');
 });
 
 test('path weights group findings by label and scale counts', () => {

@@ -6,6 +6,7 @@ const path = require('path');
 const { loadGavelConfig } = require('./load-gavel-config');
 const { normalizeArea } = require('./area-map');
 const { matchGlob } = require('./glob-match');
+const { hasCSharpFiles } = require('./audit-autofix');
 
 function areaForFile(filePath, areaMap) {
   if (!filePath) {
@@ -116,16 +117,23 @@ function buildSuiteHealthSummary(
     }
   }
 
-  return {
-    deadPoms: autofixFindings.filter((item) => item.tag === 'dead-pom').length,
-    deadLocators: autofixFindings.filter((item) => item.tag === 'dead-locator').length,
-    unusedFactories: autofixFindings.filter((item) => item.tag === 'unused-factory').length,
+  const csharp = hasCSharpFiles(repoRoot);
+  const deadPomsCount = autofixFindings.filter((item) => item.tag === 'dead-pom').length;
+  const deadLocatorsCount = autofixFindings.filter((item) => item.tag === 'dead-locator').length;
+  const unusedFactoriesCount = autofixFindings.filter((item) => item.tag === 'unused-factory').length;
+
+  const summary = {
+    deadPoms: csharp ? null : deadPomsCount,
+    deadLocators: csharp ? null : deadLocatorsCount,
+    unusedFactories: csharp ? null : unusedFactoriesCount,
+    deadCodeStatus: csharp ? 'n/a (csharp)' : undefined,
     selectorLeaks: selfCheckFindings.filter((item) => item.tag === 'selector-leak').length,
     manualWaits: selfCheckFindings.filter((item) => item.tag === 'manual-wait').length,
     skipMarkers: selfCheckFindings.filter((item) => item.tag === 'skip-marker').length,
     bareTestFail: selfCheckFindings.filter((item) => item.tag === 'bare-test-fail').length,
     constitutionViolations: selfCheckFindings.length,
-    safeAutofixCandidates: autofixFindings.length,
+    safeAutofixCandidates: csharp ? null : autofixFindings.length,
+    safeAutofixStatus: csharp ? 'n/a (csharp)' : undefined,
     criticalAreaViolations: criticalCount,
     excludedFileCount,
     rawViolations: all.length,
@@ -135,21 +143,27 @@ function buildSuiteHealthSummary(
     byLabel,
     scoredFindings: all.sort((a, b) => a.impactScore - b.impactScore),
   };
+
+  return summary;
+}
+
+function fmtDeadCode(value) {
+  return value === null ? 'n/a (csharp)' : String(value);
 }
 
 function formatSuiteHealth(summary) {
   const lines = [
     'Suite health:',
-    `  Dead POMs: ${summary.deadPoms}`,
-    `  Dead locators: ${summary.deadLocators}`,
-    `  Unused factories: ${summary.unusedFactories}`,
+    `  Dead POMs: ${fmtDeadCode(summary.deadPoms)}`,
+    `  Dead locators: ${fmtDeadCode(summary.deadLocators)}`,
+    `  Unused factories: ${fmtDeadCode(summary.unusedFactories)}`,
     `  Selector leaks: ${summary.selectorLeaks}`,
     `  Manual waits: ${summary.manualWaits}`,
     `  Skip/quarantine markers: ${summary.skipMarkers}`,
     `  Bare test.fail markers: ${summary.bareTestFail}`,
     `  Constitution violations: ${summary.constitutionViolations}`,
     `  Critical-area violations: ${summary.criticalAreaViolations}`,
-    `  Safe autofix candidates: ${summary.safeAutofixCandidates}`,
+    `  Safe autofix candidates: ${fmtDeadCode(summary.safeAutofixCandidates)}`,
     `  Excluded files: ${summary.excludedFileCount ?? 0}`,
   ];
 

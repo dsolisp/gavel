@@ -38,6 +38,26 @@ const CLASS_EXPORT_RE = /export\s+(?:default\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*
 const FACTORY_FN_RE = /export\s+(?:async\s+)?function\s+([A-Za-z_][A-Za-z0-9_]*)/g;
 const FACTORY_CONST_RE = /export\s+const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/g;
 
+const CS_EXCLUDED_DIRS = new Set(['bin', 'obj']);
+
+function hasCSharpFiles(repoRoot) {
+  const CS_FILE_RE = /\.cs$/;
+  function walk(dir) {
+    if (!fs.existsSync(dir)) return false;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (EXCLUDED_DIRS.has(entry.name) || CS_EXCLUDED_DIRS.has(entry.name)) continue;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (walk(fullPath)) return true;
+        continue;
+      }
+      if (CS_FILE_RE.test(fullPath)) return true;
+    }
+    return false;
+  }
+  return walk(repoRoot);
+}
+
 function walkFiles(dir, matcher, files = []) {
   if (!fs.existsSync(dir)) {
     return files;
@@ -466,6 +486,7 @@ module.exports = {
   applyCandidate,
   walkFiles,
   relPath,
+  hasCSharpFiles,
   EXCLUDED_DIRS,
   CODE_FILE_RE,
 };
