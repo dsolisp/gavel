@@ -641,3 +641,78 @@ test('adoption (#8/#9) masks comments/strings and excludes Playwright waitFor* b
   assert.deepEqual(helpers.map((h) => h.symbol), ['waitForModal']);
   assert.ok(helpers.every((h) => h.tag === 'unused-helper' && h.severity === 'report'));
 });
+
+test('no-di Gate 1: infrastructure files (BaseTest.cs, *TestsBase.cs) never emit no-di', () => {
+  const { isNoDiInfrastructureFile } = require('../self-check');
+  assert.equal(isNoDiInfrastructureFile('BaseTest.cs'), true);
+  assert.equal(isNoDiInfrastructureFile('Support/BaseTest.cs'), true);
+  assert.equal(isNoDiInfrastructureFile('LoginTestsBase.cs'), true);
+  assert.equal(isNoDiInfrastructureFile('UiTestsBase.cs'), true);
+  assert.equal(isNoDiInfrastructureFile('LoginTests.cs'), false);
+  assert.equal(isNoDiInfrastructureFile('LoginTest.cs'), false);
+  assert.equal(isNoDiInfrastructureFile('FactConstructionTests.cs'), false);
+});
+
+test('no-di Gate 2: C# method scope — only fires inside [Test]/[Fact], not [SetUp]', () => {
+  const { RULES } = require('../self-check');
+  const noDi = RULES.find((r) => r.id === 'no-di');
+
+  // BaseTest.cs + SetUp → [] (Gate 1 skips the file)
+  assert.deepEqual(
+    noDi.test('BaseTest.cs', '[SetUp]\npublic void Setup() {\n  new LoginPage(page);\n}'),
+    [],
+  );
+
+  // LoginTests.cs + [Test] + new LoginPage → hit
+  const testHits = noDi.test(
+    'Tests/LoginTests.cs',
+    'public class LoginTests {\n  [Test]\n  public void Login() {\n    new LoginPage(page);\n  }\n}',
+  );
+  assert.equal(testHits.length, 1);
+
+  // FooTests.cs + [SetUp] + new LoginPage → [] (Gate 2 skips SetUp)
+  assert.deepEqual(
+    noDi.test(
+      'Tests/FooTests.cs',
+      'public class FooTests {\n  [SetUp]\n  public void Setup() {\n    new LoginPage(page);\n  }\n}',
+    ),
+    [],
+  );
+
+  // FooTests.cs + [Test] + new LoginPage → hit
+  const fooHits = noDi.test(
+    'Tests/FooTests.cs',
+    'public class FooTests {\n  [Test]\n  public void DoLogin() {\n    new LoginPage(page);\n  }\n}',
+  );
+  assert.equal(fooHits.length, 1);
+
+  // login.spec.ts + new LoginPage → hit (no C# method gate for non-.cs)
+  const tsHits = noDi.test(
+    'login.spec.ts',
+    'test("x", () => {\n  new LoginPage(page);\n});',
+  );
+  assert.equal(tsHits.length, 1);
+
+  // [Fact] + new LoginPage → hit (xUnit)
+  const factHits = noDi.test(
+    'Tests/FactTests.cs',
+    'public class FactTests {\n  [Fact]\n  public void Login() {\n    new LoginPage(page);\n  }\n}',
+  );
+  assert.equal(factHits.length, 1);
+
+  // [Theory] + new LoginPage → hit (xUnit)
+  const theoryHits = noDi.test(
+    'Tests/TheoryTests.cs',
+    'public class TheoryTests {\n  [Theory]\n  public void Login(string x) {\n    new LoginPage(page);\n  }\n}',
+  );
+  assert.equal(theoryHits.length, 1);
+
+  // [TearDown] + new LoginPage → [] (Gate 2 skips TearDown)
+  assert.deepEqual(
+    noDi.test(
+      'Tests/FooTests.cs',
+      'public class FooTests {\n  [TearDown]\n  public void Cleanup() {\n    new LoginPage(page);\n  }\n}',
+    ),
+    [],
+  );
+});

@@ -646,6 +646,79 @@ function splitTestBlocks(content) {
   return blocks;
 }
 
+// Gate 1 for no-di: infrastructure base classes that wire fixture DI in
+// [SetUp]/[TearDown] are not spec bodies. Only the no-di rule skips these —
+// other test-only rules still need BaseTest.cs as a test file.
+const NO_DI_INFRA_RE = /^(?:BaseTest\.cs|.+TestBase\.cs|.+TestsBase\.cs)$/;
+
+function isNoDiInfrastructureFile(filePath) {
+  const basename = filePath.replace(/\\/g, '/').replace(/^.*\//, '');
+  return NO_DI_INFRA_RE.test(basename);
+}
+
+// Gate 2 for no-di: on .cs files, only fire inside methods whose attribute is
+// [Test], [TestCase], [TestCaseSource], [Fact], or [Theory]. Constructions in
+// [SetUp], [TearDown], etc. are NUnit/xUnit fixture DI, not spec-body violations.
+// Strategy: use findMatches for comment-aware detection, then filter by lines
+// that fall within a test-method body (tracked via brace depth + attributes).
+const CS_ATTR_RE = /^\s*\[(Test\b|TestCase\b|TestCaseSource\b|Fact\b|Theory\b|SetUp\b|OneTimeSetUp\b|TearDown\b|OneTimeTearDown\b|TestInitialize\b|ClassInitialize\b|TestCleanup\b|ClassCleanup\b)/;
+const CS_TEST_ATTR_RE = /\[(Test\b|TestCase\b|TestCaseSource\b|Fact\b|Theory\b)/;
+const CS_SETUP_ATTR_RE = /\[(SetUp\b|OneTimeSetUp\b|TearDown\b|OneTimeTearDown\b|TestInitialize\b|ClassInitialize\b|TestCleanup\b|ClassCleanup\b)/;
+const CS_BRACE_RE = /[{}]/g;
+
+function findCSharpTestMethodMatches(content, pattern, filePath) {
+  const allMatches = findMatches(content, pattern, filePath);
+  if (allMatches.length === 0) return [];
+
+  const lines = content.split('\n');
+  const testMethodLines = new Set();
+  let depth = 0;
+  let pendingTestAttr = false;
+  let inTestMethod = false;
+  let methodBodyDepth = 0;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+
+    if (CS_ATTR_RE.test(trimmed)) {
+      if (CS_TEST_ATTR_RE.test(trimmed)) {
+        pendingTestAttr = true;
+      } else if (CS_SETUP_ATTR_RE.test(trimmed)) {
+        pendingTestAttr = false;
+      }
+    }
+
+    const braces = trimmed.match(CS_BRACE_RE) || [];
+
+    // Process opens before closes so that `{ }` on one line enters and exits
+    // the method in the correct order.
+    for (const brace of braces) {
+      if (brace === '{') {
+        if (pendingTestAttr && !inTestMethod) {
+          pendingTestAttr = false;
+          depth += 1;
+          inTestMethod = true;
+          methodBodyDepth = depth;
+          continue;
+        }
+        depth += 1;
+      } else {
+        if (inTestMethod && depth - 1 < methodBodyDepth) {
+          inTestMethod = false;
+        }
+        depth -= 1;
+        if (depth < 0) depth = 0;
+      }
+    }
+
+    if (inTestMethod) {
+      testMethodLines.add(i + 1);
+    }
+  }
+
+  return allMatches.filter((m) => testMethodLines.has(m.line));
+}
+
 // RULES contract (irreversible — frozen at v1.0):
 //   id — rule tag (string)
 //   severity — self-check/failThreshold vocabulary: blocker | error | warning | info
@@ -761,7 +834,14 @@ const RULES = [
       if (!TEST_FILE_RE.test(filePath)) {
         return [];
       }
-      return findMatches(content, /\bnew\s+[A-Z][A-Za-z0-9_]*(Page|Actions?|Component|Locators?)\s*\(/g, filePath);
+      const constructionRe = /\bnew\s+[A-Z][A-Za-z0-9_]*(Page|Actions?|Component|Locators?)\s*\(/g;
+      if (isNoDiInfrastructureFile(filePath)) {
+        return [];
+      }
+      if (filePath.endsWith('.cs')) {
+        return findCSharpTestMethodMatches(content, constructionRe, filePath);
+      }
+      return findMatches(content, constructionRe, filePath);
     },
   },
   {
@@ -1347,7 +1427,7 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration, FIX_HINTS, manualWaitFixHint, fixHintFor };
+module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration, FIX_HINTS, manualWaitFixHint, fixHintFor, isNoDiInfrastructureFile };
 
 if (require.main === module) {
   main();

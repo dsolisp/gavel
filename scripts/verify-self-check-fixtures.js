@@ -159,6 +159,15 @@ if (csharpNoDiFinding.tag !== 'no-di') {
   process.exit(1);
 }
 
+// v0.12 session 02: xUnit [Fact] construction fires no-di
+const csharpFactNoDi = report.findings.find(
+  (finding) => /no-di\/FactConstructionTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!csharpFactNoDi || csharpFactNoDi.tag !== 'no-di') {
+  console.error('C# no-di Gate 2: expected no-di finding in violations/no-di/FactConstructionTests.cs');
+  process.exit(1);
+}
+
 const csharpManualWaitFinding = report.findings.find(
   (finding) => /manual-wait\/ThreadSleepTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
 );
