@@ -212,8 +212,11 @@ test('complex-locator itemizes fragility and honors selector allowlists', () => 
   const violations = JSON.parse(runCli(['self-check', 'fixtures/self-check/violations', '--json']).stdout);
   const findings = violations.findings.filter((finding) => finding.tag === 'complex-locator');
   assert.deepEqual(findings.map((finding) => finding.text), [
+    'xpath string +5 → 5',
     'generated class +3, broad text +2 → 5',
-    'XPath axis +3, positional index +2 → 5',
+    'generated id +5 → 5',
+    'XPath axis +3, positional index +2, xpath string +5 → 10',
+    'generated id +5 → 5',
   ]);
 
   const clean = runCli(['self-check', 'fixtures/self-check/clean', '--json']);
@@ -859,4 +862,50 @@ test('NameString is not a unique finding type — counts as selector-leak like N
   assert.ok(nonLeakTags.length > 0);
   // The summary must not contain a NameString-specific key.
   assert.equal(report.summary.namestring, undefined);
+});
+
+test('literalSelector extracts C# Locator and Appium XPath strings', () => {
+  const { RULES } = require('../self-check');
+  const complexLocator = RULES.find((r) => r.id === 'complex-locator');
+  // C# Locator("#cph...") scores as complex-locator via generated id.
+  const csharpHits = complexLocator.test(
+    'pages/locators/CsLocators.cs',
+    'public class CsLocators {\n  ILocator x = page.Locator("#BNCRMP_cphContenidoPagina_x");\n}',
+  );
+  assert.equal(csharpHits.length, 1);
+  assert.match(csharpHits[0].text, /generated id/);
+
+  // AppiumBy.XPath("//...") scores as complex-locator via xpath string.
+  const appiumHits = complexLocator.test(
+    'pages/locators/AppiumLocators.cs',
+    'public class AppiumLocators {\n  var el = driver.FindElement(AppiumBy.XPath("//android.widget.Button"));\n}',
+  );
+  assert.equal(appiumHits.length, 1);
+  assert.match(appiumHits[0].text, /xpath string/);
+
+  // Short stable id #submit does not score as complex (score < 5).
+  const shortIdHits = complexLocator.test(
+    'pages/locators/ShortIdLocators.cs',
+    'public class ShortIdLocators {\n  ILocator x = page.Locator("#submit");\n}',
+  );
+  assert.equal(shortIdHits.length, 0);
+});
+
+test('ExpectedConditions is not manual-wait; Sleep still fires', () => {
+  const { RULES } = require('../self-check');
+  const manualWait = RULES.find((r) => r.id === 'manual-wait');
+
+  // wait.Until(ExpectedConditions.*) is not manual-wait.
+  const ecHits = manualWait.test(
+    'ExpectedConditionsTests.cs',
+    'var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));\nwait.Until(ExpectedConditions.ElementIsVisible(By.Id("x")));',
+  );
+  assert.equal(ecHits.length, 0);
+
+  // Thread.Sleep still fires even on a file with ExpectedConditions context.
+  const sleepHits = manualWait.test(
+    'SleepTests.cs',
+    'Thread.Sleep(1000);',
+  );
+  assert.equal(sleepHits.length, 1);
 });

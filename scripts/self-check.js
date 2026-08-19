@@ -228,13 +228,13 @@ function findNoTeardownMatches(filePath, content) {
 }
 
 function literalSelector(line) {
-  const match = line.match(/(?:\.\s*locator|querySelector(?:All)?|\$(?:\$)?)\s*\(\s*(?:'([^']*)'|"([^"]*)"|`([^`]*)`)/);
+  const match = line.match(/(?:\.?\s*(?:locator|Locator)|(?:querySelector(?:All)?|QuerySelector(?:All)?)|\$(?:\$)?|(?:AppiumBy|MobileBy|By)\.XPath|FindElement\s*\(\s*By\.XPath)\s*\(\s*(?:'([^']*)'|"([^"]*)"|`([^`]*)`)/);
   return match && match.slice(1).find((value) => value !== undefined);
 }
 
 function locatorExpressions(content, filePath) {
   const lines = content.split('\n');
-  return findMatches(content, /(?:\.\s*(?:locator|Locator)|(?:querySelector(?:All)?|QuerySelector(?:All)?)|\$(?:\$)?)\s*\(\s*['"`]/, filePath)
+  return findMatches(content, /(?:\.?\s*(?:locator|Locator)|(?:querySelector(?:All)?|QuerySelector(?:All)?)|\$(?:\$)?|(?:AppiumBy|MobileBy|By)\.XPath|FindElement\s*\(\s*By\.XPath)\s*\(\s*['"`]/, filePath)
     .map(({ line }) => ({ line, selector: literalSelector(lines[line - 1]) }))
     .filter(({ selector }) => selector !== undefined);
 }
@@ -251,7 +251,9 @@ function selectorFragility(selector) {
   if (/\b[\w-]+::/.test(selector)) add('XPath axis', 3);
   if (/\[\s*\d+\s*\]|:nth-child\s*\(/.test(selector)) add('positional index', 2);
   if (/\[class[*^$]?=['"][^'"]*(?:sc-|css-)/.test(selector)) add('generated class', 3);
-  if (/\btext=|:has-text\s*\(/.test(selector)) add('broad text', 2);
+  if (/(?<!@)\btext=|:has-text\s*\(/.test(selector)) add('broad text', 2);
+  if (/#\w+_\w+/.test(selector)) add('generated id', 5);
+  if (/^(?:\/\/|xpath=)/.test(selector)) add('xpath string', 5);
   const hops = combinatorHops(selector);
   if (hops > 2) add('deep combinators', hops - 2);
 
@@ -263,7 +265,11 @@ function selectorFragility(selector) {
 }
 
 function findComplexLocatorMatches(filePath, content) {
-  if (!LOCATOR_FILE_RE.test(filePath)) return [];
+  const isLocatorDir = LOCATOR_FILE_RE.test(filePath);
+  const isPageDir = ACTION_PAGE_FILE_RE.test(filePath);
+  const isCSharp = filePath.endsWith('.cs');
+  const isTestSpec = TEST_FILE_RE.test(filePath);
+  if (!isLocatorDir && !isPageDir && !(isCSharp && !isTestSpec)) return [];
   return locatorExpressions(content, filePath)
     .map(({ line, selector }) => ({ line, ...selectorFragility(selector) }))
     .filter(({ score }) => score >= 5)
@@ -786,7 +792,10 @@ const RULES = [
         content,
         /waitForTimeout\s*\(|page\.waitForTimeout|WaitForTimeoutAsync\s*\(|page\.WaitForTimeoutAsync|time\.sleep\s*\(|Thread\.sleep\s*\(|Thread\.Sleep\s*\(|Task\.Delay\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(|WaitForLoadStateAsync\s*\(\s*LoadState\.NetworkIdle|WaitForLoadStateAsync\s*\(\s*["']networkidle["']|waitForLoadState\s*\(\s*['"]networkidle['"]|WaitForLoadStateAsync\s*\(\s*\)/g,
         filePath,
-      ).map((hit) => {
+      ).filter((hit) => {
+        if (/Thread\.Sleep|Task\.Delay|time\.sleep|Thread\.sleep|waitForTimeout|WaitForTimeoutAsync|cy\.wait|browser\.pause/.test(hit.text)) return true;
+        return !/\.Until\s*\(\s*ExpectedConditions\b|wait\.Until\s*\(\s*ExpectedConditions\b|Until\s*\(\s*ExpectedConditions\./.test(hit.text);
+      }).map((hit) => {
         let subCase = classifyManualWaitSubCase(lines, hit.line);
         const isParameterlessLoadState = /WaitForLoadStateAsync\s*\(\s*\)/.test(hit.text);
         const isLoadStateWait = /WaitForLoadState|waitForLoadState/.test(hit.text);
