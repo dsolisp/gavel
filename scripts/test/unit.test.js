@@ -758,3 +758,105 @@ test('no-di Gate 2: C# method scope — only fires inside [Test]/[Fact], not [Se
     [],
   );
 });
+
+test('findPlaywrightPackageMismatch detects mixed versions, returns null when aligned', () => {
+  const { findPlaywrightPackageMismatch } = require('../check-profile-freshness');
+
+  const mismatchDir = path.join(root, 'fixtures/profiles/playwright-dotnet-mismatch');
+  const result = findPlaywrightPackageMismatch(mismatchDir);
+  assert.ok(result);
+  assert.equal(result.packages['Microsoft.Playwright'], '1.55.0');
+  assert.equal(result.packages['Microsoft.Playwright.NUnit'], '1.27.1');
+  assert.notEqual(result.packages['Microsoft.Playwright'], result.packages['Microsoft.Playwright.NUnit']);
+  assert.match(result.file, /\.csproj$/);
+
+  const freshDir = path.join(root, 'fixtures/profiles/playwright-dotnet-fresh');
+  assert.equal(findPlaywrightPackageMismatch(freshDir), null);
+});
+
+test('formatSuiteHealth renders freshness and package mismatch lines', () => {
+  const tsRoot = path.join(root, 'fixtures/audit-autofix');
+  const summary = buildSuiteHealthSummary([], [], tsRoot);
+
+  summary.freshness = {
+    detected: true,
+    framework: 'playwright_dotnet',
+    package: 'Microsoft.Playwright.NUnit',
+    installed: '1.27.1',
+    profileCurrent: '1.61.0',
+    status: 'stale-minor',
+    detail: 'more than one minor behind profile',
+  };
+  summary.packageMismatch = {
+    file: 'PlaywrightDotnetMismatch.csproj',
+    packages: { 'Microsoft.Playwright': '1.55.0', 'Microsoft.Playwright.NUnit': '1.27.1' },
+  };
+
+  const formatted = formatSuiteHealth(summary);
+  assert.match(formatted, /Profile freshness: Microsoft\.Playwright\.NUnit 1\.27\.1 < pin 1\.61\.0 \(stale-minor\)/);
+  assert.match(formatted, /Package mismatch: Microsoft\.Playwright 1\.55\.0 vs Microsoft\.Playwright\.NUnit 1\.27\.1/);
+  assert.match(formatted, /mixed Microsoft\.Playwright\* versions in/);
+
+  // Fresh status omits the freshness line.
+  const freshSummary = buildSuiteHealthSummary([], [], tsRoot);
+  freshSummary.freshness = { detected: true, status: 'fresh', package: 'X', installed: '1.0.0', profileCurrent: '1.0.0' };
+  assert.doesNotMatch(formatSuiteHealth(freshSummary), /Profile freshness/);
+});
+
+test('audit-report JSON includes freshness and mismatch for mismatch fixture', () => {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(root, 'scripts/audit-report.js'), 'fixtures/profiles/playwright-dotnet-mismatch', '--json'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.ok(payload.suiteHealth.freshness);
+  assert.equal(payload.suiteHealth.freshness.detected, true);
+  assert.equal(payload.suiteHealth.freshness.framework, 'playwright_dotnet');
+  assert.ok(payload.suiteHealth.packageMismatch);
+  assert.equal(payload.suiteHealth.packageMismatch.packages['Microsoft.Playwright'], '1.55.0');
+  assert.equal(payload.suiteHealth.packageMismatch.packages['Microsoft.Playwright.NUnit'], '1.27.1');
+});
+
+test('buildSuiteHealthSummary includes fatPomFiles and leakFiles', () => {
+  const fixtureRoot = path.join(root, 'fixtures/suite-health/fat-pom');
+  const selfCheck = [
+    { tag: 'selector-leak', severity: 'error', autofix: 'review', file: 'Pages/LoginPage.cs', line: 12 },
+    { tag: 'selector-leak', severity: 'error', autofix: 'review', file: 'Pages/LoginPage.cs', line: 14 },
+    { tag: 'selector-leak', severity: 'error', autofix: 'review', file: 'Tests/LoginTests.cs', line: 22 },
+  ];
+  const summary = buildSuiteHealthSummary([], selfCheck, fixtureRoot);
+  // Two selector-leak files → leakFiles === 2; one fat POM (Pages/LoginPage.cs) → fatPomFiles === 1.
+  assert.equal(summary.leakFiles, 2);
+  assert.equal(summary.fatPomFiles, 1);
+  assert.equal(summary.selectorLeaks, 3);
+  const formatted = formatSuiteHealth(summary);
+  assert.match(formatted, /Fat POM files: 1/);
+  assert.match(formatted, /Leak files: 2/);
+});
+
+test('good locator-folder sample repo has fatPomFiles 0', () => {
+  const sampleRoot = path.join(root, 'fixtures/sample-repos/playwright-dotnet');
+  const summary = buildSuiteHealthSummary([], [], sampleRoot);
+  assert.equal(summary.fatPomFiles, 0);
+  assert.equal(summary.leakFiles, 0);
+});
+
+test('NameString is not a unique finding type — counts as selector-leak like Name', () => {
+  const fixtureRoot = path.join(root, 'fixtures/suite-health/fat-pom');
+  const result = spawnSync(
+    process.execPath,
+    [path.join(root, 'scripts/self-check.js'), fixtureRoot, '--json'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  const report = JSON.parse(result.stdout);
+  // NameString must not introduce a second tag — all findings from the fixture are selector-leak.
+  const nonLeakTags = report.findings
+    .filter((f) => f.file === 'Pages/LoginPage.cs')
+    .map((f) => f.tag);
+  assert.ok(nonLeakTags.every((tag) => tag === 'selector-leak'));
+  assert.ok(nonLeakTags.length > 0);
+  // The summary must not contain a NameString-specific key.
+  assert.equal(report.summary.namestring, undefined);
+});
