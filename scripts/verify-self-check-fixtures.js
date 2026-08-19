@@ -167,6 +167,22 @@ if (!csharpManualWaitFinding || csharpManualWaitFinding.tag !== 'manual-wait') {
   process.exit(1);
 }
 
+const networkIdleFinding = report.findings.find(
+  (finding) => /manual-wait\/NetworkIdleTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!networkIdleFinding || networkIdleFinding.tag !== 'manual-wait') {
+  console.error('C# manual-wait: expected manual-wait finding in violations/manual-wait/NetworkIdleTests.cs');
+  process.exit(1);
+}
+
+const networkIdleRedundantFinding = report.findings.find(
+  (finding) => /manual-wait\/NetworkIdleRedundantTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!networkIdleRedundantFinding || networkIdleRedundantFinding.tag !== 'manual-wait' || networkIdleRedundantFinding.subCase !== 'redundant') {
+  console.error('C# manual-wait: expected manual-wait finding with subCase redundant in violations/manual-wait/NetworkIdleRedundantTests.cs');
+  process.exit(1);
+}
+
 const csharpCases = [
   { path: 'Tests/LoginTests.cs', expectTest: true },
   { path: 'Tests/LoginTest.cs', expectTest: true },

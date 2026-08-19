@@ -444,7 +444,7 @@ function findBrittleAssertMatches(filePath, content) {
 function classifyManualWaitSubCase(lines, lineNumber) {
   const context = lines.slice(lineNumber, lineNumber + 3).join('\n');
   const redundantPattern =
-    /waitFor(?!Timeout)\w+\s*\(|WaitFor(?!Timeout)\w+Async\s*\(|expect\.poll\s*\(|Expect\.Poll|ToBeVisibleAsync\s*\(|cy\.wait\s*\(\s*['"`@]/;
+    /waitFor(?!Timeout)\w+\s*\(|WaitFor(?!Timeout)\w+Async\s*\(|expect\.poll\s*\(|Expect\.Poll|Expect\s*\(|ToBeVisibleAsync\s*\(|cy\.wait\s*\(\s*['"`@]/;
   const staleReadPattern =
     /evaluate\s*\(|EvaluateAsync\s*\(|innerHTML|InnerText|textContent|TextContent|getAttribute|GetAttributeAsync|\$eval/;
   if (redundantPattern.test(context)) return 'redundant';
@@ -711,15 +711,26 @@ const RULES = [
       const lines = content.split('\n');
       return findMatches(
         content,
-        /waitForTimeout\s*\(|page\.waitForTimeout|WaitForTimeoutAsync\s*\(|page\.WaitForTimeoutAsync|time\.sleep\s*\(|Thread\.sleep\s*\(|Thread\.Sleep\s*\(|Task\.Delay\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(/g,
+        /waitForTimeout\s*\(|page\.waitForTimeout|WaitForTimeoutAsync\s*\(|page\.WaitForTimeoutAsync|time\.sleep\s*\(|Thread\.sleep\s*\(|Thread\.Sleep\s*\(|Task\.Delay\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(|WaitForLoadStateAsync\s*\(\s*LoadState\.NetworkIdle|WaitForLoadStateAsync\s*\(\s*["']networkidle["']|waitForLoadState\s*\(\s*['"]networkidle['"]|WaitForLoadStateAsync\s*\(\s*\)/g,
         filePath,
       ).map((hit) => {
         let subCase = classifyManualWaitSubCase(lines, hit.line);
+        const isParameterlessLoadState = /WaitForLoadStateAsync\s*\(\s*\)/.test(hit.text);
+        const isLoadStateWait = /WaitForLoadState|waitForLoadState/.test(hit.text);
         const result = {
           ...hit,
           subCase,
           durationMs: parseManualWaitDuration(hit.text),
         };
+        if (isParameterlessLoadState) {
+          result.confidence = 'low';
+        }
+        if (isLoadStateWait && subCase === 'intentional') {
+          result.suggestion = 'Expect(locator).ToBeVisibleAsync() / WaitForURLAsync';
+        }
+        if (isLoadStateWait) {
+          result.loadStateWait = true;
+        }
         if (isPollingLoop(lines, hit.line - 1)) {
           result.subCase = 'intentional';
           result.pollingLoop = true;
@@ -1026,6 +1037,9 @@ function manualWaitFixHint(finding) {
     case 'redundant':
       return 'remove — subsequent code already waits';
     case 'stale-read':
+      if (finding.loadStateWait && finding.file && finding.file.endsWith('.cs')) {
+        return 'replace with Expect(locator).ToBeVisibleAsync() / WaitForURLAsync on the specific DOM state';
+      }
       return 'replace with expect.poll / pollUntil on the specific DOM state';
     case 'intentional':
       if (finding.replaceable === true) {
@@ -1252,6 +1266,9 @@ function main() {
         }
         if (hit.durationMs !== undefined) {
           finding.durationMs = hit.durationMs;
+        }
+        if (hit.confidence) {
+          finding.confidence = hit.confidence;
         }
         const fix = fixHintFor(finding);
         if (fix) {

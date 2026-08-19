@@ -470,6 +470,17 @@ test('fix hints: static per-tag and context-aware per manual-wait subCase', () =
   assert.match(manualWaitFixHint({ subCase: 'intentional', replaceable: false }), /rename|gavel-ignore/);
   assert.equal(manualWaitFixHint({ subCase: undefined }), null);
   assert.equal(fixHintFor({ tag: 'manual-wait', subCase: 'redundant' }), manualWaitFixHint({ subCase: 'redundant' }));
+
+  // NetworkIdle: redundant still matches /remove/; non-redundant C# mentions Expect or WaitForURLAsync.
+  assert.match(manualWaitFixHint({ subCase: 'redundant', tag: 'manual-wait', file: 'NetworkIdleTests.cs' }), /remove/);
+  assert.match(
+    manualWaitFixHint({ subCase: 'intentional', replaceable: true, suggestion: 'Expect(locator).ToBeVisibleAsync() / WaitForURLAsync', file: 'NetworkIdleTests.cs' }),
+    /Expect|WaitForURLAsync/,
+  );
+  assert.match(
+    manualWaitFixHint({ subCase: 'stale-read', loadStateWait: true, file: 'Foo.cs' }),
+    /Expect\(locator\)\.ToBeVisibleAsync\(\)/,
+  );
 });
 
 test('self-check output carries fix hints in text, JSON, and SARIF', () => {

@@ -206,7 +206,7 @@ NUnit has no `test.step()` analog in v0.10.0. Group with descriptive test names,
 
 ### Wait strategy
 
-**Prohibited:** `Thread.Sleep`, `Task.Delay` with fixed duration, `page.WaitForTimeoutAsync` (`manual-wait`).
+**Prohibited:** `Thread.Sleep`, `Task.Delay` with fixed duration, `page.WaitForTimeoutAsync`, `WaitForLoadStateAsync(LoadState.NetworkIdle)`, `waitForLoadState('networkidle')` (`manual-wait`).
 
 **Prefer (in order):**
 
