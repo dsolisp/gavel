@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="400" height="400" alt="gavel" src="https://github.com/user-attachments/assets/94ac2e95-0f1b-4965-a720-3846c055d6c2" />
+  <img width="400" height="400" alt="gavel" src="assets/gavel.png" />
 
   <h1 align="center">Gavel</h1>
   <p align="center">
