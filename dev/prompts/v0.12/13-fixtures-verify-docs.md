@@ -6,7 +6,7 @@ This is the release DoD mop: anything 01–12 left incomplete in docs, sample-re
 
 ## Why
 
-Roadmap definition of done: scanner fixes validated against the 7-repo lessons, every remaining C# rule has corpus precision ≥95% (session 08 target was 100%), Appium goldens for .NET and Java, `gavel baseline write` + `"preset": "legacy"` documented in ENTERPRISE.md.
+Roadmap definition of done: scanner fixes validated against the 7-repo lessons, every remaining C# rule has corpus precision ≥95% (session 08 target was 100% on **seven** tags incl. `no-di` carryover), Appium goldens for .NET and Java, `gavel baseline write` + `"preset": "legacy"` documented in ENTERPRISE.md.
 
 ## Read first
 
@@ -33,11 +33,11 @@ Group **Added** / **Fixed** / **Changed**. Examples of what should appear **if s
 - NetworkIdle / `waitForLoadState('networkidle')` as `manual-wait`
 - `no-di` skips BaseTest / `[SetUp]`
 - Dead-code `n/a (csharp)`
-- Audit suite-health freshness + Playwright package mismatch
-- `fat-pom-files` / `leak-files` rollup
+- Audit suite-health freshness + Playwright package mismatch (session 04; `gavel-audit` skill may already list these — extend, don’t rewrite)
+- `fatPomFiles` / `leakFiles` rollup (session 05)
 - `complex-locator` C# CSS/XPath; ExpectedConditions not `manual-wait`
 - C# `no-teardown` / `bare-test-fail` / `test-fail-order`
-- C# corpus for the six tags
+- C# corpus for the seven tags (incl. `no-di` session 02 carryover)
 - `MobileBy` → `AppiumBy` fix hint; ImplicitWait; Appium Java skill
 - `gavel baseline write` / `check`
 - `"preset"` / `--preset` IDs
@@ -72,7 +72,7 @@ In `skills/gavel-playwright/SKILL.md` C# section:
 
 ## 5. Audit skill suite-health
 
-`skills/gavel-audit/SKILL.md`: document new health lines if present in code: freshness, package mismatch, fat-POM files, leak files, dead-code n/a. Do not document fields that were not implemented.
+`skills/gavel-audit/SKILL.md`: session **04** may already document freshness + package mismatch — only add lines for fields shipped in **03** (dead-code `n/a (csharp)`) and **05** (`fatPomFiles`, `leakFiles`) if missing. Do not document unimplemented fields. No ENTERPRISE-sized rewrite; bullet list matching `formatSuiteHealth` order is enough.
 
 ## 6. Sample-repo READMEs
 
@@ -85,6 +85,8 @@ Good tests stay clean under `node scripts/self-check.js fixtures/sample-repos/<n
 ## 7. Remaining goldens
 
 If sessions 01–09 missed a **required** self-check file named in those prompts and the scanner **exists**, add the fixture here (smallest). Do not re-open corpus to 10+10 if session 08 already passed — only fill holes that make `npm run verify` fail.
+
+**Optional profile fixture:** `fixtures/profiles/playwright-dotnet-stale/` (NUnit 1.27.1 only, stale-without-mismatch) — add **only** if a test or doc needs that case. Session 04 deferred it; `playwright-dotnet-mismatch` + `cypress-stale` already cover mismatch and stale paths.
 
 `no-step` must still not fire on `.cs`.
 

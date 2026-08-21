@@ -128,12 +128,17 @@ Suite health:
   Dead locators: N
   Unused factories: N
   Selector leaks: N
+  Fat POM files: N
+  Leak files: N
   Manual waits: N
   Skip/quarantine markers: N
   Bare test.fail markers: N
   Constitution violations: N
   Critical-area violations: N (when gavel.config.json marks criticalAreas)
   Safe autofix candidates: N
+  Excluded files: N
+  Profile freshness: <package> <installed> < pin <current> (<status>)  # only when stale
+  Package mismatch: <pkg-a> <ver-a> vs <pkg-b> <ver-b> (mixed Microsoft.Playwright* versions in <file>)  # only when detected
 ```
 
 Return `templates/result-envelope.md` when the audit report is complete.

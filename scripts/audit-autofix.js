@@ -26,15 +26,23 @@ const EXCLUDED_DIRS = new Set([
   '.qoder',
   '.cursor',
   '.vscode',
+  'bin',
+  'obj',
+  'packages',
+  '.vs',
 ]);
 
 const LOCATOR_RE = /locators?\//i;
 const POM_RE = /(?:^|\/)(?:pages?|page-objects?)\//i;
 const FACTORY_RE = /(?:^|\/)(?:factories?|test-data|lib\/test-data)\//i;
-const CODE_FILE_RE = /\.(ts|tsx|js|jsx)$/;
+const CODE_FILE_RE = /\.(ts|tsx|js|jsx|cs)$/;
+const CS_FILE_RE = /\.cs$/;
 
 const SYMBOL_RE = /^\s+(?:async\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*(?::\s*[^{]+)?\s*\{/gm;
 const CLASS_EXPORT_RE = /export\s+(?:default\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)/g;
+const CS_CLASS_RE = /^\s*(?:(?:public|internal|protected|private)\s+)?(?:(?:sealed|abstract|partial|static)\s+)*class\s+([A-Za-z_][A-Za-z0-9_]*)/gm;
+const CS_LOCATOR_PROP_RE = /^\s*(?:public|internal|protected)\s+(?:static\s+)?(?:readonly\s+)?(?:ILocator|IWebElement|By)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:=>|{|=)/gm;
+const CS_FACTORY_FN_RE = /^\s*(?:public|internal)\s+static\s+(?:async\s+)?(?:[\w.<>,\s\[\]]+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/gm;
 const FACTORY_FN_RE = /export\s+(?:async\s+)?function\s+([A-Za-z_][A-Za-z0-9_]*)/g;
 const FACTORY_CONST_RE = /export\s+const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/g;
 
@@ -98,10 +106,11 @@ function extractSymbols(content) {
 
 function extractClassNames(content) {
   const names = [];
-  let match = CLASS_EXPORT_RE.exec(content);
-  while (match) {
+  for (const match of content.matchAll(CLASS_EXPORT_RE)) {
     names.push(match[1]);
-    match = CLASS_EXPORT_RE.exec(content);
+  }
+  for (const match of content.matchAll(CS_CLASS_RE)) {
+    names.push(match[1]);
   }
   return names;
 }
@@ -118,6 +127,17 @@ function extractFactoryExports(content) {
     names.push(match[1]);
     match = FACTORY_CONST_RE.exec(content);
   }
+  for (const csMatch of content.matchAll(CS_FACTORY_FN_RE)) {
+    names.push(csMatch[1]);
+  }
+  return names;
+}
+
+function extractCsLocatorSymbols(content) {
+  const names = [];
+  for (const match of content.matchAll(CS_LOCATOR_PROP_RE)) {
+    names.push({ name: match[1], index: match.index });
+  }
   return names;
 }
 
@@ -130,7 +150,7 @@ function buildContentCache(repoRoot) {
   return cache;
 }
 
-function countExternalReferences(repoRoot, symbol, definingFile, contentCache) {
+function countExternalReferences(repoRoot, symbol, definingFile, contentCache, options = {}) {
   const cache = contentCache || buildContentCache(repoRoot);
   const pattern = new RegExp(`\\b${symbol}\\b`);
   let external = 0;
@@ -142,6 +162,9 @@ function countExternalReferences(repoRoot, symbol, definingFile, contentCache) {
       continue;
     }
     if (file === normalizedDefining) {
+      if (options.ignoreDefiningFile) {
+        continue;
+      }
       if (matches.length > 1) {
         external += matches.length - 1;
       }
@@ -248,6 +271,17 @@ function removeBraceBlock(content, startIndex) {
   return content.slice(0, start) + content.slice(blockEnd);
 }
 
+function isCsharpFile(filePath) {
+  return CS_FILE_RE.test(filePath);
+}
+
+function csharpReportOnly(filePath, item) {
+  if (!isCsharpFile(filePath)) {
+    return item;
+  }
+  return { ...item, autofix: 'report-only' };
+}
+
 function findDeadLocators(repoRoot, contentCache) {
   const cache = contentCache || buildContentCache(repoRoot);
   const locatorFiles = walkFiles(
@@ -259,18 +293,18 @@ function findDeadLocators(repoRoot, contentCache) {
 
   for (const filePath of locatorFiles) {
     const content = fs.readFileSync(filePath, 'utf8');
-    const symbols = extractSymbols(content);
+    const symbols = isCsharpFile(filePath) ? extractCsLocatorSymbols(content) : extractSymbols(content);
     for (const symbol of symbols) {
       const externalRefs = countExternalReferences(repoRoot, symbol.name, filePath, cache);
       if (externalRefs === 0) {
-        dead.push({
+        dead.push(csharpReportOnly(filePath, {
           tag: 'dead-locator',
           autofix: 'safe',
           severity: 'cleanup',
           symbol: symbol.name,
           file: relPath(repoRoot, filePath),
           kind: 'method',
-        });
+        }));
       }
     }
   }
@@ -282,7 +316,10 @@ function findDeadPoms(repoRoot, contentCache) {
   const cache = contentCache || buildContentCache(repoRoot);
   const pomFiles = walkFiles(
     repoRoot,
-    (file) => POM_RE.test(file.replace(/\\/g, '/')) && CODE_FILE_RE.test(file),
+    (file) => {
+      const posix = file.replace(/\\/g, '/');
+      return POM_RE.test(posix) && CODE_FILE_RE.test(file) && !LOCATOR_RE.test(posix);
+    },
   );
 
   const dead = [];
@@ -295,18 +332,18 @@ function findDeadPoms(repoRoot, contentCache) {
     }
 
     const allUnused = classNames.every(
-      (className) => countExternalReferences(repoRoot, className, filePath, cache) === 0,
+      (className) => countExternalReferences(repoRoot, className, filePath, cache, { ignoreDefiningFile: true }) === 0,
     );
 
     if (allUnused) {
-      dead.push({
+      dead.push(csharpReportOnly(filePath, {
         tag: 'dead-pom',
         autofix: 'safe',
         severity: 'cleanup',
         symbol: classNames.join(','),
         file: relPath(repoRoot, filePath),
         kind: 'file',
-      });
+      }));
     }
   }
 
@@ -326,16 +363,18 @@ function findUnusedFactories(repoRoot, contentCache) {
     const content = fs.readFileSync(filePath, 'utf8');
     const exports = extractFactoryExports(content);
     for (const exportName of exports) {
-      const externalRefs = countExternalReferences(repoRoot, exportName, filePath, cache);
+      const externalRefs = countExternalReferences(repoRoot, exportName, filePath, cache, {
+        ignoreDefiningFile: isCsharpFile(filePath),
+      });
       if (externalRefs === 0) {
-        dead.push({
+        dead.push(csharpReportOnly(filePath, {
           tag: 'unused-factory',
           autofix: 'safe',
           severity: 'cleanup',
           symbol: exportName,
           file: relPath(repoRoot, filePath),
           kind: 'export',
-        });
+        }));
       }
     }
   }
@@ -371,6 +410,9 @@ function isFileEmptyOrExportsOnly(content) {
 }
 
 function applyCandidate(repoRoot, item) {
+  if (isCsharpFile(item.file) || item.autofix === 'report-only') {
+    return false;
+  }
   const fullPath = path.join(repoRoot, item.file);
 
   if (item.kind === 'file') {

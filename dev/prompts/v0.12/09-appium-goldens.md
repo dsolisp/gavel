@@ -12,7 +12,7 @@ Lessons #7 and #12 (3 Appium.NET production repos): `MobileBy` / `FindElement` a
 - `scripts/self-check.js` — `selector-leak` regex already includes `\bMobileBy\.[A-Za-z]` and `\bAppiumBy\.[A-Za-z]`; `FIX_HINTS['selector-leak']` is generic; `fixHintFor` / `manualWaitFixHint`
 - `fixtures/profiles/appium-dotnet-fresh/AppiumDotnet.csproj` — **already** `Appium.WebDriver` 8.3.2. **Do not recreate this fixture.** `verify-profile-fixtures.js` already wires it.
 - `fixtures/sample-repos/appium-dotnet/` — good/bad login only
-- `scripts/verify-profile-fixtures.js` — asserts `appium_dotnet` → `gavel-appium` and skill contains `AppiumBy`
+- `scripts/verify-profile-fixtures.js` — asserts `appium_dotnet` → `gavel-appium` and skill contains `AppiumBy`; **also** asserts `findPlaywrightPackageMismatch` on `playwright-dotnet-mismatch` (session 04) — do not duplicate mismatch fixture work here
 - `LESSONS_LEARNED_PLAYWRIGHT_CSHARP.md` §7, §12
 
 ## 1. Do not recreate the .NET golden profile

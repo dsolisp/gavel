@@ -2,6 +2,8 @@
 
 Obey `dev/prompts/v0.12/00-PROTOCOL.md`. Implement **only** this item. Tier B. Zero new tags. Two scanner edits in one session (roadmap row 6).
 
+**Do not** reorder or rewrite `formatSuiteHealth` freshness/mismatch (session 04) or fat-POM rollup lines (session 05: `Fat POM files` / `Leak files` after `Selector leaks:`). Scanner-only session — no suite-health edits unless verify breaks.
+
 ## Why
 
 Lessons #2, #7, #12:

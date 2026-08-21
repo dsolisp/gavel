@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Theme: **.NET + Appium depth & baseline gates** — full C# rule parity, Appium golden fixtures, incremental adoption.
+
+### Added
+
+- **`gavel baseline write` / `check`** — snapshot current self-check findings into `gavel-baseline.json` (v0.8 schema) and fail only on new violations not in baseline. Identity: `path + rule + snippetHash`; severity excluded. Git-aware when metadata exists.
+- **Policy presets** — `"preset": "recommended"` / `"strict"` / `"legacy"` / `"api-only"` in `gavel.config.json` or CLI `--preset`. Explicit file keys override pack defaults. Unknown ID → exit `2`.
+- **C# `no-teardown`** — detects `IDisposable.Dispose`, `[TearDown]`, `[OneTimeTearDown]`, `DisposeAsync` as cleanup signals.
+- **C# `bare-test-fail`** — detects `Assert.Fail(` without ticket, `Assert.Throws<>` without follow-up assertion.
+- **C# `test-fail-order`** — detects NUnit `[Test(Order=)]`, `[TestCase]` ordering dependencies.
+- **C# corpus** — `language: cs` corpus samples for `no-di`, `no-teardown`, `complex-locator`, `test-fail-order`, `bare-test-fail`, `expect-in-action`, `manual-wait` (NetworkIdle) at 100% precision.
+- **`MobileBy` → `AppiumBy` fix hint** — `selector-leak` findings on `MobileBy.*` carry deprecation hint pointing at `AppiumBy.*`.
+- **ImplicitWait detection** — `driver.Manage().Timeouts().ImplicitWait` and `ImplicitWait =` fire `manual-wait` with remediation hint.
+- **Appium Java/Kotlin skill** (`gavel-appium-java`) — `io.appium:java-client` profile: `AppiumDriver`, `MobileBy` → `AppiumBy` migration, UiAutomator2/XCUITest locator priority.
+- **Suite-health freshness + mismatch** — `gavel audit` surfaces csproj pin warnings via `check-profile-freshness.js` knowledge; flags mixed `Microsoft.Playwright` + `Microsoft.Playwright.NUnit` version mismatch in one csproj.
+- **Suite-health rollup** — `fatPomFiles` (page files with both locator API and action methods) and `leakFiles` (distinct files with selector-leak findings) so architecture-level signal replaces per-line noise.
+- **C# dead-code graph** — `audit-autofix` walks `.cs` page/locator/factory files and counts unused types via identifier references (`new FooPage`, `FooPage` in other files). Suite health prints numeric Dead POMs / locators / factories on C# repos (no `n/a`). `--apply` does not delete `.cs` (`autofix: report-only`).
+
+### Fixed
+
+- **`manual-wait` NetworkIdle on C#** — widened regex for `WaitForLoadStateAsync(LoadState.NetworkIdle)`, parameterless `WaitForLoadStateAsync()`, and TS/JS cousins `waitForLoadState('networkidle')`. Sub-case classification: redundant if next line is `Expect`/`WaitForAsync`; otherwise intentional/replaceable.
+- **`no-di` BaseTest / `[SetUp]` false positive** — excludes `BaseTest.cs` / `*TestBase.cs` / `*TestsBase` from `no-di`. Only fires inside `[Test]` / `[TestCase]` / `[Fact]` / `[Theory]` methods — not `[SetUp]` / `[OneTimeSetUp]`.
+- **`complex-locator` C# CSS/XPath** — widened for `Locator("#...")` and WebForms id prefix patterns. `ExpectedConditions` excluded from `manual-wait` (`DotNetSeleniumExtras.WaitHelpers` is closer to constitution than Sleep).
+
 ## [0.11.0] - 2026-07-16
 
 Theme: **Remediation Loop** — close the detect → suggest → fix → verify loop. The scanner now tells agents *how* to fix findings, reduces false positives on `hardcoded-env` and `brittle-assert`, adds adoption/fixture-utilization scanners and CI-history flakiness scoring, and the orchestrator's agent contract mandates post-refactor review and parallel delegation. Also ships GitHub Copilot native discovery and the v0.10.x ecosystem cleanup.

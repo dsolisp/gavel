@@ -63,6 +63,7 @@ for (const [label, fixturePath] of [
   ['playwright-dotnet', 'fixtures/profiles/playwright-dotnet-fresh'],
   ['appium-dotnet', 'fixtures/profiles/appium-dotnet-fresh'],
   ['selenium-dotnet', 'fixtures/profiles/selenium-dotnet-fresh'],
+  ['appium-java', 'fixtures/profiles/appium-java-fresh'],
 ]) {
   const result = run(process.execPath, [
     path.join(root, 'scripts/check-profile-freshness.js'),
@@ -78,6 +79,7 @@ for (const [label, fixturePath] of [
     'playwright-dotnet': { framework: 'playwright_dotnet', profile: 'gavel-playwright' },
     'appium-dotnet': { framework: 'appium_dotnet', profile: 'gavel-appium' },
     'selenium-dotnet': { framework: 'selenium_dotnet', profile: 'gavel-selenium' },
+    'appium-java': { framework: 'appium_java', profile: 'gavel-appium-java' },
   };
   if (dotnetExpectations[label]) {
     const { framework, profile } = dotnetExpectations[label];
@@ -99,11 +101,34 @@ if (!resolved.paths.includes('src/features/catalog')) {
   process.exit(1);
 }
 
+// Playwright package mismatch fixture: Microsoft.Playwright vs Microsoft.Playwright.NUnit versions differ.
+const { findPlaywrightPackageMismatch } = require(path.join(root, 'scripts/check-profile-freshness'));
+const mismatchDir = path.join(root, 'fixtures/profiles/playwright-dotnet-mismatch');
+const mismatchResult = findPlaywrightPackageMismatch(mismatchDir);
+if (!mismatchResult) {
+  console.error('Expected mismatch fixture to detect Playwright package version mismatch.');
+  process.exit(1);
+}
+if (mismatchResult.packages['Microsoft.Playwright'] === mismatchResult.packages['Microsoft.Playwright.NUnit']) {
+  console.error('Mismatch fixture: packages should have different versions.');
+  process.exit(1);
+}
+
+// Fresh fixture must NOT trigger mismatch.
+const freshDir = path.join(root, 'fixtures/profiles/playwright-dotnet-fresh');
+const freshMismatch = findPlaywrightPackageMismatch(freshDir);
+if (freshMismatch) {
+  console.error('Fresh fixture should not have a package mismatch.');
+  console.error(freshMismatch);
+  process.exit(1);
+}
+
 const requiredProfileSnippets = [
   ['skills/gavel-playwright/SKILL.md', 'getByRole'],
   ['skills/gavel-cypress/SKILL.md', 'cy.get'],
   ['skills/gavel-selenium/SKILL.md', 'find_element'],
   ['skills/gavel-appium/SKILL.md', 'AppiumBy'],
+  ['skills/gavel-appium-java/SKILL.md', 'AppiumBy'],
   ['skills/gavel-webdriverio/SKILL.md', '$'],
   ['skills/gavel-cucumber/SKILL.md', 'Given'],
 ];

@@ -12,6 +12,8 @@ description: >
 Appium-specific bindings for the .NET client. Universal POM/workflow rules:
 `gavel` + `gavel-e2e`.
 
+Java/Kotlin: see `gavel-appium-java`.
+
 **Current release (as of 2026-07-01):** `Appium.WebDriver` **8.3.2**
 
 Appium.WebDriver depends on `Selenium.WebDriver`, so it is a superset of the
@@ -141,6 +143,26 @@ driver.PerformActions(new List<ActionSequence> { swipe });
 ```
 
 Wrap gestures behind action methods — never inline coordinates in a spec.
+
+## Hybrid Web Context
+
+Hybrid apps embed a webview inside the native shell. Switch context to interact
+with web content, then switch back:
+
+```csharp
+// Native → webview
+driver.Context = "WEBVIEW_com.example";
+// interact with web elements via named locators (same selector boundary)
+driver.Context = "NATIVE_APP";
+```
+
+After switching to a webview context the **selector-leak rule still applies**:
+`FindElement`, CSS selectors, and XPath in actions or specs are leaks. Locators
+live in locator classes regardless of context. Do not inline
+`FindElement(By.CssSelector(...))` in an action just because the context
+changed — expose it as a named locator property.
+
+*Reference:* AGENTS.md — Selector Boundary Rule, Page Object Discipline.
 
 ## Skip / Ignore Markers
 

@@ -168,6 +168,27 @@ page.GetByTestId("submit-btn")                                 // 5th — last r
 
 Locator classes live under `Pages/Locators/` (or `locators/`). Actions and specs call named locator methods — no inline `GetByRole` / `Locator("...")` chains outside that layer (`selector-leak`).
 
+Extract `ILocator` properties **out** of page classes into the locator layer:
+
+```csharp
+// BAD — locators mixed with actions in a fat page class
+public class LoginPage : PageTest
+{
+    private ILocator Email => Page.GetByLabel("Email");
+    public async Task LoginAsync(string email, string pass) { /* ... */ }
+}
+
+// GOOD — locators in Pages/Locators/LoginLocators.cs
+public sealed class LoginLocators
+{
+    private readonly IPage _page;
+    public LoginLocators(IPage page) => _page = page;
+    public ILocator Email => _page.GetByLabel("Email");
+    public ILocator Password => _page.GetByLabel("Password");
+    public ILocator Submit => _page.GetByRole(AriaRole.Button, new() { Name = "Sign in" });
+}
+```
+
 ### Assertions (web-first)
 
 ```csharp
@@ -175,6 +196,8 @@ await Expect(locator).ToBeVisibleAsync();
 await Expect(locator).ToHaveTextAsync("Success");
 await Expect(page).ToHaveURLAsync(new Regex(@"/dashboard"));
 ```
+
+**Never** use `Assert.That(await locator.IsVisibleAsync())` — that reads a bool snapshot with no auto-retry. The Playwright C# web-first assertion is `await Expect(locator).ToBeVisibleAsync()`, which retries until the locator is visible or the timeout expires.
 
 Polling stays in **specs only** (Assertion Layering). Prefer `Expect(...)` auto-retry over reading DOM state after a fixed delay.
 
@@ -206,7 +229,7 @@ NUnit has no `test.step()` analog in v0.10.0. Group with descriptive test names,
 
 ### Wait strategy
 
-**Prohibited:** `Thread.Sleep`, `Task.Delay` with fixed duration, `page.WaitForTimeoutAsync`, `WaitForLoadStateAsync(LoadState.NetworkIdle)`, `waitForLoadState('networkidle')` (`manual-wait`).
+**Prohibited:** `Thread.Sleep`, `Task.Delay` with fixed duration, `page.WaitForTimeoutAsync`, `WaitForLoadStateAsync(LoadState.NetworkIdle)`, parameterless `WaitForLoadStateAsync()` (defaults to `load`, not a locator wait), `waitForLoadState('networkidle')` (`manual-wait`).
 
 **Prefer (in order):**
 
@@ -231,6 +254,8 @@ if (!ready.Wait(TimeSpan.FromSeconds(5)))
 ```
 
 **Not allowed:** `var gate = new ManualResetEventSlim(false); gate.Wait(timeout)` with no `.Set()` caller — that is a sleep rename.
+
+**Not allowed:** `EvaluateAsync("document.body.style.zoom = '80%'")` — never zoom via CSS. Use `ViewportSize` / `deviceScaleFactor` on the browser context instead.
 
 Use `gavel-ignore: manual-wait` with reason only for non-replaceable intentional waits (bot jitter, safety halt).
 

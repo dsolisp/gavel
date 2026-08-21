@@ -159,6 +159,108 @@
       "language": "cs",
       "framework": "playwright-dotnet",
       "rationale": "native Expect.ToBeVisibleAsync; comment mentioning Thread.Sleep must not fire"
+    },
+    {
+      "file": "violating/pages/LoginPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional, replaceable=true — WaitForLoadStateAsync(NetworkIdle) after click in page (lesson #12)",
+      "expectedFindings": [{ "line": 16, "tag": "manual-wait", "subCase": "intentional", "replaceable": true, "suggestion": "Expect(locator).ToBeVisibleAsync() / WaitForURLAsync" }]
+    },
+    {
+      "file": "violating/pages/CheckoutPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional — WaitForLoadStateAsync(NetworkIdle) after click in page",
+      "expectedFindings": [{ "line": 15, "tag": "manual-wait", "subCase": "intentional", "replaceable": false, "suggestion": "Expect(locator).ToBeVisibleAsync() / WaitForURLAsync" }]
+    },
+    {
+      "file": "violating/NetworkIdleDirectTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional — WaitForLoadStateAsync(NetworkIdle) in test body",
+      "expectedFindings": [{ "line": 14, "tag": "manual-wait", "subCase": "intentional", "replaceable": false, "suggestion": "Expect(locator).ToBeVisibleAsync() / WaitForURLAsync" }]
+    },
+    {
+      "file": "violating/ParameterlessLoadStateTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "subCase=intentional — parameterless WaitForLoadStateAsync()",
+      "expectedFindings": [{ "line": 14, "tag": "manual-wait", "subCase": "intentional", "replaceable": false, "suggestion": "Expect(locator).ToBeVisibleAsync() / WaitForURLAsync" }]
+    },
+    {
+      "file": "clean/WaitForURLTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WaitForURLAsync instead of NetworkIdle — native navigation wait"
+    },
+    {
+      "file": "clean/WaitForVisibleTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WaitForAsync with Visible state — native element wait"
+    },
+    {
+      "file": "clean/ExpectVisibleTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "native Expect.ToBeVisibleAsync / ToHaveTextAsync — auto-retrying assertions"
+    },
+    {
+      "file": "clean/ExpectEnabledTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "native Expect.ToBeEnabledAsync / ToBeCheckedAsync — auto-retrying assertions"
+    },
+    {
+      "file": "clean/WaitForResponseTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WaitForResponseAsync — native API response wait"
+    },
+    {
+      "file": "clean/NativeAssertionTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "native Expect assertions; comment mentioning Thread.Sleep must not fire"
+    },
+    {
+      "file": "clean/PageGotoTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GotoAsync + Expect URL — no manual wait"
+    },
+    {
+      "file": "clean/WaitForSelectorTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WaitForAsync with Detached/Hidden state — native element lifecycle wait"
+    },
+    {
+      "file": "clean/ExpectURLTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Expect.ToHaveURLAsync / ToHaveTitleAsync — native auto-retrying assertions"
+    },
+    {
+      "file": "clean/pages/locators/CheckoutLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "locator class with GetByRole — no manual waits"
     }
   ]
 }

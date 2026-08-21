@@ -80,7 +80,7 @@ Gavel ships **SARIF 2.1.0** only — there is no Sonar plugin. Import the file a
 
 3. **Run your existing Sonar scan** — Gavel findings import as external issues with stable `ruleId` values from the SARIF driver rules list.
 
-4. **Quality gates** — reference Gavel rule IDs as-is in gate conditions; do not rename or remap IDs (baseline ratchet in v0.9 keys on `path + rule + snippetHash`).
+4. **Quality gates** — reference Gavel rule IDs as-is in gate conditions; do not rename or remap IDs (baseline ratchet keys on `path + rule + snippetHash`).
 
 5. **Edition notes** — SonarCloud and SonarQube 9.9+ support `sonar.sarifReportPaths`. Older editions may require the REST import API; consult your Sonar admin docs for SARIF external-issue import.
 
@@ -95,12 +95,23 @@ Gavel ships **SARIF 2.1.0** only — there is no Sonar plugin. Import the file a
 | Release | Capability |
 |---------|------------|
 | v0.8 | [`gavel-baseline.json` schema](../schemas/gavel-baseline.schema.json) + [verify samples](../fixtures/baseline/) (no write CLI yet) |
-| v0.9 | `gavel baseline` **command** + new-findings-only gating for legacy monorepos |
-| v1.0 | Frozen baseline key continuity with SARIF fingerprints |
+| v0.12 | `gavel baseline` **command** (`write` / `check`) + new-findings-only gating for legacy monorepos; `createdAt` ratchet clock preserves first-seen timestamps across rewrites |
+| v1.0 | Frozen baseline key identity (`path + rule + snippetHash`) with SARIF fingerprints |
 
-## Policy packs (v0.9+)
+## Policy packs (v0.12)
 
-Orgs apply presets instead of tuning 40 knobs: `recommended`, `strict`, `legacy`, `api-only` (see roadmap v0.9).
+Named presets in `gavel.config.json` `"preset"` or CLI `--preset`. IDs are frozen: `recommended`, `strict`, `legacy`, `api-only`. Unknown ID → exit `2` (`Unknown preset: …`). No aliases.
+
+| ID | Intent | Defaults |
+|----|--------|----------|
+| `recommended` | Balanced gate (same as implicit default) | `failThreshold: warning` |
+| `strict` | Fail on `info` findings | `failThreshold: info` (does not strip user `allowlist`) |
+| `legacy` | Brownfield / baseline-friendly | `failThreshold: error`; `paths: [{ pattern: '**/*', weight: 0.5, label: 'legacy' }]` if `paths` omitted |
+| `api-only` | Mute UI locator rules | `failThreshold: warning`; allowlist `selector-leak` + `complex-locator` on `file: '*'` |
+
+**Merge:** start with the pack, then shallow-merge file keys. `failThreshold` in the file wins. If the file sets `allowlist` or `paths`, that array **replaces** the pack array for that key; omitted keys keep pack defaults. CLI `--preset` selects which pack; file keys still override that pack (e.g. `--preset legacy` + `"failThreshold": "info"` → legacy paths + `info` threshold).
+
+**Adoption:** `"preset": "legacy"` plus `gavel baseline check` for brownfield suites. The preset does not run baseline check.
 
 ## Bailiff boundary
 

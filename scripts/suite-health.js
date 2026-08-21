@@ -6,7 +6,6 @@ const path = require('path');
 const { loadGavelConfig } = require('./load-gavel-config');
 const { normalizeArea } = require('./area-map');
 const { matchGlob } = require('./glob-match');
-const { hasCSharpFiles } = require('./audit-autofix');
 const { findMatches } = require('./self-check');
 
 const FAT_POM_EXCLUDED = new Set([
@@ -166,16 +165,15 @@ function buildSuiteHealthSummary(
     }
   }
 
-  const csharp = hasCSharpFiles(repoRoot);
   const deadPomsCount = autofixFindings.filter((item) => item.tag === 'dead-pom').length;
   const deadLocatorsCount = autofixFindings.filter((item) => item.tag === 'dead-locator').length;
   const unusedFactoriesCount = autofixFindings.filter((item) => item.tag === 'unused-factory').length;
+  const safeAutofixCount = autofixFindings.filter((item) => item.autofix === 'safe').length;
 
   const summary = {
-    deadPoms: csharp ? null : deadPomsCount,
-    deadLocators: csharp ? null : deadLocatorsCount,
-    unusedFactories: csharp ? null : unusedFactoriesCount,
-    deadCodeStatus: csharp ? 'n/a (csharp)' : undefined,
+    deadPoms: deadPomsCount,
+    deadLocators: deadLocatorsCount,
+    unusedFactories: unusedFactoriesCount,
     leakFiles: new Set(selfCheckFindings.filter((item) => item.tag === 'selector-leak').map((item) => item.file)).size,
     fatPomFiles: countFatPomFiles(repoRoot),
     selectorLeaks: selfCheckFindings.filter((item) => item.tag === 'selector-leak').length,
@@ -183,8 +181,7 @@ function buildSuiteHealthSummary(
     skipMarkers: selfCheckFindings.filter((item) => item.tag === 'skip-marker').length,
     bareTestFail: selfCheckFindings.filter((item) => item.tag === 'bare-test-fail').length,
     constitutionViolations: selfCheckFindings.length,
-    safeAutofixCandidates: csharp ? null : autofixFindings.length,
-    safeAutofixStatus: csharp ? 'n/a (csharp)' : undefined,
+    safeAutofixCandidates: safeAutofixCount,
     criticalAreaViolations: criticalCount,
     excludedFileCount,
     rawViolations: all.length,

@@ -192,6 +192,31 @@ if (!networkIdleRedundantFinding || networkIdleRedundantFinding.tag !== 'manual-
   process.exit(1);
 }
 
+// v0.12 session 07: C# rule parity (no-teardown, bare-test-fail, test-fail-order)
+const csharpNoTeardown = report.findings.find(
+  (finding) => /no-teardown\/NoCleanupTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!csharpNoTeardown || csharpNoTeardown.tag !== 'no-teardown') {
+  console.error('C# no-teardown: expected no-teardown finding in violations/no-teardown/NoCleanupTests.cs');
+  process.exit(1);
+}
+
+const csharpBareAssertFail = report.findings.find(
+  (finding) => /bare-test-fail\/BareAssertFailTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!csharpBareAssertFail || csharpBareAssertFail.tag !== 'bare-test-fail') {
+  console.error('C# bare-test-fail: expected bare-test-fail finding in violations/bare-test-fail/BareAssertFailTests.cs');
+  process.exit(1);
+}
+
+const csharpAssertBeforeFail = report.findings.find(
+  (finding) => /test-fail-order\/AssertBeforeFailTests\.cs$/i.test(finding.file.replace(/\\/g, '/')),
+);
+if (!csharpAssertBeforeFail || csharpAssertBeforeFail.tag !== 'test-fail-order') {
+  console.error('C# test-fail-order: expected test-fail-order finding in violations/test-fail-order/AssertBeforeFailTests.cs');
+  process.exit(1);
+}
+
 const csharpCases = [
   { path: 'Tests/LoginTests.cs', expectTest: true },
   { path: 'Tests/LoginTest.cs', expectTest: true },
@@ -209,6 +234,33 @@ for (const { path: samplePath, expectTest } of csharpCases) {
     );
     process.exit(1);
   }
+}
+
+// v0.12 session 09: MobileBy selector-leak fix hint mentions AppiumBy
+const mobileByFinding = report.findings.find(
+  (finding) => /MobileByLoginActions\.cs$/i.test(finding.file.replace(/\\/g, '/')) && finding.tag === 'selector-leak',
+);
+if (!mobileByFinding) {
+  console.error('MobileBy selector-leak: expected selector-leak finding in violations/selector-leak/pages/actions/MobileByLoginActions.cs');
+  process.exit(1);
+}
+if (!/AppiumBy/.test(mobileByFinding.fix || '')) {
+  console.error('MobileBy selector-leak: fix hint must mention AppiumBy');
+  console.error(`  got fix: ${mobileByFinding.fix}`);
+  process.exit(1);
+}
+
+// v0.12 session 09: ImplicitWait fires manual-wait
+const implicitWaitFinding = report.findings.find(
+  (finding) => /manual-wait\/ImplicitWaitTests\.cs$/i.test(finding.file.replace(/\\/g, '/')) && finding.tag === 'manual-wait',
+);
+if (!implicitWaitFinding) {
+  console.error('ImplicitWait manual-wait: expected manual-wait finding in violations/manual-wait/ImplicitWaitTests.cs');
+  process.exit(1);
+}
+if (!implicitWaitFinding.implicitWait) {
+  console.error('ImplicitWait manual-wait: finding must have implicitWait flag');
+  process.exit(1);
 }
 
 const diffRoot = path.join(root, 'fixtures', 'self-check', 'diff', 'assert-drop');

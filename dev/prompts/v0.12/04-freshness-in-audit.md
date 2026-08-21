@@ -2,6 +2,8 @@
 
 Obey `dev/prompts/v0.12/00-PROTOCOL.md`. Implement **only** this item. Tier B. Zero new tags.
 
+**Status: shipped.** Do not re-run this session unless verify regresses. Deferred (acceptable): new `stale-pin` tag, audit exit-code change, ENTERPRISE rewrite, `playwright-dotnet-stale` fixture (mismatch + `cypress-stale` already prove `compareFreshness`). Add stale-only fixture when a stale-without-mismatch case is needed (session 13 mop).
+
 ## Why
 
 Lesson #5: `gavel-detect` routed profiles correctly; `gavel-audit` did not warn on stale pins. Sinpe shipped `Microsoft.Playwright` **1.55.0** + `Microsoft.Playwright.NUnit` **1.27.1** in one process. All Appium client repos pin `Appium.WebDriver` **7.2.0** vs profile **8.3.2**. A single suite-health warning would have ranked Sinpe P0 immediately.
@@ -137,6 +139,13 @@ npm run verify
 - [ ] Audit exit code unchanged for freshness-only
 - [ ] `npm run verify` green
 
+## Shipped shape (reference for 05+)
+
+- `audit-report.js` calls `buildSuiteHealthSummary`, **then** attaches `health.freshness` / `health.packageMismatch` from `check-profile-freshness.js` (does not change exit code).
+- `formatSuiteHealth` prints freshness (when not `fresh`) and mismatch **after** dead-code / constitution lines, **before** Top areas.
+- `findPlaywrightPackageMismatch(repoRoot)` exported; `fixtures/profiles/playwright-dotnet-mismatch/` wired in verify + unit tests.
+- One line added to `skills/gavel-audit/SKILL.md` — full audit-skill mop is session 13.
+
 ## Out of scope
 
-Fat-POM rollup (05). Appium `MobileBy` hint (09). Docs ENTERPRISE refresh (13), except you may add one line to `skills/gavel-audit/SKILL.md` listing the new suite-health freshness line if that file already documents the health block — otherwise leave docs to 13.
+Fat-POM rollup (05). Appium `MobileBy` hint (09). ENTERPRISE refresh (13). Stale-only profile fixture (13, only if needed).

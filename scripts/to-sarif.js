@@ -87,4 +87,4 @@ function formatFlag(args) {
   return eq ? eq.slice('--format='.length) : null;
 }
 
-module.exports = { toSarif, SARIF_LEVEL, formatFlag };
+module.exports = { toSarif, SARIF_LEVEL, formatFlag, fingerprint };

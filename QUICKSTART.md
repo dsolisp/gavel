@@ -78,6 +78,12 @@ gavel <command> [args] [--config gavel.config.json]
 
 **Config resolution:** `--config` flag → `gavel.config.json` in CWD → `package.json#gavel` → defaults. Zero-config first run works with defaults plus a one-line hint toward `gavel.config.json`.
 
+**Brownfield baseline:** set `"preset": "legacy"` in `gavel.config.json` for a relaxed threshold, then snapshot existing findings:
+```bash
+gavel baseline write .
+gavel baseline check .   # exit 1 only on new violations not in baseline
+```
+
 **Compatibility aliases:** `gavel-audit`, `gavel-review`, `gavel-self-check`, `gavel-analyze`, `gavel-affected-tests`, `gavel-detect`, `gavel-explain` remain as one-minor-line compatibility aliases and call the same implementation.
 
 **Companion workflows:** `gavel companion --help` lists optional skills (cloud CI, env setup, issue closure, external credentials). These are not part of the first-run path.

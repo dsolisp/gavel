@@ -14,7 +14,7 @@ Roadmap Feature 5: `gavel-appium` today is **.NET-only**. Java/Kotlin `io.appium
 - `scripts/detect.js` — JVM already adds `junit` when `pom.xml` / `build.gradle` exists; **does not** distinguish Appium Java
 - `scripts/check-profile-freshness.js` — `PROFILE_RELEASES` has no `appium_java` key
 - `scripts/verify-skills.js` — `CORE_SKILLS` array
-- `scripts/verify-profile-fixtures.js` — freshness loop + `requiredProfileSnippets`
+- `scripts/verify-profile-fixtures.js` — freshness loop + `requiredProfileSnippets`; `playwright-dotnet-mismatch` assertions already wired (session 04) — this session adds **appium-java-fresh** only
 - `plugin.yaml` — `provides_skills` (must list every public `skills/*` dir; `validate-manifest.js` + `verify-docs.js` enforce this)
 - `scripts/validate-manifest.js`
 - `.github/copilot-instructions.md` or skill indexes only if verify complains

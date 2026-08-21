@@ -198,12 +198,13 @@ function findStateCreationSignals(content, filePath) {
     /\bINSERT\s+INTO\b/i,
     /\bfetch\s*\([^,\n]+,\s*\{[^}\n]*\bmethod\s*:\s*['"](?:POST|PUT)['"]/i,
     /\b(?:axios|request|supertest)(?:\s*\([^)]*\))?\s*\.\s*(?:post|put)\s*\(/i,
+    /\.(?:PostAsync|PutAsync)\s*\(/i,
   ];
   return patterns.flatMap((pattern) => findMatches(content, pattern, filePath));
 }
 
 function cleanupSignals(content, filePath) {
-  const hits = findMatches(content, /\b(?:afterEach|tearDown|addfinalizer)\s*\(|\b@AfterEach\b/, filePath);
+  const hits = findMatches(content, /\b(?:afterEach|tearDown|addfinalizer)\s*\(|\b@AfterEach\b|\[TearDown\]|\[OneTimeTearDown\]|\[TestCleanup\]|\bDisposeAsync\b|\.Dispose\s*\(|\bvoid\s+Dispose\s*\(|\bIDisposable\b|\bIAsyncDisposable\b/, filePath);
   return [...hits, ...findPostYieldCleanup(content, filePath)];
 }
 
@@ -212,9 +213,63 @@ function blockForLine(blocks, line, end) {
     .sort((a, b) => (a.end - a.start) - (b.end - b.start))[0] || { start: 1, end };
 }
 
+function splitCSharpTestBlocks(content) {
+  const lines = content.split('\n');
+  const blocks = [];
+  let pendingTest = false;
+  let depth = 0;
+  let inMethod = false;
+  let methodBodyDepth = 0;
+  let current = null;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+
+    if (/^\s*\[(Test\b|TestCase\b|TestCaseSource\b|Fact\b|Theory\b)/.test(trimmed)) {
+      pendingTest = true;
+    }
+
+    const opens = (trimmed.match(/\{/g) || []).length;
+    const closes = (trimmed.match(/\}/g) || []).length;
+
+    for (let j = 0; j < opens; j += 1) {
+      if (pendingTest && !inMethod) {
+        pendingTest = false;
+        inMethod = true;
+        depth += 1;
+        methodBodyDepth = depth;
+        current = { startLine: i + 1, lines: [lines[i]] };
+        continue;
+      }
+      depth += 1;
+      if (inMethod && current) current.lines.push(lines[i]);
+    }
+
+    for (let j = 0; j < closes; j += 1) {
+      depth -= 1;
+      if (inMethod && current) current.lines.push(lines[i]);
+      if (inMethod && depth < methodBodyDepth) {
+        if (current) blocks.push(current);
+        inMethod = false;
+        current = null;
+      }
+    }
+
+    if (!opens && !closes && inMethod && current) {
+      current.lines.push(lines[i]);
+    }
+  }
+
+  if (current) blocks.push(current);
+  return blocks;
+}
+
 function findNoTeardownMatches(filePath, content) {
   if (!TEST_FILE_RE.test(filePath)) return [];
-  const blocks = findDescribeBlocks(content);
+  const isCSharp = filePath.endsWith('.cs');
+  const blocks = isCSharp
+    ? [{ start: 1, end: content.split('\n').length }]
+    : findDescribeBlocks(content);
   const teardown = cleanupSignals(content, filePath);
   return findStateCreationSignals(content, filePath)
     .filter((creation) => {
@@ -551,6 +606,10 @@ function parseManualWaitDuration(text) {
   if (taskDelayMsMatch) return Number(taskDelayMsMatch[1]);
   const taskDelaySecMatch = text.match(/Task\.Delay\s*\(\s*TimeSpan\.FromSeconds\s*\(\s*(\d+(?:\.\d+)?)\s*\)/);
   if (taskDelaySecMatch) return Math.round(Number(taskDelaySecMatch[1]) * 1000);
+  const implicitWaitSecMatch = text.match(/ImplicitWait\s*=\s*TimeSpan\.FromSeconds\s*\(\s*(\d+(?:\.\d+)?)\s*\)/);
+  if (implicitWaitSecMatch) return Math.round(Number(implicitWaitSecMatch[1]) * 1000);
+  const implicitWaitMsMatch = text.match(/ImplicitWait\s*=\s*TimeSpan\.FromMilliseconds\s*\(\s*(\d+)\s*\)/);
+  if (implicitWaitMsMatch) return Number(implicitWaitMsMatch[1]);
   const secMatch = text.match(/time\.sleep\s*\(\s*(\d+(?:\.\d+)?)\s*\)?/);
   if (secMatch) return Math.round(Number(secMatch[1]) * 1000);
   return null;
@@ -790,15 +849,16 @@ const RULES = [
       const lines = content.split('\n');
       return findMatches(
         content,
-        /waitForTimeout\s*\(|page\.waitForTimeout|WaitForTimeoutAsync\s*\(|page\.WaitForTimeoutAsync|time\.sleep\s*\(|Thread\.sleep\s*\(|Thread\.Sleep\s*\(|Task\.Delay\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(|WaitForLoadStateAsync\s*\(\s*LoadState\.NetworkIdle|WaitForLoadStateAsync\s*\(\s*["']networkidle["']|waitForLoadState\s*\(\s*['"]networkidle['"]|WaitForLoadStateAsync\s*\(\s*\)/g,
+        /waitForTimeout\s*\(|page\.waitForTimeout|WaitForTimeoutAsync\s*\(|page\.WaitForTimeoutAsync|time\.sleep\s*\(|Thread\.sleep\s*\(|Thread\.Sleep\s*\(|Task\.Delay\s*\(|cy\.wait\s*\(\s*\d+|browser\.pause\s*\(|WaitForLoadStateAsync\s*\(\s*LoadState\.NetworkIdle|WaitForLoadStateAsync\s*\(\s*["']networkidle["']|waitForLoadState\s*\(\s*['"]networkidle['"]|WaitForLoadStateAsync\s*\(\s*\)|\.Timeouts\(\)\s*\.ImplicitWait\b|ImplicitWait\s*=|manage\(\)\s*\.timeouts\(\)\s*\.implicitlyWait/g,
         filePath,
       ).filter((hit) => {
-        if (/Thread\.Sleep|Task\.Delay|time\.sleep|Thread\.sleep|waitForTimeout|WaitForTimeoutAsync|cy\.wait|browser\.pause/.test(hit.text)) return true;
+        if (/Thread\.Sleep|Task\.Delay|time\.sleep|Thread\.sleep|waitForTimeout|WaitForTimeoutAsync|cy\.wait|browser\.pause|ImplicitWait|implicitlyWait/.test(hit.text)) return true;
         return !/\.Until\s*\(\s*ExpectedConditions\b|wait\.Until\s*\(\s*ExpectedConditions\b|Until\s*\(\s*ExpectedConditions\./.test(hit.text);
       }).map((hit) => {
         let subCase = classifyManualWaitSubCase(lines, hit.line);
         const isParameterlessLoadState = /WaitForLoadStateAsync\s*\(\s*\)/.test(hit.text);
         const isLoadStateWait = /WaitForLoadState|waitForLoadState/.test(hit.text);
+        const isImplicitWait = /ImplicitWait|implicitlyWait/.test(hit.text);
         const result = {
           ...hit,
           subCase,
@@ -812,6 +872,9 @@ const RULES = [
         }
         if (isLoadStateWait) {
           result.loadStateWait = true;
+        }
+        if (isImplicitWait) {
+          result.implicitWait = true;
         }
         if (isPollingLoop(lines, hit.line - 1)) {
           result.subCase = 'intentional';
@@ -892,13 +955,38 @@ const RULES = [
       const hits = [];
       const lines = content.split('\n');
       const ticketRe = /[A-Z][A-Z0-9]+-\d+|PROJ-\d+|#\d+/;
+      const isCSharp = filePath.endsWith('.cs');
       for (let i = 0; i < lines.length; i += 1) {
-        if (!/\btest\.fail\s*\(|\bit\.failing\s*\(|\bpytest\.mark\.xfail\b/.test(lines[i])) {
+        const line = lines[i];
+        // JS/Python patterns
+        if (/\btest\.fail\s*\(|\bit\.failing\s*\(|\bpytest\.mark\.xfail\b/.test(line)) {
+          const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
+          if (!ticketRe.test(context)) {
+            hits.push({ line: i + 1, text: line.trim() });
+          }
           continue;
         }
-        const context = `${lines[i - 1] || ''}\n${lines[i]}\n${lines[i + 1] || ''}`;
-        if (!ticketRe.test(context)) {
-          hits.push({ line: i + 1, text: lines[i].trim() });
+        if (!isCSharp) continue;
+        // C#: Assert.Fail( without ticket
+        if (/\bAssert\.Fail\s*\(/.test(line) && !/\bAssert\.Throws</.test(line)) {
+          const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
+          if (!ticketRe.test(context)) {
+            hits.push({ line: i + 1, text: line.trim() });
+          }
+          continue;
+        }
+        // C#: bare Assert.Throws< without follow-up assert and no ticket
+        if (/\bAssert\.Throws(?:Async)?<[^>]*>\s*\(/.test(line)) {
+          const context = `${lines[i - 1] || ''}\n${line}\n${lines[i + 1] || ''}`;
+          if (ticketRe.test(context)) continue;
+          const hasFollowUp = (i + 1 < lines.length && /\b(?:Assert\.That|Expect\s*\(|Assert\.AreEqual|\.Should\s*\()/.test(lines[i + 1]))
+            || (i + 2 < lines.length && /\b(?:Assert\.That|Expect\s*\(|Assert\.AreEqual|\.Should\s*\()/.test(lines[i + 2]));
+          if (hasFollowUp) continue;
+          const allMatches = findMatches(content, /\b(?:Assert\.That|Expect\s*\(|Assert\.AreEqual|Assert\.Fail|\.Should\s*\()/, filePath);
+          const methodAsserts = allMatches.filter((m) => m.line !== i + 1);
+          if (methodAsserts.length === 0) {
+            hits.push({ line: i + 1, text: line.trim() });
+          }
         }
       }
       return hits;
@@ -916,24 +1004,55 @@ const RULES = [
       if (!TEST_FILE_RE.test(filePath)) {
         return [];
       }
+      const isCSharp = filePath.endsWith('.cs');
       const hits = [];
-      for (const block of splitTestBlocks(content)) {
-        const failIdx = block.lines.findIndex((line) =>
-          /\btest\.fail\s*\(|\bit\.failing\s*\(/.test(line),
-        );
-        if (failIdx < 0) {
-          continue;
+
+      if (!isCSharp) {
+        for (const block of splitTestBlocks(content)) {
+          const failIdx = block.lines.findIndex((line) =>
+            /\btest\.fail\s*\(|\bit\.failing\s*\(/.test(line),
+          );
+          if (failIdx < 0) {
+            continue;
+          }
+          const assertIdx = block.lines.findIndex((line) =>
+            /\bexpect\s*\(|\bassert\b|\bassertEquals\b|\bassertThat\b/.test(line),
+          );
+          if (assertIdx >= 0 && failIdx > assertIdx) {
+            hits.push({
+              line: block.startLine + failIdx,
+              text: block.lines[failIdx].trim(),
+            });
+          }
         }
-        const assertIdx = block.lines.findIndex((line) =>
-          /\bexpect\s*\(|\bassert\b|\bassertEquals\b|\bassertThat\b/.test(line),
-        );
-        if (assertIdx >= 0 && failIdx > assertIdx) {
-          hits.push({
-            line: block.startLine + failIdx,
-            text: block.lines[failIdx].trim(),
-          });
+      } else {
+        // C#: Assert.Fail after assert in same method
+        for (const block of splitCSharpTestBlocks(content)) {
+          const assertIdx = block.lines.findIndex((line) =>
+            /\b(?:Assert\.That|Expect\s*\(|Assert\.AreEqual|\.Should\s*\()/.test(line),
+          );
+          const failIdx = block.lines.findIndex((line) =>
+            /\bAssert\.Fail\s*\(/.test(line),
+          );
+          if (assertIdx >= 0 && failIdx > assertIdx) {
+            hits.push({
+              line: block.startLine + failIdx,
+              text: block.lines[failIdx].trim(),
+            });
+          }
+        }
+        // C#: [Test(Order=n)] suite-order coupling
+        if (/\[Test\s*\([^\)]*Order\s*=/.test(content)) {
+          const orderedLines = findMatches(content, /\[Test\s*\([^\)]*Order\s*=/, filePath);
+          if (orderedLines.length > 0) {
+            hits.push({
+              line: orderedLines[0].line,
+              text: orderedLines[0].text,
+            });
+          }
         }
       }
+
       return hits;
     },
   },
@@ -1131,6 +1250,9 @@ function manualWaitFixHint(finding) {
       }
       return 'replace with expect.poll / pollUntil on the specific DOM state';
     case 'intentional':
+      if (finding.implicitWait) {
+        return 'replace ImplicitWait with WebDriverWait / wait.Until(ExpectedConditions.*) or Expect on observable state';
+      }
       if (finding.replaceable === true) {
         return `replace with ${finding.suggestion || 'a signal-driven wait'} (see gavel-refactor)`;
       }
@@ -1140,10 +1262,21 @@ function manualWaitFixHint(finding) {
   }
 }
 
-// Resolve the fix hint for a finding: context-aware for manual-wait, static otherwise.
+// Context-aware selector-leak fix hint: MobileBy is deprecated, steer to AppiumBy.
+function selectorLeakFixHint(finding) {
+  if (/MobileBy\./.test(finding.text || '')) {
+    return 'MobileBy is deprecated — use AppiumBy.*; extract the selector to a named locator in a locator class';
+  }
+  return FIX_HINTS['selector-leak'];
+}
+
+// Resolve the fix hint for a finding: context-aware for manual-wait and selector-leak, static otherwise.
 function fixHintFor(finding) {
   if (finding.tag === 'manual-wait') {
     return manualWaitFixHint(finding);
+  }
+  if (finding.tag === 'selector-leak') {
+    return selectorLeakFixHint(finding);
   }
   return FIX_HINTS[finding.tag] || null;
 }
@@ -1261,7 +1394,7 @@ function scanTestIds(files, repoRoot) {
 }
 
 function main() {
-  const { args, configPath } = parseConfigFlag(process.argv.slice(2));
+  const { args, configPath, preset } = parseConfigFlag(process.argv.slice(2));
   const jsonOutput = args.includes('--json');
   const format = formatFlag(args);
   if (format && format !== 'sarif') {
@@ -1282,7 +1415,7 @@ function main() {
   }
 
   try {
-    config = loadGavelConfig(resolvedRoot, { configPath, cwd: process.cwd() });
+    config = loadGavelConfig(resolvedRoot, { configPath, cwd: process.cwd(), preset });
     allowlist = Array.isArray(config.allowlist) ? config.allowlist : [];
     scanRoot = resolvedRoot;
   } catch (error) {
@@ -1358,6 +1491,9 @@ function main() {
         }
         if (hit.confidence) {
           finding.confidence = hit.confidence;
+        }
+        if (hit.implicitWait) {
+          finding.implicitWait = true;
         }
         const fix = fixHintFor(finding);
         if (fix) {
@@ -1436,7 +1572,7 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration, FIX_HINTS, manualWaitFixHint, fixHintFor, isNoDiInfrastructureFile };
+module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration, FIX_HINTS, manualWaitFixHint, fixHintFor, isNoDiInfrastructureFile, splitCSharpTestBlocks };
 
 if (require.main === module) {
   main();

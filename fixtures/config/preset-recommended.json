@@ -1,0 +1,4 @@
+{
+  "$schema": "../../schemas/gavel-config.schema.json",
+  "preset": "recommended"
+}

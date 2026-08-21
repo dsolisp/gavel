@@ -7,8 +7,8 @@ const { spawnSync } = require('child_process');
 const { RULES } = require('./self-check');
 const { parseConfigFlag, resolveGavelConfig } = require('./load-gavel-config');
 
-const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js', adoption: 'adoption-scan.js', flakiness: 'flakiness.js' };
-const valueFlags = new Set(['--config', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format']);
+const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js', adoption: 'adoption-scan.js', flakiness: 'flakiness.js', baseline: 'baseline.js' };
+const valueFlags = new Set(['--config', '--preset', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format']);
 const severityRank = { info: 0, warning: 1, error: 2, blocker: 3 };
 const ruleSeverity = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
 
@@ -18,8 +18,8 @@ function publicCommandName() {
 }
 
 function printHelp() {
-  console.log('Usage: gavel <command> [args] [--config gavel.config.json]');
-  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, adoption, flakiness, explain');
+  console.log('Usage: gavel <command> [args] [--config gavel.config.json] [--preset name]');
+  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, adoption, flakiness, baseline, explain');
 }
 
 function hasPositional(args) {
@@ -40,10 +40,11 @@ function addDefaultRoot(command, args) {
   return args;
 }
 
-function scriptArgs(command, args, configSource) {
+function scriptArgs(command, args, configSource, preset) {
   const out = addDefaultRoot(command, [...args]);
   if (command === 'audit' && !out.includes('--with-self-check')) out.push('--with-self-check');
-  if (configSource && configSource !== 'package.json#gavel' && ['audit', 'review', 'self-check'].includes(command)) out.push('--config', configSource);
+  if (configSource && configSource !== 'package.json#gavel' && ['audit', 'review', 'self-check', 'baseline'].includes(command)) out.push('--config', configSource);
+  if (preset && ['audit', 'review', 'self-check', 'baseline'].includes(command)) out.push('--preset', preset);
   return out;
 }
 
@@ -124,6 +125,10 @@ function main() {
     } else console.error('Usage: gavel companion --help');
     process.exit(rawArgs.includes('--help') || rawArgs.includes('-h') ? 0 : 2);
   }
+  if (command === 'baseline' && (rawArgs.includes('--help') || rawArgs.includes('-h'))) {
+    runScript(command, rawArgs);
+    process.exit(0);
+  }
   if (command === 'explain') {
     const jsonOut = rawArgs.includes('--json');
     const tag = rawArgs.find((a) => !a.startsWith('--'));
@@ -157,18 +162,19 @@ function main() {
     process.exit(2);
   }
 
-  const { args, configPath, sawConfig } = parseConfigFlag(rawArgs);
+  const { args, configPath, sawConfig, preset, sawPreset } = parseConfigFlag(rawArgs);
   if (sawConfig && !configPath) return console.error('Usage error: --config requires a path'), process.exit(2);
+  if (sawPreset && !preset) return console.error('Usage error: --preset requires a name'), process.exit(2);
   if (command === 'analyze' && !hasPositional(args) && process.stdin.isTTY) return console.error('Usage: gavel analyze <report-path> [--json|--envelope|--json-envelope]'), process.exit(2);
   let resolved;
   try {
-    resolved = resolveGavelConfig({ configPath, cwd: process.cwd() });
+    resolved = resolveGavelConfig({ configPath, cwd: process.cwd(), preset });
   } catch (error) {
     console.error(error.message);
     process.exit(2);
   }
 
-  const finalArgs = scriptArgs(command, args, resolved.source);
+  const finalArgs = scriptArgs(command, args, resolved.source, preset);
   const result = runScript(command, finalArgs);
   if (command === 'audit' && !resolved.source) {
     console.error('Hint: add gavel.config.json for thresholds, allowlists, and $schema editor autocomplete.');

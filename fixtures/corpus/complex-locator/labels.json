@@ -1,0 +1,187 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "complex-locator",
+  "samples": [
+    {
+      "file": "violating/pages/locators/WebFormsIdLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WebForms generated id #BNCRMP_cphContenidoPagina_ddlCuentas",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/XPathChainLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "XPath chain //div//span//a",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/GeneratedClassLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Generated class sc- with :has-text",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/XPathTableLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "XPath with positional indices in table",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/WebFormsTextBoxLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WebForms generated id #frmMain_cphContent_txtName",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/XPathFormLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "XPath string //form[@id='loginForm']",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/WebFormsLabelLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WebForms generated id #ctl00_MainContent_lblStatus",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/XpathPrefixLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "xpath= prefix string",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/DeepXPathLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Deep XPath chain //nav//ul//li//a",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/WebFormsButtonLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "WebForms generated id #aspnetForm_cphBody_btnSubmit",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/GeneratedIdTableLocators.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Generated id #gvData_ctl02_lblValue",
+      "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
+    },
+    {
+      "file": "violating/pages/locators/GeneratedClassLocators.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Generated class sc- with :has-text in TS",
+      "expectedFindings": [{ "line": 2, "tag": "complex-locator" }]
+    },
+    {
+      "file": "clean/pages/locators/RoleLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByRole with NameString — accessibility-first locator"
+    },
+    {
+      "file": "clean/pages/locators/AppiumA11yLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "appium-dotnet",
+      "rationale": "AppiumBy.AccessibilityId — accessibility-first locator"
+    },
+    {
+      "file": "clean/pages/locators/TextLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByText — semantic locator"
+    },
+    {
+      "file": "clean/pages/locators/SimpleCssLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Simple CSS #submit — fragility score below threshold"
+    },
+    {
+      "file": "clean/pages/locators/LabelLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByLabel — accessibility-first locator"
+    },
+    {
+      "file": "clean/pages/locators/PlaceholderLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByPlaceholder — accessibility-first locator"
+    },
+    {
+      "file": "clean/pages/locators/TestIdLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByTestId — stable test ID locator"
+    },
+    {
+      "file": "clean/pages/locators/TitleLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByTitle — accessibility-first locator"
+    },
+    {
+      "file": "clean/pages/locators/AltTextLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "GetByAltText — accessibility-first locator"
+    },
+    {
+      "file": "clean/pages/locators/AppiumIdLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "appium-dotnet",
+      "rationale": "AppiumBy.Id — stable ID locator"
+    },
+    {
+      "file": "clean/pages/locators/SimpleClassLocators.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Simple CSS .active — fragility score below threshold"
+    },
+    {
+      "file": "clean/pages/locators/AccessibleLocators.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "getByRole — accessibility-first locator"
+    }
+  ]
+}

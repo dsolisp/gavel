@@ -2,6 +2,10 @@
 
 Obey `dev/prompts/v0.12/00-PROTOCOL.md`. Implement **only** this item. Tier B. Zero new tags. Do **not** create a `fat-pom` rule id.
 
+**Depends on:** session **03** (`hasCSharpFiles`, dead-code `n/a` lines) and **04** (freshness/mismatch already on `suiteHealth` — do not re-implement or move them).
+
+**Status: shipped.** Do not re-run unless verify regresses. Deferred (acceptable): corpus fat-POM samples (08 — corpus labels `selector-leak` on fat pages, not `fatPomFiles`); touching rollup when running 06/08 unless a test needs it. `gavel-audit` skill lines for fat-POM/leak-files → session **13** mop.
+
 ## Why
 
 Lesson #2: every client `*Page.cs` owns `private ILocator X => page.GetByRole(...)` **and** click/fill methods. There is no `pages/locators/` split. Constitution is correct: GetByRole outside a locator class is `selector-leak`. IBC emitted **656** leaks; BNMovil **414**. Humans cannot see the real signal: “1 architecture finding / 40 files.”
@@ -10,10 +14,10 @@ Keep tagging every leak. Add a **rollup** so suite health shows architecture-lev
 
 ## Read first
 
-- `scripts/suite-health.js` — `buildSuiteHealthSummary`, `formatSuiteHealth`, `selectorLeaks` count (L123)
-- `scripts/audit-report.js` — JSON `suiteHealth`
+- `scripts/suite-health.js` — `buildSuiteHealthSummary` (already takes `repoRoot`; `hasCSharpFiles` from `audit-autofix.js`), `formatSuiteHealth` (dead-code block → **Selector leaks** → manual-wait block → **freshness/mismatch** from session 04 → Top areas)
+- `scripts/audit-report.js` — attaches `freshness` / `packageMismatch` **after** `buildSuiteHealthSummary`; your rollup fields belong **inside** `buildSuiteHealthSummary` (filesystem walk). Do not touch freshness wiring or audit exit codes.
 - `scripts/self-check.js` — `selector-leak` rule (L676–700), `LOCATOR_FILE_RE = /locators?\//i`, `TEST_FILE_RE`
-- `scripts/test/unit.test.js` — existing suite-health summary test (~L45–53)
+- `scripts/test/unit.test.js` — suite-health summary (~L45–53); freshness/mismatch `formatSuiteHealth` tests (~L777+) — extend that block for fat-POM/leak-files lines
 - `fixtures/sample-repos/playwright-dotnet/` — **good** shape: locators folder, not fat POM
 - `LESSONS_LEARNED_PLAYWRIGHT_CSHARP.md` §2 and §11 item 2
 - `AGENTS.md` Selector Boundary Rule
@@ -44,7 +48,7 @@ TS fat pages (`pages/LoginPage.ts` with `page.getByRole` + `async click`) should
 
 `new Set(selfCheckFindings.filter(f => f.tag === 'selector-leak').map(f => f.file)).size`
 
-Distinct files, not distinct lines. `selectorLeaks` line count stays as today.
+Distinct files, not distinct lines. `selectorLeaks` line count stays as today. `audit-report.js` passes **scored** findings into `buildSuiteHealthSummary`; `scoreFinding` preserves `tag` and `file` — filter on `tag === 'selector-leak'` as usual.
 
 ### Summary object
 
@@ -59,12 +63,16 @@ Always numbers (0 is honest here — this rollup **can** see C#).
 
 ### Print
 
+Insert **immediately after** the `Selector leaks:` line (before `Manual waits:`), so humans see line count and file count together:
+
 ```
-  Fat POM files: N
-  Leak files: N
+  Selector leaks: 656
+  Fat POM files: 40
+  Leak files: 40
+  Manual waits: ...
 ```
 
-Place near `Selector leaks:` so 656 leaks sit next to “40 files / 40 fat POMs”. Do not hide the per-line selector-leak findings in the ranked audit list — only the **health block** rollup changes.
+Leave session 04’s freshness/mismatch lines where they are (after constitution block, before Top areas). Do not hide per-line `selector-leak` findings in the ranked audit list — only the health block rollup changes.
 
 ### JSON
 
@@ -75,6 +83,8 @@ Same fields on `suiteHealth` for `--json` consumers.
 - Suppress or sample selector-leak findings.
 - Change `selector-leak` regex (MobileBy hint is session 09).
 - Change `complex-locator` (session 06).
+- Re-implement or reorder freshness / package mismatch (session 04).
+- Change audit exit codes for rollup-only changes.
 
 ## Fixtures
 
@@ -119,4 +129,11 @@ npm run verify
 
 ## Out of scope
 
-`complex-locator` CSS/XPath scoring (06). Corpus fat-POM samples (08).
+`complex-locator` CSS/XPath scoring (06). Corpus fat-POM samples (08 — optional; rollup is suite-health only).
+
+## Shipped shape (reference for 06+)
+
+- `countFatPomFiles(repoRoot)` in `suite-health.js`; `fatPomFiles` / `leakFiles` on `buildSuiteHealthSummary` return value.
+- `formatSuiteHealth`: after `Selector leaks:`, before `Manual waits:` — freshness/mismatch block unchanged (session 04).
+- Fixture: `fixtures/suite-health/fat-pom/`; unit tests ~L822+ in `unit.test.js`.
+- No new tags, no `selector-leak` regex changes, no audit exit-code changes.

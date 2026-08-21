@@ -12,6 +12,8 @@ These files are **dev-only**. They are not under `docs/` and must not be added t
 4. Wait until `npm run verify` is green and the session’s Done-when checklist is true.
 5. Commit on the release branch (human or a follow-up commit session). Then start the next item with a **new** session.
 
+**Shipped in tree (do not re-run):** 02 `no-di`, 03 dead-code `n/a (csharp)`, 04 audit freshness + mismatch, 05 fat-POM rollup. Next up: **06** complex-locator + ExpectedConditions.
+
 Order is the roadmap implementation table. Do not skip ahead. Later prompts assume earlier scanners exist (corpus session 08 needs NetworkIdle + C# parity from 01/07; baseline session 11 needs a working self-check).
 
 | File | Item | Tier |
@@ -23,7 +25,7 @@ Order is the roadmap implementation table. Do not skip ahead. Later prompts assu
 | [05-fat-pom-rollup.md](05-fat-pom-rollup.md) | Suite-health fat-POM rollup | B |
 | [06-complex-locator-expectedconditions.md](06-complex-locator-expectedconditions.md) | `complex-locator` C# CSS + ExpectedConditions exclusion | B |
 | [07-csharp-rule-parity.md](07-csharp-rule-parity.md) | C# parity for `no-teardown` / `bare-test-fail` / `test-fail-order` | B |
-| [08-csharp-corpus.md](08-csharp-corpus.md) | C# corpus completion (6 tags) | A + R |
+| [08-csharp-corpus.md](08-csharp-corpus.md) | C# corpus completion (7 tags incl. `no-di` session 02 carryover) | A + R |
 | [09-appium-goldens.md](09-appium-goldens.md) | Appium goldens + `MobileBy` hint | B |
 | [10-appium-java-skill.md](10-appium-java-skill.md) | Appium Java/Kotlin client skill | C |
 | [11-baseline-cli.md](11-baseline-cli.md) | `gavel baseline write` + `check` | A + R |

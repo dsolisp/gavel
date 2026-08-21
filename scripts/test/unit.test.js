@@ -10,7 +10,7 @@ const { spawnSync } = require('child_process');
 const { parseJUnitXml } = require('../parsers/junit');
 const { clusterFailures } = require('../cluster-failures');
 const { buildSuiteHealthSummary, formatSuiteHealth } = require('../suite-health');
-const { resolveGavelConfig, validateGavelConfig } = require('../load-gavel-config');
+const { resolveGavelConfig, validateGavelConfig, loadGavelConfig, applyPreset } = require('../load-gavel-config');
 const { validateEnvelope, schema: envelopeSchema } = require('../validate-envelope');
 const { toSarif } = require('../to-sarif');
 
@@ -63,33 +63,49 @@ test('buildSuiteHealthSummary counts dead code and constitution tags', () => {
   assert.doesNotMatch(formatted, /By path category/);
 });
 
-test('buildSuiteHealthSummary reports n/a (csharp) for C# repos', () => {
-  const csharpRoot = path.join(root, 'fixtures/sample-repos/playwright-dotnet');
-  const summary = buildSuiteHealthSummary([], [], csharpRoot);
-  assert.equal(summary.deadPoms, null);
-  assert.equal(summary.deadLocators, null);
-  assert.equal(summary.unusedFactories, null);
-  assert.equal(summary.deadCodeStatus, 'n/a (csharp)');
-  assert.equal(summary.safeAutofixCandidates, null);
-  assert.equal(summary.safeAutofixStatus, 'n/a (csharp)');
-  const formatted = formatSuiteHealth(summary);
-  assert.match(formatted, /Dead POMs: n\/a \(csharp\)/);
-  assert.match(formatted, /Dead locators: n\/a \(csharp\)/);
-  assert.match(formatted, /Unused factories: n\/a \(csharp\)/);
-  assert.match(formatted, /Safe autofix candidates: n\/a \(csharp\)/);
-  assert.doesNotMatch(formatted, /Dead POMs: 0/);
+test('C# dead-code graph flags unused POM/locator/factory and not used ones', () => {
+  const { findDeadPoms, findDeadLocators, findUnusedFactories, applyCandidate } = require('../audit-autofix');
+  const csharpRoot = path.join(root, 'fixtures/audit-autofix-csharp');
+
+  const deadPoms = findDeadPoms(csharpRoot);
+  assert.ok(deadPoms.some((item) => item.file.endsWith('Pages/UnusedPage.cs')));
+  assert.equal(deadPoms.some((item) => item.file.endsWith('Pages/UsedPage.cs')), false);
+  assert.ok(deadPoms.every((item) => item.autofix === 'report-only'));
+
+  const deadLocators = findDeadLocators(csharpRoot);
+  assert.ok(deadLocators.some((item) => item.symbol === 'UnusedButton'));
+  assert.equal(deadLocators.some((item) => item.symbol === 'UsedButton'), false);
+
+  const unusedFactories = findUnusedFactories(csharpRoot);
+  assert.ok(unusedFactories.some((item) => item.symbol === 'CreateUnused'));
+  assert.equal(unusedFactories.some((item) => item.symbol === 'CreateUsed'), false);
+
+  const unusedPage = path.join(csharpRoot, 'Pages', 'UnusedPage.cs');
+  assert.equal(applyCandidate(csharpRoot, deadPoms.find((item) => item.file.endsWith('Pages/UnusedPage.cs'))), false);
+  assert.equal(fs.existsSync(unusedPage), true);
 });
 
-test('audit-report on C# sample repo prints n/a (csharp) and not Dead POMs: 0', () => {
+test('buildSuiteHealthSummary counts C# dead-code as numbers, not n/a', () => {
+  const csharpRoot = path.join(root, 'fixtures/sample-repos/playwright-dotnet');
+  const summary = buildSuiteHealthSummary([], [], csharpRoot);
+  assert.equal(summary.deadPoms, 0);
+  assert.equal(summary.deadLocators, 0);
+  assert.equal(summary.unusedFactories, 0);
+  assert.equal(summary.safeAutofixCandidates, 0);
+  const formatted = formatSuiteHealth(summary);
+  assert.match(formatted, /Dead POMs: 0/);
+  assert.doesNotMatch(formatted, /n\/a \(csharp\)/);
+});
+
+test('audit-report on C# sample repo prints numeric dead-code counts', () => {
   const result = spawnSync(
     process.execPath,
     [path.join(root, 'scripts/audit-report.js'), 'fixtures/sample-repos/playwright-dotnet'],
     { cwd: root, encoding: 'utf8' },
   );
   assert.equal(result.status, 0);
-  assert.match(result.stdout, /Dead POMs: n\/a \(csharp\)/);
-  assert.match(result.stdout, /Dead locators: n\/a \(csharp\)/);
-  assert.doesNotMatch(result.stdout, /Dead POMs: 0/);
+  assert.match(result.stdout, /Dead POMs: 0/);
+  assert.doesNotMatch(result.stdout, /n\/a \(csharp\)/);
 
   const jsonResult = spawnSync(
     process.execPath,
@@ -97,10 +113,9 @@ test('audit-report on C# sample repo prints n/a (csharp) and not Dead POMs: 0', 
     { cwd: root, encoding: 'utf8' },
   );
   const payload = JSON.parse(jsonResult.stdout);
-  assert.equal(payload.suiteHealth.deadPoms, null);
-  assert.equal(payload.suiteHealth.deadCodeStatus, 'n/a (csharp)');
-  assert.equal(payload.suiteHealth.safeAutofixCandidates, null);
-  assert.equal(payload.suiteHealth.safeAutofixStatus, 'n/a (csharp)');
+  assert.equal(payload.suiteHealth.deadPoms, 0);
+  assert.equal(payload.suiteHealth.deadCodeStatus, undefined);
+  assert.equal(typeof payload.suiteHealth.safeAutofixCandidates, 'number');
 });
 
 test('path weights group findings by label and scale counts', () => {
@@ -153,6 +168,60 @@ test('gavel config resolution prefers --config, cwd config, package metadata, de
 
   fs.writeFileSync(path.join(dir, 'explicit.json'), JSON.stringify({ failThreshold: 'blocker' }));
   assert.equal(resolveGavelConfig({ cwd: dir, configPath: 'explicit.json' }).config.failThreshold, 'blocker');
+});
+
+test('policy presets merge failThreshold, paths, and allowlist with explicit overrides', () => {
+  const recommended = loadGavelConfig(root, {
+    configPath: path.join(root, 'fixtures/config/preset-recommended.json'),
+    cwd: root,
+  });
+  assert.equal(recommended.failThreshold, 'warning');
+
+  const strict = loadGavelConfig(root, {
+    configPath: path.join(root, 'fixtures/config/preset-strict.json'),
+    cwd: root,
+  });
+  assert.equal(strict.failThreshold, 'info');
+
+  const legacy = loadGavelConfig(root, {
+    configPath: path.join(root, 'fixtures/config/preset-legacy.json'),
+    cwd: root,
+  });
+  assert.equal(legacy.failThreshold, 'error');
+  assert.equal(legacy.paths[0].weight, 0.5);
+  assert.equal(legacy.paths[0].label, 'legacy');
+
+  const apiOnly = loadGavelConfig(root, {
+    configPath: path.join(root, 'fixtures/config/preset-api-only.json'),
+    cwd: root,
+  });
+  assert.ok(apiOnly.allowlist.some((entry) => entry.file === '*' && entry.tag === 'selector-leak'));
+  assert.ok(apiOnly.allowlist.some((entry) => entry.file === '*' && entry.tag === 'complex-locator'));
+
+  const override = loadGavelConfig(root, {
+    configPath: path.join(root, 'fixtures/config/preset-strict-override.json'),
+    cwd: root,
+  });
+  assert.equal(override.preset, 'strict');
+  assert.equal(override.failThreshold, 'blocker');
+
+  const userPaths = applyPreset({ preset: 'legacy', paths: [{ pattern: 'tests/**', weight: 2, label: 'hot' }] });
+  assert.equal(userPaths.paths[0].label, 'hot');
+
+  assert.throws(() => validateGavelConfig({ preset: 'soc2' }), /Unknown preset: soc2/);
+  assert.throws(() => applyPreset({ preset: 'mobile' }), /Unknown preset: mobile/);
+});
+
+test('CLI --preset unknown exits 2; api-only mutes locator tags', () => {
+  const unknown = runCli(['self-check', 'fixtures/self-check/violations', '--preset', 'soc2', '--json']);
+  assert.equal(unknown.status, 2);
+  assert.match(unknown.stderr, /Unknown preset: soc2/);
+
+  const apiOnly = runCli(['self-check', 'fixtures/self-check/violations', '--preset', 'api-only', '--json']);
+  const report = JSON.parse(apiOnly.stdout);
+  assert.equal(report.findings.some((finding) => finding.tag === 'selector-leak'), false);
+  assert.equal(report.findings.some((finding) => finding.tag === 'complex-locator'), false);
+  assert.ok(report.findings.some((finding) => finding.tag === 'manual-wait'));
 });
 
 test('hardcoded-env detects spec values without exposing credentials', () => {
@@ -242,6 +311,7 @@ test('package publishes unified gavel bins and config schema', () => {
     assert.equal(pkg.bin[name], './scripts/cli.js');
   }
   const schema = JSON.parse(fs.readFileSync(path.join(root, 'schemas/gavel-config.schema.json'), 'utf8'));
+  assert.deepEqual(schema.properties.preset.enum, ['recommended', 'strict', 'legacy', 'api-only']);
   assert.ok(schema.properties.failThreshold.enum.includes('warning'));
   assert.equal(schema.properties.fixturePaths.items.type, 'string');
   assert.equal(schema.properties.factoryPaths.items.type, 'string');
@@ -486,6 +556,19 @@ test('playwright_dotnet freshness reads Microsoft.Playwright from csproj', () =>
   const stack = detectStack(fixture);
   assert.equal(stack.primary, 'playwright-dotnet');
   assert.equal(stack.profile, 'gavel-playwright');
+});
+
+test('appium_java freshness reads io.appium:java-client from pom.xml', () => {
+  const { detectFramework } = require('../check-profile-freshness');
+  const { detectStack } = require('../detect');
+  const fixture = path.join(root, 'fixtures/profiles/appium-java-fresh');
+  const freshness = detectFramework(fixture);
+  assert.equal(freshness.framework, 'appium_java');
+  assert.equal(freshness.profile, 'gavel-appium-java');
+  assert.equal(freshness.installed, '9.4.0');
+  const stack = detectStack(fixture);
+  assert.equal(stack.primary, 'appium-java');
+  assert.equal(stack.profile, 'gavel-appium-java');
 });
 
 test('parseManualWaitDuration handles C# sleep APIs', () => {
@@ -908,4 +991,295 @@ test('ExpectedConditions is not manual-wait; Sleep still fires', () => {
     'Thread.Sleep(1000);',
   );
   assert.equal(sleepHits.length, 1);
+});
+
+test('C# no-teardown: recognizes TearDown/Dispose as cleanup; fires without cleanup', () => {
+  const { RULES } = require('../self-check');
+  const noTeardown = RULES.find((r) => r.id === 'no-teardown');
+
+  // Violating: PostAsync without cleanup
+  const violating = noTeardown.test(
+    'Tests/NoCleanupTests.cs',
+    'using NUnit.Framework;\nusing System.Net.Http;\n[TestFixture]\npublic class NoCleanupTests {\n  [Test]\n  public async Task Create() {\n    var c = new HttpClient();\n    await c.PostAsync("/x", null);\n  }\n}',
+  );
+  assert.ok(violating.length >= 1);
+
+  // Clean: [TearDown] present
+  const withTearDown = noTeardown.test(
+    'Tests/TearDownTests.cs',
+    'using NUnit.Framework;\n[TestFixture]\npublic class T {\n  [TearDown]\n  public void Cleanup() { }\n  [Test]\n  public void Create() {\n    var c = new HttpClient();\n    c.PostAsync("/x", null);\n  }\n}',
+  );
+  assert.equal(withTearDown.length, 0);
+
+  // Clean: IDisposable present
+  const withDispose = noTeardown.test(
+    'Tests/DisposableTests.cs',
+    'using NUnit.Framework;\n[TestFixture]\npublic class T : IDisposable {\n  [Test]\n  public void Create() {\n    var c = new HttpClient();\n    c.PostAsync("/x", null);\n  }\n  public void Dispose() { }\n}',
+  );
+  assert.equal(withDispose.length, 0);
+
+  // Clean: DisposeAsync present
+  const withDisposeAsync = noTeardown.test(
+    'Tests/AsyncDisposableTests.cs',
+    'using NUnit.Framework;\n[TestFixture]\npublic class T : IAsyncDisposable {\n  [Test]\n  public void Create() {\n    var c = new HttpClient();\n    c.PostAsync("/x", null);\n  }\n  public async Task DisposeAsync() { }\n}',
+  );
+  assert.equal(withDisposeAsync.length, 0);
+});
+
+test('C# bare-test-fail: Assert.Fail without ticket fires; ticketed/Throws+follow-up do not', () => {
+  const { RULES } = require('../self-check');
+  const bareFail = RULES.find((r) => r.id === 'bare-test-fail');
+
+  // Violating: Assert.Fail() no ticket
+  const v1 = bareFail.test(
+    'Tests/BareFailTests.cs',
+    '[Test]\npublic void X() {\n  Assert.Fail();\n}',
+  );
+  assert.equal(v1.length, 1);
+
+  // Clean: Assert.Fail with ticket
+  const c1 = bareFail.test(
+    'Tests/TicketedFailTests.cs',
+    '[Test]\npublic void X() {\n  Assert.Fail("PROJ-123: known bug");\n}',
+  );
+  assert.equal(c1.length, 0);
+
+  // Violating: bare Assert.Throws<Exception> without follow-up
+  const v2 = bareFail.test(
+    'Tests/BareThrowsTests.cs',
+    '[Test]\npublic void X() {\n  Assert.Throws<System.Exception>(() => Do());\n}\nprivate void Do() { }',
+  );
+  assert.equal(v2.length, 1);
+
+  // Clean: Assert.Throws followed by Assert.That
+  const c2 = bareFail.test(
+    'Tests/ThrowsThenAssertTests.cs',
+    '[Test]\npublic void X() {\n  var ex = Assert.Throws<System.Exception>(() => Do());\n  Assert.That(ex.Message, Does.Contain("err"));\n}\nprivate void Do() { }',
+  );
+  assert.equal(c2.length, 0);
+});
+
+test('C# test-fail-order: Assert-then-Fail fires; [Test(Order=] fires; unordered does not', () => {
+  const { RULES } = require('../self-check');
+  const failOrder = RULES.find((r) => r.id === 'test-fail-order');
+
+  // Violating: Assert.That then Assert.Fail
+  const v1 = failOrder.test(
+    'Tests/AssertBeforeFailTests.cs',
+    '[Test]\npublic void X() {\n  Assert.That(1, Is.EqualTo(1));\n  Assert.Fail("PROJ-1 regression");\n}',
+  );
+  assert.ok(v1.some((h) => /Assert\.Fail/.test(h.text)));
+
+  // Violating: [Test(Order=...)]
+  const v2 = failOrder.test(
+    'Tests/OrderedTests.cs',
+    '[TestFixture]\npublic class T {\n  [Test(Order = 1)]\n  public void A() { }\n  [Test(Order = 2)]\n  public void B() { }\n}',
+  );
+  assert.ok(v2.some((h) => /Order/.test(h.text)));
+
+  // Clean: Assert.Fail before any assert (with ticket)
+  const c1 = failOrder.test(
+    'Tests/FailBeforeAssertTests.cs',
+    '[Test]\npublic void X() {\n  Assert.Fail("PROJ-1: known");\n}',
+  );
+  assert.equal(c1.length, 0);
+
+  // Clean: unordered tests
+  const c2 = failOrder.test(
+    'Tests/UnorderedTests.cs',
+    '[TestFixture]\npublic class T {\n  [Test]\n  public void A() { }\n  [Test]\n  public void B() { }\n}',
+  );
+  assert.equal(c2.length, 0);
+});
+
+test('no-step still returns [] on .cs files', () => {
+  const { RULES } = require('../self-check');
+  const noStep = RULES.find((r) => r.id === 'no-step');
+  const hits = noStep.test(
+    'Tests/LargeTests.cs',
+    '[TestFixture]\npublic class T {\n  [Test] public void A() { }\n  [Test] public void B() { }\n}\n'.repeat(10),
+  );
+  assert.equal(hits.length, 0);
+});
+
+test('MobileBy selector-leak fix hint mentions AppiumBy deprecation', () => {
+  const { fixHintFor } = require('../self-check');
+
+  // MobileBy. in the snippet → deprecation hint + extract guidance
+  const mobileByHint = fixHintFor({ tag: 'selector-leak', text: 'driver.FindElement(MobileBy.AndroidUIAutomator("..."))' });
+  assert.match(mobileByHint, /MobileBy is deprecated/);
+  assert.match(mobileByHint, /AppiumBy/);
+  assert.match(mobileByHint, /extract the selector to a named locator/);
+
+  // AppiumBy. in the snippet → generic extract hint (no deprecation sentence)
+  const appiumByHint = fixHintFor({ tag: 'selector-leak', text: 'driver.FindElement(AppiumBy.AccessibilityId("x"))' });
+  assert.doesNotMatch(appiumByHint, /deprecated/);
+  assert.match(appiumByHint, /extract the selector/);
+
+  // No MobileBy → generic hint
+  const genericHint = fixHintFor({ tag: 'selector-leak', text: 'page.GetByRole(AriaRole.Button)' });
+  assert.equal(genericHint, 'extract the selector to a named locator in a locator class and call it by name');
+});
+
+test('ImplicitWait fires manual-wait; ExpectedConditions does not', () => {
+  const { RULES } = require('../self-check');
+  const manualWait = RULES.find((r) => r.id === 'manual-wait');
+
+  // ImplicitWait = TimeSpan.FromSeconds(10) → manual-wait
+  const iwHits = manualWait.test(
+    'Tests/ImplicitWaitTests.cs',
+    'driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10);',
+  );
+  assert.equal(iwHits.length, 1);
+  assert.equal(iwHits[0].implicitWait, true);
+  assert.equal(iwHits[0].subCase, 'intentional');
+
+  // .Timeouts().ImplicitWait → manual-wait
+  const toHits = manualWait.test(
+    'Tests/TimeoutTests.cs',
+    'driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);',
+  );
+  assert.equal(toHits.length, 1);
+
+  // Java implicitlyWait → manual-wait
+  const javaHits = manualWait.test(
+    'Tests/JavaImplicitTest.java',
+    'driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));',
+  );
+  assert.equal(javaHits.length, 1);
+
+  // WebDriverWait construction is NOT manual-wait (no false positive)
+  const wdHits = manualWait.test(
+    'Tests/ExplicitWaitTests.cs',
+    'var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));',
+  );
+  assert.equal(wdHits.length, 0);
+
+  // ImplicitWait fix hint
+  const { fixHintFor } = require('../self-check');
+  const hint = fixHintFor({ tag: 'manual-wait', subCase: 'intentional', implicitWait: true });
+  assert.match(hint, /replace ImplicitWait with WebDriverWait/);
+  assert.match(hint, /ExpectedConditions/);
+});
+
+test('fingerprint export is stable and matches SARIF identity', () => {
+  const { fingerprint } = require('../to-sarif');
+  const finding = { file: 'tests/a.spec.ts', tag: 'manual-wait', snippet: 'await page.waitForTimeout(1000)' };
+  const hash = fingerprint(finding);
+  assert.match(hash, /^[0-9a-f]{64}$/);
+  assert.equal(hash, fingerprint(finding));
+  assert.notEqual(hash, fingerprint({ ...finding, file: 'tests/b.spec.ts' }));
+});
+
+test('baseline write maps findings to schema-valid entries with correct snippetHash', () => {
+  const { fingerprint } = require('../to-sarif');
+  const { validateBaseline } = require('../verify-baseline-schema');
+  const finding = { file: 'tests/a.spec.ts', tag: 'manual-wait', text: 'await page.waitForTimeout(1000)' };
+  const hash = fingerprint({ file: finding.file, tag: finding.tag, snippet: finding.text });
+  const expectedHash = fingerprint({ file: 'tests/a.spec.ts', tag: 'manual-wait', snippet: 'await page.waitForTimeout(1000)' });
+  assert.equal(hash, expectedHash);
+
+  const doc = {
+    schemaVersion: '1.0.0',
+    generatedAt: new Date().toISOString(),
+    findings: [{ path: finding.file, rule: finding.tag, snippetHash: hash, createdAt: new Date().toISOString() }],
+  };
+  assert.deepEqual(validateBaseline(doc), []);
+});
+
+test('baseline write + check integration: schema-valid write, check exit 0, new violation exit 1', () => {
+  const { validateBaseline } = require('../verify-baseline-schema');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-baseline-'));
+  fs.mkdirSync(path.join(dir, 'tests'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'tests', 'wait.spec.ts'),
+    "import { test } from '@playwright/test';\ntest('waits', async ({ page }) => {\n  await page.waitForTimeout(1000);\n});\n",
+  );
+
+  const outFile = path.join(dir, 'gavel-baseline.json');
+  const writeResult = runCli(['baseline', 'write', dir, '--output', outFile]);
+  assert.equal(writeResult.status, 0);
+
+  const doc = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+  assert.equal(doc.schemaVersion, '1.0.0');
+  assert.deepEqual(validateBaseline(doc), []);
+  assert.ok(doc.findings.length >= 1);
+  assert.ok(doc.findings.some((f) => f.rule === 'manual-wait'));
+  assert.match(doc.findings[0].snippetHash, /^[0-9a-f]{64}$/);
+
+  const checkResult = runCli(['baseline', 'check', dir, '--baseline', outFile]);
+  assert.equal(checkResult.status, 0);
+
+  fs.writeFileSync(
+    path.join(dir, 'tests', 'wait.spec.ts'),
+    "import { test } from '@playwright/test';\ntest('waits', async ({ page }) => {\n  await page.waitForTimeout(1000);\n  await page.waitForTimeout(2000);\n});\n",
+  );
+  const newViolation = runCli(['baseline', 'check', dir, '--baseline', outFile]);
+  assert.equal(newViolation.status, 1);
+});
+
+test('baseline identity ignores line number but not snippet text', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-baseline-identity-'));
+  fs.mkdirSync(path.join(dir, 'tests'), { recursive: true });
+  const specPath = path.join(dir, 'tests', 'a.spec.ts');
+  fs.writeFileSync(
+    specPath,
+    "import { test } from '@playwright/test';\ntest('waits', async ({ page }) => {\n  await page.waitForTimeout(1000);\n});\n",
+  );
+
+  const outFile = path.join(dir, 'gavel-baseline.json');
+  assert.equal(runCli(['baseline', 'write', dir, '--output', outFile]).status, 0);
+
+  // Same snippet moved to a different line in the same file — hash has no line, identity matches.
+  fs.writeFileSync(
+    specPath,
+    "import { test } from '@playwright/test';\n\n\ntest('waits', async ({ page }) => {\n  await page.waitForTimeout(1000);\n});\n",
+  );
+  const sameSnippetMoved = runCli(['baseline', 'check', dir, '--baseline', outFile]);
+  assert.equal(sameSnippetMoved.status, 0);
+
+  // Different snippet text — new hash, not in baseline — exit 1.
+  fs.writeFileSync(
+    specPath,
+    "import { test } from '@playwright/test';\ntest('waits', async ({ page }) => {\n  await page.waitForTimeout(2000);\n});\n",
+  );
+  const differentSnippet = runCli(['baseline', 'check', dir, '--baseline', outFile]);
+  assert.equal(differentSnippet.status, 1);
+});
+
+test('gavel baseline with no subcommand exits 2', () => {
+  assert.equal(runCli(['baseline']).status, 2);
+  assert.equal(runCli(['baseline', 'unknown']).status, 2);
+});
+
+test('baseline write with --preset api-only mutes selector-leak and complex-locator', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-baseline-preset-'));
+  fs.mkdirSync(path.join(dir, 'tests'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'pages'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'tests', 'leak.spec.ts'),
+    "import { test } from '@playwright/test';\ntest('leaks', async ({ page }) => {\n  await page.locator('.btn').click();\n});\n",
+  );
+
+  const outFile = path.join(dir, 'gavel-baseline.json');
+  const result = runCli(['baseline', 'write', dir, '--output', outFile, '--preset', 'api-only']);
+  assert.equal(result.status, 0);
+
+  const doc = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+  assert.equal(doc.findings.some((f) => f.rule === 'selector-leak'), false);
+  assert.equal(doc.findings.some((f) => f.rule === 'complex-locator'), false);
+});
+
+test('baseline write --help exits 0 without creating a file', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-baseline-help-'));
+  const outFile = path.join(dir, 'gavel-baseline.json');
+  const result = runCli(['baseline', 'write', dir, '--output', outFile, '--help']);
+  assert.equal(result.status, 0);
+  assert.ok(!fs.existsSync(outFile));
+});
+
+test('baseline write with unknown --preset exits 2', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-baseline-bad-preset-'));
+  const result = runCli(['baseline', 'write', dir, '--preset', 'nonexistent']);
+  assert.equal(result.status, 2);
 });

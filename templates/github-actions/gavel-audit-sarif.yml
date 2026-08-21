@@ -5,7 +5,7 @@
 #
 # No LLM, no IDE skills, no Bailiff — only the pinned npm CLI.
 # `gavel audit` includes self-check by default (see docs/CLI_MATRIX.md).
-# Baseline ratchet (`gavel baseline`) is v0.9; until then gate on failThreshold.
+# Baseline ratchet (`gavel baseline write` / `check`) landed in v0.12; gate on failThreshold or baseline check.
 
 name: gavel-audit
 
