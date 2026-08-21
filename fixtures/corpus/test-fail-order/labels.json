@@ -1,0 +1,179 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "test-fail-order",
+  "samples": [
+    {
+      "file": "violating/OrderedTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "[Test(Order=1)] suite-order coupling",
+      "expectedFindings": [{ "line": 6, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/AssertBeforeFailTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.That before Assert.Fail in same method",
+      "expectedFindings": [{ "line": 10, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/AreEqualBeforeFailTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual before Assert.Fail in same method",
+      "expectedFindings": [{ "line": 10, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/OrderedThreeTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "[Test(Order=3)] suite-order coupling with three tests",
+      "expectedFindings": [{ "line": 6, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/ExpectBeforeFailTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Expect() before Assert.Fail in same method",
+      "expectedFindings": [{ "line": 10, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/ShouldBeforeFailTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": ".Should() before Assert.Fail in same method",
+      "expectedFindings": [{ "line": 11, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/OrderedWithSetupTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "[Test(Order=)] with SetUp present",
+      "expectedFindings": [{ "line": 9, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/MultipleAssertBeforeFailTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Multiple Assert.That before Assert.Fail",
+      "expectedFindings": [{ "line": 12, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/OrderedNegativeTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "[Test(Order=0)] suite-order coupling",
+      "expectedFindings": [{ "line": 6, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/AssertFailAfterTwoAssertsTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Two asserts then Assert.Fail in same method",
+      "expectedFindings": [{ "line": 11, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "violating/assertion-before-fail.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "test.fail() after assertion in same test",
+      "expectedFindings": [{ "line": 6, "tag": "test-fail-order" }]
+    },
+    {
+      "file": "clean/FailBeforeAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail before any other assert — correct order"
+    },
+    {
+      "file": "clean/UnorderedTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Normal tests without Order= or Assert.Fail"
+    },
+    {
+      "file": "clean/NormalNunitAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Simple NUnit assert, no fail marker"
+    },
+    {
+      "file": "clean/NormalXunitAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "Simple xUnit assert, no fail marker"
+    },
+    {
+      "file": "clean/NormalMstestAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "mstest",
+      "rationale": "Simple MSTest assert, no fail marker"
+    },
+    {
+      "file": "clean/SetUpOnlyTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "SetUp + Test without Order= or Assert.Fail"
+    },
+    {
+      "file": "clean/TearDownOnlyTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "TearDown + Test without Order= or Assert.Fail"
+    },
+    {
+      "file": "clean/TestCaseNoOrderTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "[TestCase] without Order= parameter"
+    },
+    {
+      "file": "clean/TheoryNoOrderTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "[Theory] without ordering"
+    },
+    {
+      "file": "clean/FluentAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "FluentAssertions only, no Assert.Fail"
+    },
+    {
+      "file": "clean/MultipleTestNoFailTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Multiple tests with normal asserts only"
+    },
+    {
+      "file": "clean/clean-assert.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Normal test with assertion, no fail marker"
+    }
+  ]
+}

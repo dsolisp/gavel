@@ -17,7 +17,8 @@ appium-dotnet/
 │   │   └── LoginLocators.cs      # Locator class — AppiumBy strategies only
 │   └── Actions/
 │       ├── LoginActions.cs       # Action class — no assertions
-│       └── LoginActionsBad.cs    # expect-in-action demo
+│       ├── LoginActionsBad.cs    # expect-in-action demo
+│       └── MobileGestureActionsBad.cs  # gesture leak, MobileBy, context-switch leak
 └── Support/
     └── Factories.cs              # UserFactory + DriverFactory
 ```
@@ -30,12 +31,15 @@ appium-dotnet/
 - **Factory data** — `UserFactory.Create()` over hardcoded credentials; server URL via `APPIUM_SERVER_URL`.
 - **NUnit categories** — `[Category("smoke")]` / `[Category("regression")]` mirror TS `@smoke` / `@regression`.
 
-## Violations Tagged In `LoginBadTests.cs` / `LoginActionsBad.cs`
+## Violations Tagged In `LoginBadTests.cs` / `LoginActionsBad.cs` / `MobileGestureActionsBad.cs`
 
 | Rule | Where |
 |------|-------|
 | `selector-leak` | spec calls `FindElement(AppiumBy.*)` outside a locator class |
-| `manual-wait` | `Thread.Sleep`, `Task.Delay` |
+| `selector-leak` | `MobileBy.AndroidUIAutomator` (deprecated — use `AppiumBy.*`; fix hint carries deprecation note) |
+| `selector-leak` | context switch then `FindElement(By.CssSelector(...))` in action |
+| `selector-leak` | inline gesture coordinates in action |
+| `manual-wait` | `Thread.Sleep`, `Task.Delay`, `ImplicitWait =` |
 | `no-di` | spec constructs `new LoginActions(...)` at class scope |
 | `skip-marker` | `[Ignore]` without reason |
 | `ignore-no-reason` | bare `gavel-ignore` without tag |

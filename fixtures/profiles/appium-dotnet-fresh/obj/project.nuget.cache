@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "dgSpecHash": "bX82Y1X1vds=",
+  "success": false,
+  "projectFilePath": "/Users/danielsolis/Documents/GitHub/Personal/gavel/fixtures/profiles/appium-dotnet-fresh/AppiumDotnet.csproj",
+  "expectedPackageFiles": [
+    "/Users/danielsolis/.nuget/packages/appium.webdriver/8.3.2/appium.webdriver.8.3.2.nupkg.sha512",
+    "/Users/danielsolis/.nuget/packages/microsoft.win32.systemevents/10.0.9/microsoft.win32.systemevents.10.0.9.nupkg.sha512",
+    "/Users/danielsolis/.nuget/packages/nunit/4.3.2/nunit.4.3.2.nupkg.sha512",
+    "/Users/danielsolis/.nuget/packages/selenium.webdriver/4.45.0/selenium.webdriver.4.45.0.nupkg.sha512",
+    "/Users/danielsolis/.nuget/packages/system.drawing.common/10.0.9/system.drawing.common.10.0.9.nupkg.sha512",
+    "/Users/danielsolis/.nuget/packages/microsoft.netcore.app.ref/8.0.22/microsoft.netcore.app.ref.8.0.22.nupkg.sha512",
+    "/Users/danielsolis/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.22/microsoft.aspnetcore.app.ref.8.0.22.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1605",
+      "level": "Error",
+      "message": "Warning As Error: Detected package downgrade: Selenium.WebDriver from 4.46.0 to 4.45.0. Reference the package directly from the project to select a different version. \n AppiumDotnet -> Appium.WebDriver 8.3.2 -> Selenium.WebDriver (>= 4.46.0) \n AppiumDotnet -> Selenium.WebDriver (>= 4.45.0)",
+      "projectPath": "/Users/danielsolis/Documents/GitHub/Personal/gavel/fixtures/profiles/appium-dotnet-fresh/AppiumDotnet.csproj",
+      "filePath": "/Users/danielsolis/Documents/GitHub/Personal/gavel/fixtures/profiles/appium-dotnet-fresh/AppiumDotnet.csproj",
+      "libraryId": "Selenium.WebDriver",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
+}

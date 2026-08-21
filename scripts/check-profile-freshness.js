@@ -91,6 +91,18 @@ const PROFILE_RELEASES = {
     profile: 'gavel-selenium',
     current: '4.45.0',
   },
+  appium_java: {
+    ecosystem: 'jvm',
+    packages: ['io.appium:java-client'],
+    profile: 'gavel-appium-java',
+    current: '9.4.0',
+  },
+  selenium_java: {
+    ecosystem: 'jvm',
+    packages: ['org.seleniumhq.selenium:selenium-java'],
+    profile: 'gavel-selenium',
+    current: '4.45.0',
+  },
 };
 
 function parseSemver(version) {
@@ -296,9 +308,61 @@ function detectDotnetFramework(repoRoot) {
   return null;
 }
 
+function parseJvmDependencies(repoRoot) {
+  const deps = {};
+  const gradleFiles = ['build.gradle', 'build.gradle.kts'];
+  for (const gFile of gradleFiles) {
+    const gPath = path.join(repoRoot, gFile);
+    if (!fs.existsSync(gPath)) continue;
+    const content = fs.readFileSync(gPath, 'utf8');
+    // Match implementation/compileOnly/api 'group:artifact:version'
+    const re = /(?:implementation|compileOnly|api|testImplementation)\s+['"]([^:'"]+):([^:'"]+):([^'"]+)['"]/g;
+    let m;
+    while ((m = re.exec(content)) !== null) {
+      deps[`${m[1]}:${m[2]}`] = m[3];
+    }
+  }
+  // Parse pom.xml
+  const pomPath = path.join(repoRoot, 'pom.xml');
+  if (fs.existsSync(pomPath)) {
+    const content = fs.readFileSync(pomPath, 'utf8');
+    const depRe = /<dependency>\s*(?:<[\/!\s]*[^>]*>\s*)*<groupId>([^<]+)<\/groupId>\s*<artifactId>([^<]+)<\/artifactId>\s*(?:<[^>]*>[^<]*<\/[^>]*>\s*)*<version>([^<]+)<\/version>/gi;
+    let m;
+    while ((m = depRe.exec(content)) !== null) {
+      deps[`${m[1].trim()}:${m[2].trim()}`] = m[3].trim();
+    }
+    // Also try the simpler pattern where elements may be in any order
+    const simpleRe = /<groupId>([^<]+)<\/groupId>\s*<artifactId>([^<]+)<\/artifactId>\s*(?:<[^>]*>[^<]*<\/[^>]*>\s*)*<version>([^<]+)<\/version>/gi;
+    while ((m = simpleRe.exec(content)) !== null) {
+      const key = `${m[1].trim()}:${m[2].trim()}`;
+      if (!deps[key]) {
+        deps[key] = m[3].trim();
+      }
+    }
+  }
+  return deps;
+}
+
+function detectJvmFramework(repoRoot) {
+  const deps = parseJvmDependencies(repoRoot);
+  // Precedence: Appium Java (superset of Selenium Java) → Selenium Java.
+  const order = ['appium_java', 'selenium_java'];
+  for (const framework of order) {
+    const meta = PROFILE_RELEASES[framework];
+    if (!meta) continue;
+    for (const pkg of meta.packages) {
+      if (deps[pkg]) {
+        return { framework, package: pkg, installed: deps[pkg], ...meta };
+      }
+    }
+  }
+  return null;
+}
+
 function detectFramework(repoRoot) {
   return (
     detectDotnetFramework(repoRoot)
+    || detectJvmFramework(repoRoot)
     || detectNodeFramework(readPackageJson(repoRoot))
     || detectPythonFramework(repoRoot)
   );
@@ -358,10 +422,40 @@ if (require.main === module) {
   main();
 }
 
+function findPlaywrightPackageMismatch(repoRoot) {
+  const testPackages = [
+    'Microsoft.Playwright.NUnit',
+    'Microsoft.Playwright.MSTest',
+    'Microsoft.Playwright.Xunit',
+  ];
+  for (const filePath of walkCsprojFiles(repoRoot)) {
+    const packages = parseCsprojPackages(filePath);
+    const pwVersion = packages['Microsoft.Playwright'];
+    if (!pwVersion) {
+      continue;
+    }
+    for (const testPkg of testPackages) {
+      const testVersion = packages[testPkg];
+      if (testVersion && testVersion !== pwVersion) {
+        return {
+          file: path.relative(repoRoot, filePath),
+          packages: {
+            'Microsoft.Playwright': pwVersion,
+            [testPkg]: testVersion,
+          },
+        };
+      }
+    }
+  }
+  return null;
+}
+
 module.exports = {
   compareFreshness,
   detectFramework,
   detectDotnetFramework,
+  detectJvmFramework,
+  findPlaywrightPackageMismatch,
   PROFILE_RELEASES,
   parseRequirementsTxt,
   parsePyprojectToml,

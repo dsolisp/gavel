@@ -1,0 +1,187 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "no-teardown",
+  "samples": [
+    {
+      "file": "violating/PostNoCleanupTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync without any teardown signal",
+      "expectedFindings": [{ "line": 11, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PutNoCleanupTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PutAsync without any teardown signal",
+      "expectedFindings": [{ "line": 11, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PostMultipleTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Multiple PostAsync without teardown",
+      "expectedFindings": [{ "line": 11, "tag": "no-teardown" }, { "line": 18, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PostWithSetUpTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync with SetUp but no TearDown",
+      "expectedFindings": [{ "line": 14, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PostXunitTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "xUnit [Fact] PostAsync without cleanup",
+      "expectedFindings": [{ "line": 10, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PostMstestTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "mstest",
+      "rationale": "MSTest [TestMethod] PostAsync without cleanup",
+      "expectedFindings": [{ "line": 11, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PutWithTearDownMissingTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PutAsync with SetUp but no TearDown",
+      "expectedFindings": [{ "line": 14, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PostAsyncWithContentTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync with content but no teardown",
+      "expectedFindings": [{ "line": 12, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PutAndPostTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Both PostAsync and PutAsync without teardown",
+      "expectedFindings": [{ "line": 11, "tag": "no-teardown" }, { "line": 12, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PostWithAssertTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync with assert but no teardown",
+      "expectedFindings": [{ "line": 11, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/PostWithOneTimeSetUpTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync with OneTimeSetUp but no teardown",
+      "expectedFindings": [{ "line": 14, "tag": "no-teardown" }]
+    },
+    {
+      "file": "violating/inline-create.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "axios.post without afterEach cleanup",
+      "expectedFindings": [{ "line": 6, "tag": "no-teardown" }]
+    },
+    {
+      "file": "clean/TearDownTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync with [TearDown] cleanup"
+    },
+    {
+      "file": "clean/DisposableTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync with IDisposable Dispose"
+    },
+    {
+      "file": "clean/OneTimeTearDownTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PostAsync with [OneTimeTearDown] cleanup"
+    },
+    {
+      "file": "clean/TestCleanupMstestTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "mstest",
+      "rationale": "PostAsync with [TestCleanup] cleanup"
+    },
+    {
+      "file": "clean/PutWithTearDownTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "PutAsync with [TearDown] cleanup"
+    },
+    {
+      "file": "clean/PostWithDisposeTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "PostAsync with IAsyncDisposable DisposeAsync"
+    },
+    {
+      "file": "clean/PostWithAfterTestTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Multiple PostAsync with [TearDown] cleanup"
+    },
+    {
+      "file": "clean/NoStateCreationTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Read-only test with no state creation"
+    },
+    {
+      "file": "clean/GetOnlyTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "GetAsync is not a state creation signal"
+    },
+    {
+      "file": "clean/MstestWithCleanupTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "mstest",
+      "rationale": "MSTest PostAsync with [TestCleanup]"
+    },
+    {
+      "file": "clean/XunitWithCleanupTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "xUnit PostAsync with IDisposable"
+    },
+    {
+      "file": "clean/inline-create-with-cleanup.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "axios.post with afterEach cleanup"
+    }
+  ]
+}

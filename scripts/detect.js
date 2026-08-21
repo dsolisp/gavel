@@ -35,12 +35,16 @@ function detectStack(repoRoot) {
   if (fileExists(root, ['pytest.ini', 'pyproject.toml', 'requirements.txt'])) add('pytest', 'pytest config or Python dependency file');
   if (fileExists(root, ['pom.xml', 'build.gradle', 'build.gradle.kts'])) add('junit', 'JVM test build file');
 
-  const { detectDotnetFramework } = require('./check-profile-freshness');
+  const { detectDotnetFramework, detectJvmFramework } = require('./check-profile-freshness');
   const dotnet = detectDotnetFramework(root);
   const DOTNET_FRAMEWORK_LABELS = {
     appium_dotnet: 'appium-dotnet',
     playwright_dotnet: 'playwright-dotnet',
     selenium_dotnet: 'selenium-csharp',
+  };
+  const JVM_FRAMEWORK_LABELS = {
+    appium_java: 'appium-java',
+    selenium_java: 'selenium-java',
   };
   const seleniumCsprojFallback = !dotnet && hasSeleniumCsproj(root);
   let dotnetProfile;
@@ -56,12 +60,20 @@ function detectStack(repoRoot) {
     dotnetProfile = 'gavel-selenium';
   }
 
+  const jvm = detectJvmFramework(root);
+  let jvmProfile;
+  if (jvm) {
+    frameworks.unshift(JVM_FRAMEWORK_LABELS[jvm.framework] || jvm.framework);
+    evidence.unshift(`${jvm.package} in pom.xml/build.gradle → ${jvm.profile}`);
+    jvmProfile = jvm.profile;
+  }
+
   return {
     repo: root,
     primary: frameworks[0] || 'unknown',
     frameworks: [...new Set(frameworks)],
     evidence,
-    profile: dotnetProfile,
+    profile: dotnetProfile || jvmProfile,
     note: frameworks.length === 0 ? 'No known test stack markers found.' : 'Static detection only; no tests or browsers were run.',
   };
 }

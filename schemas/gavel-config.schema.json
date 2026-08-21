@@ -6,6 +6,10 @@
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
+    "preset": {
+      "type": "string",
+      "enum": ["recommended", "strict", "legacy", "api-only"]
+    },
     "failThreshold": {
       "type": "string",
       "enum": ["off", "info", "warning", "error", "blocker"],

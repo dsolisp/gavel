@@ -10,7 +10,7 @@ function usage() {
 }
 
 function main(argv) {
-  const { args, configPath } = parseConfigFlag(argv);
+  const { args, configPath, preset } = parseConfigFlag(argv);
   const json = args.includes('--json');
   const files = args.filter((arg) => !arg.startsWith('--'));
   if (files.length !== 2) {
@@ -24,7 +24,7 @@ function main(argv) {
   }
   let config;
   try {
-    config = loadGavelConfig(path.dirname(afterPath), { configPath, cwd: process.cwd() });
+    config = loadGavelConfig(path.dirname(afterPath), { configPath, cwd: process.cwd(), preset });
   } catch (error) {
     console.error(error.message);
     process.exit(2);

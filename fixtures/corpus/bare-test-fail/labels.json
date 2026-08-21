@@ -1,0 +1,202 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "bare-test-fail",
+  "samples": [
+    {
+      "file": "violating/BareAssertFailTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail() without ticket reference",
+      "expectedFindings": [{ "line": 9, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/BareAssertThrowsTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Throws<> without follow-up assert and no ticket",
+      "expectedFindings": [{ "line": 9, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/FailWithMessageTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail with message but no ticket reference",
+      "expectedFindings": [{ "line": 9, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/FailXunitTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "xUnit [Fact] Assert.Fail() without ticket",
+      "expectedFindings": [{ "line": 8, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/FailMstestTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "mstest",
+      "rationale": "MSTest [TestMethod] Assert.Fail() without ticket",
+      "expectedFindings": [{ "line": 9, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/ThrowsAsyncNoFollowUpTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.ThrowsAsync<> without follow-up and no ticket",
+      "expectedFindings": [{ "line": 9, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/MultipleFailsTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Multiple Assert.Fail() without tickets",
+      "expectedFindings": [{ "line": 9, "tag": "bare-test-fail" }, { "line": 15, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/FailInCatchTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail() in catch block without ticket",
+      "expectedFindings": [{ "line": 15, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/ThrowsInvalidOperationTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Throws<InvalidOperationException> without follow-up and no ticket",
+      "expectedFindings": [{ "line": 9, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/FailAfterSetupTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail() after [SetUp] without ticket",
+      "expectedFindings": [{ "line": 12, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/FailWithNonTicketRefTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail() with comment but no ticket pattern",
+      "expectedFindings": [{ "line": 10, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/ThrowsXunitTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "xUnit Assert.Throws<> without follow-up and no ticket",
+      "expectedFindings": [{ "line": 8, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "violating/missing-ticket.spec.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "test.fail() without ticket reference",
+      "expectedFindings": [{ "line": 3, "tag": "bare-test-fail" }]
+    },
+    {
+      "file": "clean/TicketedAssertFailTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail with PROJ-1 ticket reference"
+    },
+    {
+      "file": "clean/ThrowsThenAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Throws followed by Assert.That — not bare"
+    },
+    {
+      "file": "clean/TicketedThrowsTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Throws with BUG-42 ticket in context"
+    },
+    {
+      "file": "clean/FailWithBugRefTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail with BUG-123 ticket reference"
+    },
+    {
+      "file": "clean/FailWithHashTicketTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail with #42 ticket reference"
+    },
+    {
+      "file": "clean/ThrowsWithFollowUpTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Throws followed by Assert.That on next line"
+    },
+    {
+      "file": "clean/TicketedFailXunitTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "xUnit Assert.Fail with JIRA-99 ticket in context"
+    },
+    {
+      "file": "clean/FailWithTicketCommentTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Fail with PROJ-999 ticket on same line"
+    },
+    {
+      "file": "clean/ThrowsWithShouldTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.Throws followed by .Should() — not bare"
+    },
+    {
+      "file": "clean/CleanMstestTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "mstest",
+      "rationale": "MSTest normal assertion, no fail marker"
+    },
+    {
+      "file": "clean/CleanNunitAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "NUnit normal assertion, no fail marker"
+    },
+    {
+      "file": "clean/CleanXunitAssertTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "xunit",
+      "rationale": "xUnit normal assertion, no fail marker"
+    },
+    {
+      "file": "clean/clean-test.spec.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Normal test without fail marker"
+    }
+  ]
+}

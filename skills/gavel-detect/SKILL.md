@@ -25,6 +25,7 @@ Check these signals in order:
 | `Appium.WebDriver` in `*.csproj` (checked first — Appium depends on Selenium) | **Appium (C#)** |
 | `Microsoft.Playwright` / `Microsoft.Playwright.NUnit` (or MSTest/Xunit) in `*.csproj` (and no `Appium.WebDriver`) | **Playwright.NET** |
 | `selenium` in requirements.txt/pyproject.toml, `chromedriver` in PATH | **Selenium (Python)** |
+| `io.appium:java-client` in pom.xml/build.gradle (checked before Selenium Java) | **Appium (Java/Kotlin)** |
 | `org.seleniumhq.selenium` in pom.xml/build.gradle | **Selenium (Java)** |
 | `Selenium.WebDriver` in .csproj (and no `Microsoft.Playwright*` / `Appium.WebDriver`) | **Selenium (C#)** |
 | `cypress` in package.json, `cypress.config.*` | **Cypress** |
@@ -94,6 +95,7 @@ flag if project is more than one minor behind.
 | Playwright | `playwright` / `@playwright/test` | 1.61.1 |
 | Playwright.NET | `Microsoft.Playwright` | 1.61.0 |
 | Appium.NET | `Appium.WebDriver` | 8.3.2 |
+| Appium Java/Kotlin | `io.appium:java-client` | 9.4.0 |
 | Cypress | `cypress` | 15.18.0 |
 | WebdriverIO | `webdriverio` | 9.29.0 |
 | Selenium (Py) | `selenium` | 4.45.0 |
@@ -140,6 +142,7 @@ Once detected, the matching profile is activated for the session:
 - Playwright -> `gavel-playwright`
 - Playwright.NET -> `gavel-playwright`
 - Appium (C#) -> `gavel-appium`
+- Appium (Java/Kotlin) -> `gavel-appium-java`
 - Selenium -> `gavel-selenium`
 - Cypress -> `gavel-cypress`
 - WebdriverIO -> `gavel-webdriverio`

@@ -39,7 +39,7 @@ playwright-dotnet/
 | `no-di` | spec constructs `new LoginActions(...)` at class scope |
 | `skip-marker` | `[Ignore]` without reason |
 | `ignore-no-reason` | bare `gavel-ignore` without tag |
-| `expect-in-action` | `LoginActionsBad.cs` uses `Expect(...)` (mirrors TS sample; scanner targets lowercase `expect` today) |
+| `expect-in-action` | `LoginActionsBad.cs` uses `Expect(...)` / `Assert.That(...)` inside an action |
 
 **Not fired on C# in v0.10.0:** `no-step` (deferred — NUnit has no `test.step()` analog).
 

@@ -20,6 +20,86 @@
       "expectedFindings": [{ "line": 13, "tag": "expect-in-action" }]
     },
     {
+      "file": "violating/pages/LoginPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Expect() in page file with using static Microsoft.Playwright.Assertions (lesson #12)",
+      "expectedFindings": [{ "line": 14, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/DashboardPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual inside a page class",
+      "expectedFindings": [{ "line": 12, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/CheckoutPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "FluentAssertions .Should() inside a page class",
+      "expectedFindings": [{ "line": 11, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/ProfilePage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.That inside a page class",
+      "expectedFindings": [{ "line": 12, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/SettingsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "FluentAssertions .Should() inside a page class",
+      "expectedFindings": [{ "line": 11, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/SearchPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual inside a page class",
+      "expectedFindings": [{ "line": 12, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/OrderPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "FluentAssertions .Should() inside a page class",
+      "expectedFindings": [{ "line": 11, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/AdminPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.IsTrue inside a page class",
+      "expectedFindings": [{ "line": 12, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/ReportPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "FluentAssertions .Should() inside a page class",
+      "expectedFindings": [{ "line": 11, "tag": "expect-in-action" }]
+    },
+    {
+      "file": "violating/pages/PaymentPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "nunit",
+      "rationale": "Assert.AreEqual inside a page class",
+      "expectedFindings": [{ "line": 12, "tag": "expect-in-action" }]
+    },
+    {
       "file": "clean/pages/actions/good-login.actions.ts",
       "label": "clean",
       "language": "ts",
@@ -32,6 +112,76 @@
       "language": "cs",
       "framework": "nunit",
       "rationale": "action delegates to a locator and returns without asserting"
+    },
+    {
+      "file": "clean/pages/HomeNavigationPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with navigation only, no assertions"
+    },
+    {
+      "file": "clean/pages/FormFillPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with form fill action, no assertions"
+    },
+    {
+      "file": "clean/pages/ClickActionPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with click action, no assertions"
+    },
+    {
+      "file": "clean/pages/NavigatePage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with GotoAsync, no assertions"
+    },
+    {
+      "file": "clean/pages/SelectDropdownPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with SelectOptionAsync, no assertions"
+    },
+    {
+      "file": "clean/pages/HoverPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with HoverAsync, no assertions"
+    },
+    {
+      "file": "clean/pages/UploadPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with SetInputFilesAsync, no assertions"
+    },
+    {
+      "file": "clean/pages/ScrollPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with EvaluateAsync, no assertions"
+    },
+    {
+      "file": "clean/pages/WaitPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class with WaitForURLAsync, no assertions"
+    },
+    {
+      "file": "clean/pages/GetTextPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "page class returns text, no assertions"
     }
   ]
 }

@@ -15,14 +15,18 @@ const { RULES } = require('./self-check');
 const { ENVELOPE_SCHEMA_VERSION } = require('./ci-analysis-envelope');
 const { validateEnvelope } = require('./validate-envelope');
 const { toSarif, formatFlag } = require('./to-sarif');
+const { detectFramework, compareFreshness, findPlaywrightPackageMismatch } = require('./check-profile-freshness');
 
 const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
 
-function runSelfCheck(repoRoot, configPath = null) {
+function runSelfCheck(repoRoot, configPath = null, preset = null) {
   const script = path.join(__dirname, 'self-check.js');
   const args = [script, repoRoot, '--json'];
   if (configPath) {
     args.push('--config', configPath);
+  }
+  if (preset) {
+    args.push('--preset', preset);
   }
   const result = spawnSync(process.execPath, args, {
     encoding: 'utf8',
@@ -156,7 +160,7 @@ function buildAuditEnvelope(report, ranked) {
 }
 
 function main() {
-  const { args, configPath } = parseConfigFlag(process.argv.slice(2));
+  const { args, configPath, preset } = parseConfigFlag(process.argv.slice(2));
   const jsonOutput = args.includes('--json');
   const jsonEnvelope = args.includes('--json-envelope');
   const auditFormat = args.includes('--audit-format');
@@ -176,14 +180,14 @@ function main() {
   const resolved = path.resolve(repoRoot);
   let config = {};
   try {
-    config = loadGavelConfig(resolved, { configPath, cwd: process.cwd() });
+    config = loadGavelConfig(resolved, { configPath, cwd: process.cwd(), preset });
   } catch (error) {
     console.error(error.message);
     process.exit(2);
   }
   const autofixCandidates = findAutofixCandidates(resolved);
   const selfCheckResult = withSelfCheck
-    ? runSelfCheck(resolved, configPath)
+    ? runSelfCheck(resolved, configPath, preset)
     : { findings: [], excludedFileCount: 0 };
   const selfCheckFindings = selfCheckResult.findings;
   const excludedFileCount = selfCheckResult.excludedFileCount;
@@ -196,6 +200,27 @@ function main() {
     config,
     excludedFileCount,
   );
+
+  // Profile freshness (warning line, does not affect exit code).
+  const detected = detectFramework(resolved);
+  if (detected) {
+    const freshness = compareFreshness(detected.installed, detected.current);
+    health.freshness = {
+      detected: true,
+      framework: detected.framework,
+      package: detected.package,
+      installed: detected.installed,
+      profileCurrent: detected.current,
+      status: freshness.status,
+      detail: freshness.detail,
+    };
+  }
+
+  const packageMismatch = findPlaywrightPackageMismatch(resolved);
+  if (packageMismatch) {
+    health.packageMismatch = packageMismatch;
+  }
+
   const timeImpact = buildTimeImpact(scoredSelfCheck);
 
   const report = {

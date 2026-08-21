@@ -6,6 +6,22 @@ const path = require('path');
 
 const CONFIG_NAME = 'gavel.config.json';
 const CONFIG_NAMES = [CONFIG_NAME];
+const PRESET_IDS = ['recommended', 'strict', 'legacy', 'api-only'];
+const PRESETS = {
+  recommended: { failThreshold: 'warning' },
+  strict: { failThreshold: 'info' },
+  legacy: {
+    failThreshold: 'error',
+    paths: [{ pattern: '**/*', weight: 0.5, label: 'legacy' }],
+  },
+  'api-only': {
+    failThreshold: 'warning',
+    allowlist: [
+      { file: '*', tag: 'selector-leak' },
+      { file: '*', tag: 'complex-locator' },
+    ],
+  },
+};
 
 function readJson(filePath, label = filePath) {
   try {
@@ -19,6 +35,8 @@ function parseConfigFlag(argv) {
   const args = [];
   let configPath = null;
   let sawConfig = false;
+  let preset = null;
+  let sawPreset = false;
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--config') {
       sawConfig = true;
@@ -31,9 +49,20 @@ function parseConfigFlag(argv) {
       configPath = argv[i].slice('--config='.length);
       continue;
     }
+    if (argv[i] === '--preset') {
+      sawPreset = true;
+      preset = argv[i + 1];
+      i += 1;
+      continue;
+    }
+    if (argv[i].startsWith('--preset=')) {
+      sawPreset = true;
+      preset = argv[i].slice('--preset='.length);
+      continue;
+    }
     args.push(argv[i]);
   }
-  return { args, configPath, sawConfig };
+  return { args, configPath, sawConfig, preset, sawPreset };
 }
 
 function validateGavelConfig(config, source = CONFIG_NAME) {
@@ -45,6 +74,9 @@ function validateGavelConfig(config, source = CONFIG_NAME) {
     if (config[key] && (!Array.isArray(config[key]) || config[key].some((item) => typeof item !== 'string'))) {
       throw new Error(`${source}: ${key} must be an array of strings`);
     }
+  }
+  if (config.preset !== undefined && !PRESET_IDS.includes(config.preset)) {
+    throw new Error(`Unknown preset: ${config.preset}`);
   }
   if (config.allowlist && !Array.isArray(config.allowlist)) {
     throw new Error(`${source}: allowlist must be an array`);
@@ -91,31 +123,47 @@ function validateGavelConfig(config, source = CONFIG_NAME) {
   return config;
 }
 
+function mergeGavelConfig(userConfig, presetId) {
+  if (!presetId) {
+    return { ...userConfig };
+  }
+  const pack = PRESETS[presetId];
+  if (!pack) {
+    throw new Error(`Unknown preset: ${presetId}`);
+  }
+  return { ...pack, ...userConfig, preset: presetId };
+}
+
+function applyPreset(config, presetOverride) {
+  return mergeGavelConfig(config, presetOverride || config.preset);
+}
+
 function loadGavelConfig(repoRoot, options = {}) {
   const root = path.resolve(repoRoot || options.cwd || process.cwd());
   const cwd = path.resolve(options.cwd || root);
+  let loaded;
   if (options.configPath) {
     const configPath = path.resolve(cwd, options.configPath);
     if (!fs.existsSync(configPath)) {
       throw new Error(`Config file does not exist: ${configPath}`);
     }
-    return validateGavelConfig(readJson(configPath, configPath), configPath);
-  }
-
-  const repoConfig = path.join(root, CONFIG_NAME);
-  if (fs.existsSync(repoConfig)) {
-    return validateGavelConfig(readJson(repoConfig, CONFIG_NAME), CONFIG_NAME);
-  }
-
-  const packagePath = path.join(root, 'package.json');
-  if (fs.existsSync(packagePath)) {
-    const pkg = readJson(packagePath, 'package.json');
-    if (pkg.gavel !== undefined) {
-      return validateGavelConfig(pkg.gavel, 'package.json#gavel');
+    loaded = validateGavelConfig(readJson(configPath, configPath), configPath);
+  } else {
+    const repoConfig = path.join(root, CONFIG_NAME);
+    if (fs.existsSync(repoConfig)) {
+      loaded = validateGavelConfig(readJson(repoConfig, CONFIG_NAME), CONFIG_NAME);
+    } else {
+      const packagePath = path.join(root, 'package.json');
+      if (fs.existsSync(packagePath)) {
+        const pkg = readJson(packagePath, 'package.json');
+        if (pkg.gavel !== undefined) {
+          loaded = validateGavelConfig(pkg.gavel, 'package.json#gavel');
+        }
+      }
     }
   }
 
-  return {};
+  return applyPreset(loaded || {}, options.preset);
 }
 
 function resolveGavelConfig(options = {}) {
@@ -132,4 +180,13 @@ function resolveGavelConfig(options = {}) {
   return { config, source };
 }
 
-module.exports = { loadGavelConfig, resolveGavelConfig, parseConfigFlag, validateGavelConfig, CONFIG_NAMES };
+module.exports = {
+  loadGavelConfig,
+  resolveGavelConfig,
+  parseConfigFlag,
+  validateGavelConfig,
+  applyPreset,
+  mergeGavelConfig,
+  PRESET_IDS,
+  CONFIG_NAMES,
+};

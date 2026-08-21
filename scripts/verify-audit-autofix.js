@@ -200,4 +200,50 @@ if (remaining.length === 0) {
   process.exit(1);
 }
 
-console.log('Audit autofix OK: locators, POMs, multi-class POM, factories, audit-format, audit-report, JSON output, result envelope verified.');
+const csharpRoot = path.join(root, 'fixtures', 'audit-autofix-csharp');
+const csharpDeadPoms = findDeadPoms(csharpRoot);
+if (!csharpDeadPoms.some((item) => item.file.endsWith('Pages/UnusedPage.cs'))) {
+  console.error('Expected UnusedPage.cs to be flagged as dead POM.');
+  process.exit(1);
+}
+if (csharpDeadPoms.some((item) => item.file.endsWith('Pages/UsedPage.cs'))) {
+  console.error('UsedPage.cs should not be flagged as dead POM.');
+  process.exit(1);
+}
+if (csharpDeadPoms.some((item) => item.autofix !== 'report-only')) {
+  console.error('C# dead-pom must be report-only (not safe apply).');
+  process.exit(1);
+}
+const csharpDeadLocators = findDeadLocators(csharpRoot);
+if (!csharpDeadLocators.some((item) => item.symbol === 'UnusedButton')) {
+  console.error('Expected UnusedButton to be flagged as dead locator.');
+  process.exit(1);
+}
+if (csharpDeadLocators.some((item) => item.symbol === 'UsedButton')) {
+  console.error('UsedButton should not be flagged as dead.');
+  process.exit(1);
+}
+const csharpFactories = findUnusedFactories(csharpRoot);
+if (!csharpFactories.some((item) => item.symbol === 'CreateUnused')) {
+  console.error('Expected CreateUnused to be flagged as unused factory.');
+  process.exit(1);
+}
+if (csharpFactories.some((item) => item.symbol === 'CreateUsed')) {
+  console.error('CreateUsed should not be flagged as unused factory.');
+  process.exit(1);
+}
+const csharpApply = spawnSync(
+  process.execPath,
+  [path.join(root, 'scripts/audit-autofix.js'), csharpRoot, '--apply'],
+  { encoding: 'utf8' },
+);
+if (csharpApply.status !== 0) {
+  console.error(csharpApply.stderr || csharpApply.stdout);
+  process.exit(1);
+}
+if (!fs.existsSync(path.join(csharpRoot, 'Pages', 'UnusedPage.cs'))) {
+  console.error('C# --apply must not delete UnusedPage.cs.');
+  process.exit(1);
+}
+
+console.log('Audit autofix OK: locators, POMs, multi-class POM, factories, C# graph, audit-format, audit-report, JSON output, result envelope verified.');

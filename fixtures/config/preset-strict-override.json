@@ -1,0 +1,5 @@
+{
+  "$schema": "../../schemas/gavel-config.schema.json",
+  "preset": "strict",
+  "failThreshold": "blocker"
+}

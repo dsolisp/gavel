@@ -16,8 +16,88 @@
       "label": "violating",
       "language": "cs",
       "framework": "playwright-dotnet",
-      "rationale": "new LoginPage(page) inside NUnit test method",
+      "rationale": "new LoginPage(page) inside NUnit [Test] method",
       "expectedFindings": [{ "line": 12, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/TestCaseConstructionTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new LoginPage(page) inside [TestCase] method",
+      "expectedFindings": [{ "line": 12, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/FactConstructionTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new LoginPage(page) inside [Fact] method",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/TransferenciaTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new TransferenciaRapidaPage(page) inside [Test] — lesson #12 shape",
+      "expectedFindings": [{ "line": 12, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/CheckoutDirectTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new CheckoutPage(page) inside [Test] method",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/DashboardDirectTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new DashboardPage(page) inside [Test] method",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/SettingsDirectTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new SettingsActions(page) inside [Test] method",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/ReportDirectTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new ReportPage(page) inside [Test] method",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/MultipleConstructTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Two new page objects inside [Test] methods",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }, { "line": 18, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/XunitDirectTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new ProfilePage(page) inside [Fact] method",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }]
+    },
+    {
+      "file": "violating/MstestDirectTests.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new OrderPage(page) inside [TestCaseSource] method",
+      "expectedFindings": [{ "line": 11, "tag": "no-di" }]
     },
     {
       "file": "clean/fixture-injection.spec.ts",
@@ -32,6 +112,76 @@
       "language": "cs",
       "framework": "playwright-dotnet",
       "rationale": "PageTest provides Page via DI — no new XxxPage in test body"
+    },
+    {
+      "file": "clean/LoginTestBase.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Gate 1 infrastructure file (*TestBase.cs) — skipped by no-di"
+    },
+    {
+      "file": "clean/LoginTestsBase.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Gate 1 infrastructure file (*TestsBase.cs) — skipped by no-di"
+    },
+    {
+      "file": "clean/SetUpInjectionTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new LoginPage only in [SetUp], not in test body (Gate 2)"
+    },
+    {
+      "file": "clean/MstestTestInitializeTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new LoginPage only in [TestInitialize] (SetUp), not in test body"
+    },
+    {
+      "file": "clean/ConstructorInjectionTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Page object injected via constructor — no new in test body"
+    },
+    {
+      "file": "clean/ClassLevelFixtureTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new DashboardPage in [SetUp], not in test body (Gate 2)"
+    },
+    {
+      "file": "clean/ServiceInjectionTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "API client injected via SetUp parameter — no page object construction"
+    },
+    {
+      "file": "clean/TestFixturePatternTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "new SettingsPage in [OneTimeSetUp], not in test body (Gate 2)"
+    },
+    {
+      "file": "clean/PageMethodOnlyTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Tests use IPage methods directly — no page object construction"
+    },
+    {
+      "file": "clean/ComposedFixtureTests.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "Multiple page objects in [SetUp], none in test body (Gate 2)"
     }
   ]
 }

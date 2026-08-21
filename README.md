@@ -33,7 +33,7 @@ node scripts/cli.js audit ../your-automation-repo --with-self-check --audit-form
 Or gate CI with **SARIF 2.1.0** (no LLM required):
 
 ```bash
-npx --yes @dsolisp/gavel@0.10.0 audit --format sarif > gavel.sarif
+npx --yes @dsolisp/gavel@0.12.0 audit --format sarif > gavel.sarif
 ```
 
 Copy the GitHub Actions recipe from [templates/github-actions/gavel-audit-sarif.yml](templates/github-actions/gavel-audit-sarif.yml). Enterprise trust criteria, Sonar import, and exit codes: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).

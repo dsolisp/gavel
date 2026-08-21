@@ -4,6 +4,8 @@ Every name that looks like a “core command” in README / help must either shi
 
 **Exit contract (CLI):** `0` clean · `1` findings at/above threshold · `2` usage/config/schema error.
 
+`--preset recommended|strict|legacy|api-only` selects a policy pack (CLI overrides file `"preset"`; explicit keys override pack defaults). Not a separate verb.
+
 ## Unified CLI (`npx gavel` / `scripts/cli.js`)
 
 | Command | Implementation | Status |
@@ -16,6 +18,7 @@ Every name that looks like a “core command” in README / help must either shi
 | `gavel detect` | `scripts/detect.js` | **CLI** |
 | `gavel adoption` | `scripts/adoption-scan.js` | **CLI** (report-only, exit `0`) |
 | `gavel flakiness` | `scripts/flakiness.js` | **CLI** (report-only, exit `0`; `2` on unreadable report) |
+| `gavel baseline` | `scripts/baseline.js` (`write` / `check`) | **CLI** |
 | `gavel explain <tag>` | Inline in `scripts/cli.js` (RULES registry) | **CLI** |
 | `gavel companion --help` | Stub → points at `companion/README.md` | **CLI stub** (no workflow execution) |
 | `gavel --help` | Lists CLI commands only | **CLI** |
