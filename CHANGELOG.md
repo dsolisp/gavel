@@ -7,6 +7,8 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-20
+
 Theme: **.NET + Appium depth & baseline gates** — full C# rule parity, Appium golden fixtures, incremental adoption.
 
 ### Added
@@ -306,7 +308,8 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/dsolisp/gavel/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/dsolisp/gavel/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/dsolisp/gavel/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/dsolisp/gavel/compare/v0.8.1...v0.9.0
