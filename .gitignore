@@ -29,3 +29,7 @@ docs/graduation-evidence-v0.9.0.md
 docs/graduation-evidence-v0.10.0.md
 docs/graduation-verdict-v0.8.0.md
 docs/graduation/
+
+# .NET fixture build artifacts
+fixtures/**/bin/
+fixtures/**/obj/
