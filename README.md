@@ -7,7 +7,7 @@
     <em>One test. One verdict. Move on.</em>
   </p>
   <p align="center">
-    <img src="https://img.shields.io/github/v/release/dsolisp/gavel?style=flat-square&label=release" alt="Release">
+    <a href="https://github.com/dsolisp/gavel/tags"><img src="https://img.shields.io/github/v/tag/dsolisp/gavel?style=flat-square&label=release" alt="Release"></a>
     <img src="https://github.com/dsolisp/gavel/actions/workflows/gavel-verify.yml/badge.svg" alt="CI">
     <img src="https://img.shields.io/badge/works%20with-20%2B%20IDEs-blue?style=flat-square" alt="Works with 20+ IDEs">
     <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT license">
