@@ -125,6 +125,16 @@ function findHardcodedEnvMatches(filePath, content) {
   return [...hits.values()];
 }
 
+function findHardcodedSensitiveDataMatches(filePath, content) {
+  if (!TEST_FILE_RE.test(filePath)) return [];
+  const sensitiveName = '(?:e-?mail|ssn|socialSecurityNumber|nationalId|taxId|iban|accountNumber|cardNumber|pan)';
+  const assignment = new RegExp(`(?:["']?${sensitiveName}["']?|\\b${sensitiveName})\\s*[:=]\\s*["'][^"']+["']`, 'gi');
+  return findMatches(content, assignment, filePath).map((hit) => ({
+    line: hit.line,
+    text: 'hardcoded sensitive data',
+  }));
+}
+
 // Blank a substring's characters (line offsets preserved) so downstream line
 // splitting and matching stay aligned; newlines are kept.
 function blankNonNewline(text) {
@@ -863,6 +873,8 @@ const RULES = [
           ...hit,
           subCase,
           durationMs: parseManualWaitDuration(hit.text),
+          interpretationSource: 'static-heuristic',
+          interpretationStatus: 'unvalidated',
         };
         if (isParameterlessLoadState) {
           result.confidence = 'low';
@@ -1170,6 +1182,16 @@ const RULES = [
     test: findHardcodedEnvMatches,
   },
   {
+    id: 'hardcoded-sensitive-data',
+    severity: 'error',
+    envelopeSeverity: 'blocker',
+    class: 'data',
+    scope: 'test-only',
+    message: 'Hardcoded sensitive data in a test spec',
+    remediation: 'Create sensitive test data through a factory or protected fixture and mask it in logs (AGENTS.md: Test Data Discipline).',
+    test: findHardcodedSensitiveDataMatches,
+  },
+  {
     id: 'no-teardown',
     severity: 'info',
     envelopeSeverity: 'report',
@@ -1231,6 +1253,7 @@ const FIX_HINTS = {
   'skip-marker': 'add a reason and ticket reference to the skip/quarantine/WIP marker',
   'ignore-no-reason': 'use gavel-ignore: <tag> with a reason comment, or remove the suppression',
   'hardcoded-env': 'read the value from an env var, .env file, or config module',
+  'hardcoded-sensitive-data': 'create the value through a test-data factory or protected fixture and mask it in logs',
   'no-teardown': 'add teardown in the same file/suite (afterEach, tearDown, addfinalizer, post-yield, @AfterEach)',
   'complex-locator': 'prefer a rung-1 accessibility locator or stable test id over structural/XPath selectors',
   'brittle-assert': 'use a partial matcher (toContain / toHaveText(/partial/); "substring" in value; assertThat(actual).contains(expected))',
@@ -1396,12 +1419,25 @@ function scanTestIds(files, repoRoot) {
 function main() {
   const { args, configPath, preset } = parseConfigFlag(process.argv.slice(2));
   const jsonOutput = args.includes('--json');
+  const ruleIndex = args.indexOf('--rule');
+  const fileIndex = args.indexOf('--file');
+  const ruleFilter = ruleIndex >= 0 ? args[ruleIndex + 1] : null;
+  const fileFilter = fileIndex >= 0 ? args[fileIndex + 1]?.replace(/\\/g, '/') : null;
+  if ((ruleIndex >= 0 && !ruleFilter) || (fileIndex >= 0 && !fileFilter)) {
+    console.error('Usage error: --rule and --file require a value');
+    process.exit(2);
+  }
+  if (ruleFilter && !RULES.some((rule) => rule.id === ruleFilter)) {
+    console.error(`Unknown rule: ${ruleFilter}`);
+    process.exit(2);
+  }
   const format = formatFlag(args);
   if (format && format !== 'sarif') {
     console.error('Usage: --format supports only "sarif"');
     process.exit(2);
   }
-  const targetRoot = args.find((arg) => !arg.startsWith('--') && arg !== 'sarif');
+  const flagValues = new Set([ruleFilter, fileFilter, format].filter(Boolean));
+  const targetRoot = args.find((arg) => !arg.startsWith('--') && !flagValues.has(arg));
 
   if (!targetRoot) {
     console.error('Usage: node scripts/self-check.js <target-repo-root> [--json]');
@@ -1435,6 +1471,9 @@ function main() {
 
   for (const filePath of walked) {
     const relPath = path.relative(resolvedRoot, filePath).replace(/\\/g, '/');
+    if (fileFilter && relPath !== fileFilter && !relPath.endsWith(`/${fileFilter}`)) {
+      continue;
+    }
     if (isExcludedPath(relPath, excludePaths)) {
       excludedFileCount += 1;
       continue;
@@ -1447,6 +1486,9 @@ function main() {
     const content = fs.readFileSync(filePath, 'utf8');
 
     for (const rule of RULES) {
+      if (ruleFilter && rule.id !== ruleFilter) {
+        continue;
+      }
       if (!shouldRunRule(rule, relPath)) {
         continue;
       }
@@ -1489,6 +1531,10 @@ function main() {
         if (hit.durationMs !== undefined) {
           finding.durationMs = hit.durationMs;
         }
+        if (hit.interpretationSource) {
+          finding.interpretationSource = hit.interpretationSource;
+          finding.interpretationStatus = hit.interpretationStatus;
+        }
         if (hit.confidence) {
           finding.confidence = hit.confidence;
         }
@@ -1504,7 +1550,9 @@ function main() {
     }
   }
 
-  findings.push(...scanTestIds(scanned, resolvedRoot));
+  if (!ruleFilter || ruleFilter.startsWith('test-id-')) {
+    findings.push(...scanTestIds(scanned, resolvedRoot).filter((finding) => !ruleFilter || finding.tag === ruleFilter));
+  }
 
   // Attach fix hints uniformly: test-id findings are pushed outside the per-rule
   // loop above, so this pass guarantees every violation carries a `fix:` hint.

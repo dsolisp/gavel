@@ -46,6 +46,12 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 5. **Verify**: run test + compile + lint
 6. **Iterate**: fix one error at a time; first pass often needs follow-up
 
+Before editing shared infrastructure (`BaseTest`, fixtures, global setup, shared page objects), list its usages and state the affected tests. If the root-cause fix expands beyond the requested files or behavior, obtain explicit scope confirmation first.
+
+For `no-di`, search for an existing page-object resolver, fixture factory, or constructor-injection pattern before adding properties or helpers. Reuse the repository's established pattern; do not introduce a second DI convention.
+
+After a rule-scoped remediation, run an all-rule audit for each touched file and report remaining tags as deferred debt. Do not silently expand the fix to those tags.
+
 ## Test Maintenance Drift Playbook
 
 When gavel-analyze or gavel-impact classifies **test-maintenance-drift**:

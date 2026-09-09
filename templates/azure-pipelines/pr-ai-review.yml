@@ -1,0 +1,113 @@
+parameters:
+- name: pool
+  type: string
+  default: self-hosted-qa
+- name: dependsOn
+  type: string
+  default: Tests
+- name: configPath
+  type: string
+  default: gavel.pr-review.json
+- name: timeoutInMinutes
+  type: number
+  default: 15
+
+jobs:
+- job: GavelPrReviewShadow
+  displayName: Gavel PR review (shadow)
+  dependsOn: ${{ parameters.dependsOn }}
+  condition: and(always(), eq(variables['Build.Reason'], 'PullRequest'))
+  timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+  pool:
+    name: ${{ parameters.pool }}
+  variables:
+    deterministicJobResult: $[ dependencies.${{ parameters.dependsOn }}.result ]
+  steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+    path: s/source
+
+  - checkout: gavel
+    clean: true
+    fetchDepth: 1
+    path: s/gavel
+
+  - task: PowerShell@2
+    displayName: Verify Node.js runtime
+    inputs:
+      targetType: inline
+      script: |
+        $version = node --version
+        if ($LASTEXITCODE -ne 0) { throw 'Node.js is not installed on the configured agent.' }
+        Write-Host "Node.js runtime detected: $version"
+
+  - task: PowerShell@2
+    displayName: Restore previous PR review snapshot
+    inputs:
+      targetType: inline
+      script: |
+        $headers = @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }
+        $branch = [uri]::EscapeDataString($env:BUILD_SOURCEBRANCH)
+        $buildsUri = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds?definitions=$env:SYSTEM_DEFINITIONID&branchName=$branch&statusFilter=completed&queryOrder=finishTimeDescending&`$top=20&api-version=7.1"
+        $destination = "$(Agent.TempDirectory)/gavel-pr-review-previous"
+        New-Item -ItemType Directory -Force -Path $destination | Out-Null
+        try {
+          $builds = (Invoke-RestMethod -Uri $buildsUri -Headers $headers -Method Get).value
+          foreach ($build in $builds) {
+            if ($build.id -eq [int]$env:BUILD_BUILDID) { continue }
+            $artifactUri = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECTID/_apis/build/builds/$($build.id)/artifacts?artifactName=gavel-pr-review-state&api-version=7.1"
+            try { $artifact = Invoke-RestMethod -Uri $artifactUri -Headers $headers -Method Get } catch { continue }
+            $archive = Join-Path $destination 'snapshot.zip'
+            Invoke-WebRequest -Uri $artifact.resource.downloadUrl -Headers $headers -OutFile $archive
+            Expand-Archive -Path $archive -DestinationPath $destination -Force
+            $snapshot = Get-ChildItem -Path $destination -Filter 'gavel-pr-review-snapshot.json' -Recurse | Select-Object -First 1
+            if ($snapshot) {
+              $target = Join-Path $destination 'gavel-pr-review-snapshot.json'
+              if ($snapshot.FullName -ne $target) { Copy-Item $snapshot.FullName $target -Force }
+              Write-Host "Restored snapshot from build $($build.id)."
+              break
+            }
+          }
+        } catch {
+          Write-Warning 'Previous snapshot could not be restored; the reviewer will perform a full review.'
+        }
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      SYSTEM_COLLECTIONURI: $(System.CollectionUri)
+      SYSTEM_TEAMPROJECTID: $(System.TeamProjectId)
+      SYSTEM_DEFINITIONID: $(System.DefinitionId)
+      BUILD_SOURCEBRANCH: $(Build.SourceBranch)
+      BUILD_BUILDID: $(Build.BuildId)
+
+  - task: PowerShell@2
+    displayName: Run PR reviewer in shadow mode
+    inputs:
+      targetType: inline
+      workingDirectory: $(Pipeline.Workspace)/s/source
+      script: |
+        New-Item -ItemType Directory -Force -Path "$(Agent.TempDirectory)/gavel-pr-review-state" | Out-Null
+        node "$(Pipeline.Workspace)/s/gavel/scripts/cli.js" ado-pr-review `
+          --config "${{ parameters.configPath }}" `
+          --output "$(Agent.TempDirectory)/gavel-pr-review.json" `
+          --snapshot-input "$(Agent.TempDirectory)/gavel-pr-review-previous/gavel-pr-review-snapshot.json" `
+          --snapshot-output "$(Agent.TempDirectory)/gavel-pr-review-state/gavel-pr-review-snapshot.json"
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      GAVEL_DETERMINISTIC_STATUS: $(deterministicJobResult)
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish sanitized PR review audit
+    condition: always()
+    inputs:
+      targetPath: $(Agent.TempDirectory)/gavel-pr-review.json
+      artifact: gavel-pr-review
+      publishLocation: pipeline
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish PR review snapshot
+    condition: succeededOrFailed()
+    inputs:
+      targetPath: $(Agent.TempDirectory)/gavel-pr-review-state
+      artifact: gavel-pr-review-state
+      publishLocation: pipeline

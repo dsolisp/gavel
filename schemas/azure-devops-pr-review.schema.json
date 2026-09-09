@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dsolisp.github.io/gavel/schemas/azure-devops-pr-review.schema.json",
+  "title": "Azure DevOps pull request review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reviewedCommit", "verdict", "summary", "confidence", "findings", "missingContext", "checksConsidered"],
+  "properties": {
+    "schemaVersion": { "enum": ["1.0"] },
+    "reviewedCommit": { "type": "string", "pattern": "^[0-9a-fA-F]{40}$" },
+    "verdict": { "enum": ["APPROVE", "REQUEST_CHANGES", "NEEDS_HUMAN_REVIEW", "REVIEW_FAILED"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "findings": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "category", "file", "startLine", "endLine", "evidence", "impact", "reasoning", "recommendation", "confidence", "blocking"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-zA-Z0-9._-]{8,80}$" },
+          "severity": { "enum": ["P0", "P1", "P2", "P3", "INFO"] },
+          "category": { "enum": ["correctness", "security", "tests", "architecture", "pipeline", "traceability"] },
+          "file": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "startLine": { "type": "integer", "minimum": 1 },
+          "endLine": { "type": "integer", "minimum": 1 },
+          "evidence": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "impact": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "reasoning": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "recommendation": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "blocking": { "type": "boolean" }
+        }
+      }
+    },
+    "missingContext": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 }
+    },
+    "checksConsidered": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+    }
+  }
+}

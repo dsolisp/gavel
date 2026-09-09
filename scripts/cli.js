@@ -6,9 +6,10 @@ const fs = require('fs');
 const { spawnSync } = require('child_process');
 const { RULES } = require('./self-check');
 const { parseConfigFlag, resolveGavelConfig } = require('./load-gavel-config');
+const { version } = require('../package.json');
 
-const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js', adoption: 'adoption-scan.js', flakiness: 'flakiness.js', baseline: 'baseline.js' };
-const valueFlags = new Set(['--config', '--preset', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format']);
+const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js', adoption: 'adoption-scan.js', flakiness: 'flakiness.js', baseline: 'baseline.js', 'ado-pr-review': 'ado-pr-review.js' };
+const valueFlags = new Set(['--config', '--preset', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format', '--out', '--rule', '--file']);
 const severityRank = { info: 0, warning: 1, error: 2, blocker: 3 };
 const ruleSeverity = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
 
@@ -19,7 +20,35 @@ function publicCommandName() {
 
 function printHelp() {
   console.log('Usage: gavel <command> [args] [--config gavel.config.json] [--preset name]');
-  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, adoption, flakiness, baseline, explain');
+  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, adoption, flakiness, baseline, ado-pr-review, explain');
+}
+
+function normalizeOutputArgs(args) {
+  const normalized = [];
+  let outputPath = null;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--out') {
+      outputPath = args[index + 1] || null;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--out=')) {
+      outputPath = arg.slice('--out='.length) || null;
+      continue;
+    }
+    if (arg === '--format' && args[index + 1] === 'json') {
+      normalized.push('--json');
+      index += 1;
+      continue;
+    }
+    if (arg === '--format=json') {
+      normalized.push('--json');
+      continue;
+    }
+    normalized.push(arg);
+  }
+  return { args: normalized, outputPath };
 }
 
 function hasPositional(args) {
@@ -118,6 +147,10 @@ function main() {
     printHelp();
     process.exit(0);
   }
+  if (['-v', '--version', 'version'].includes(command)) {
+    console.log(version);
+    process.exit(0);
+  }
   if (command === 'companion') {
     if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
       console.log('Companion workflows are optional and hidden from default help.');
@@ -156,13 +189,21 @@ function main() {
     }
     process.exit(0);
   }
+  if (command === 'ado-pr-review') {
+    const result = runScript(command, rawArgs);
+    process.exit(result.status || 0);
+  }
   if (!scripts[command]) {
     console.error(`Unknown command: ${command}`);
     printHelp();
     process.exit(2);
   }
 
-  const { args, configPath, sawConfig, preset, sawPreset } = parseConfigFlag(rawArgs);
+  const output = normalizeOutputArgs(rawArgs);
+  if (rawArgs.some((arg) => arg === '--out' || arg.startsWith('--out=')) && !output.outputPath) {
+    return console.error('Usage error: --out requires a path'), process.exit(2);
+  }
+  const { args, configPath, sawConfig, preset, sawPreset } = parseConfigFlag(output.args);
   if (sawConfig && !configPath) return console.error('Usage error: --config requires a path'), process.exit(2);
   if (sawPreset && !preset) return console.error('Usage error: --preset requires a name'), process.exit(2);
   if (command === 'analyze' && !hasPositional(args) && process.stdin.isTTY) return console.error('Usage: gavel analyze <report-path> [--json|--envelope|--json-envelope]'), process.exit(2);
@@ -175,7 +216,13 @@ function main() {
   }
 
   const finalArgs = scriptArgs(command, args, resolved.source, preset);
-  const result = runScript(command, finalArgs);
+  const result = runScript(command, finalArgs, Boolean(output.outputPath));
+  if (output.outputPath) {
+    if (result.stderr) process.stderr.write(result.stderr);
+    if ([0, 1].includes(result.status)) {
+      fs.writeFileSync(path.resolve(output.outputPath), result.stdout || '', 'utf8');
+    }
+  }
   if (command === 'audit' && !resolved.source) {
     console.error('Hint: add gavel.config.json for thresholds, allowlists, and $schema editor autocomplete.');
   }

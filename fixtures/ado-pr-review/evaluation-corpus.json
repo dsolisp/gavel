@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "1.0",
+  "cases": [
+    {
+      "id": "clean-native-assertion",
+      "diff": "--- a/tests/LoginTest.cs\n+++ b/tests/LoginTest.cs\n@@ -17 +17 @@\n-Assert.That(actual, Is.EqualTo(oldValue));\n+Assert.That(actual, Is.EqualTo(expected));\n",
+      "expectedFindings": [],
+      "modelResponse": {
+        "schemaVersion": "1.0",
+        "reviewedCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "verdict": "APPROVE",
+        "summary": "The changed assertion remains deterministic.",
+        "confidence": 0.95,
+        "findings": [],
+        "missingContext": [],
+        "checksConsidered": ["evaluation"]
+      }
+    },
+    {
+      "id": "blocking-manual-wait",
+      "diff": "--- a/tests/LoginTest.cs\n+++ b/tests/LoginTest.cs\n@@ -17 +17,2 @@\n await login.SubmitAsync();\n+Thread.Sleep(5000);\n+Assert.That(login.IsComplete, Is.True);\n",
+      "expectedFindings": [
+        {
+          "severity": "P1",
+          "category": "tests",
+          "file": "tests/LoginTest.cs",
+          "startLine": 18,
+          "endLine": 18
+        }
+      ],
+      "modelResponse": {
+        "schemaVersion": "1.0",
+        "reviewedCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "verdict": "REQUEST_CHANGES",
+        "summary": "The added fixed sleep makes the test timing-dependent.",
+        "confidence": 0.96,
+        "findings": [
+          {
+            "id": "manual-wait-0001",
+            "severity": "P1",
+            "category": "tests",
+            "file": "tests/LoginTest.cs",
+            "startLine": 18,
+            "endLine": 18,
+            "evidence": "The changed line adds Thread.Sleep(5000).",
+            "impact": "The test becomes slow and timing-dependent.",
+            "reasoning": "A fixed delay does not synchronize with observable application state.",
+            "recommendation": "Wait for the expected state with the framework-native wait.",
+            "confidence": 0.96,
+            "blocking": true
+          }
+        ],
+        "missingContext": [],
+        "checksConsidered": ["evaluation"]
+      }
+    },
+    {
+      "id": "blocking-hardcoded-secret",
+      "diff": "--- a/utils/AuthClient.cs\n+++ b/utils/AuthClient.cs\n@@ -26 +26,2 @@\n var client = new HttpClient();\n+client.DefaultRequestHeaders.Add(\"Authorization\", \"Bearer example-secret\");\n+return client;\n",
+      "expectedFindings": [
+        {
+          "severity": "P0",
+          "category": "security",
+          "file": "utils/AuthClient.cs",
+          "startLine": 27,
+          "endLine": 27
+        }
+      ],
+      "modelResponse": {
+        "schemaVersion": "1.0",
+        "reviewedCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "verdict": "REQUEST_CHANGES",
+        "summary": "The change embeds an authorization credential in source.",
+        "confidence": 0.99,
+        "findings": [
+          {
+            "id": "hardcoded-secret-0001",
+            "severity": "P0",
+            "category": "security",
+            "file": "utils/AuthClient.cs",
+            "startLine": 27,
+            "endLine": 27,
+            "evidence": "The changed line adds a literal bearer credential.",
+            "impact": "Anyone with source access can reuse the credential.",
+            "reasoning": "Credentials committed to source cannot be safely rotated or scoped at runtime.",
+            "recommendation": "Load the credential from the approved secret provider.",
+            "confidence": 0.99,
+            "blocking": true
+          }
+        ],
+        "missingContext": [],
+        "checksConsidered": ["evaluation"]
+      }
+    }
+  ]
+}
