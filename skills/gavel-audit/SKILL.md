@@ -25,6 +25,7 @@ Same categories as gavel-review, plus suite-level findings:
 - `selector-leak:` chained raw selector count outside locator classes (`locator.locator`, `querySelector`, `closest`, `.find()`, `$`, `find_element`). Replacement: named locators.
 - `expect-in-action:` `expect()`, `assert()`, or framework assertion calls in action/page/locator files. Replacement: return state, move assertion to spec.
 - `hardcoded:` hardcoded data count in test bodies. Replacement: factories.
+- `hardcoded-sensitive-data:` literal personal or financial identifiers assigned to explicitly sensitive fields. Replacement: factories or protected fixtures; output is redacted.
 - `no-step:` tests without logical grouping. Replacement: test.step().
 - `manual-wait:` manual wait/sleep count. Replacement: web-first assertions.
 - `no-di:` specs with direct instantiation. Replacement: fixture DI.
@@ -112,6 +113,7 @@ Apply-safe handoff: `templates/apply-safe-workflow.md`
 | `selector-leak` | fix | review |
 | `css-loc` | fix | review |
 | `hardcoded` | fix | review |
+| `hardcoded-sensitive-data` | blocker | review |
 | `no-step` | fix | review |
 | `flake-risk` | fix | report-only |
 | `dead-pom` | cleanup | safe |

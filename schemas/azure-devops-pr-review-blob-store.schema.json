@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dsolisp.github.io/gavel/schemas/azure-devops-pr-review-blob-store.schema.json",
+  "title": "Azure DevOps PR review Blob snapshot store",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider",
+    "accountUrl",
+    "containerName",
+    "prefix",
+    "authentication",
+    "requireEtag",
+    "privateEndpointRequired",
+    "versioningRequired",
+    "retentionDays",
+    "encryption"
+  ],
+  "properties": {
+    "provider": { "enum": ["azureBlob"] },
+    "accountUrl": { "type": "string", "pattern": "^https://[^/]+/?$", "maxLength": 300 },
+    "containerName": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$" },
+    "prefix": { "type": "string", "pattern": "^[a-zA-Z0-9._/-]+$", "minLength": 1, "maxLength": 200 },
+    "authentication": { "enum": ["managedIdentity", "workloadIdentity"] },
+    "requireEtag": { "enum": [true] },
+    "privateEndpointRequired": { "enum": [true] },
+    "versioningRequired": { "enum": [true] },
+    "retentionDays": { "type": "integer", "minimum": 1, "maximum": 3650 },
+    "encryption": { "enum": ["microsoftManaged", "customerManagedKey"] }
+  }
+}

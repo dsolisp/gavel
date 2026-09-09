@@ -1,6 +1,6 @@
 {
   "name": "@dsolisp/gavel",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Minimalism + QA discipline for AI agents. Framework-adaptive test quality enforcement with YAGNI at the core.",
   "keywords": ["opencode-plugin", "opencode", "gavel", "qa", "testing", "playwright", "selenium", "cypress", "webdriverio", "pytest", "junit", "cucumber", "skills", "test-constitution", "page-object-model"],
   "license": "MIT",
@@ -20,7 +20,9 @@
   "exports": {
     ".": "./.opencode/plugins/gavel.mjs",
     "./plugin": "./.opencode/plugins/gavel.mjs",
-    "./gavel-config.schema.json": "./schemas/gavel-config.schema.json"
+    "./gavel-config.schema.json": "./schemas/gavel-config.schema.json",
+    "./azure-devops-pr-review.schema.json": "./schemas/azure-devops-pr-review.schema.json",
+    "./azure-devops-pr-review-blob-store.schema.json": "./schemas/azure-devops-pr-review-blob-store.schema.json"
   },
   "bin": {
     "gavel": "./scripts/cli.js",
@@ -30,7 +32,8 @@
     "gavel-analyze": "./scripts/cli.js",
     "gavel-affected-tests": "./scripts/cli.js",
     "gavel-detect": "./scripts/cli.js",
-    "gavel-explain": "./scripts/cli.js"
+    "gavel-explain": "./scripts/cli.js",
+    "gavel-ado-pr-review": "./scripts/cli.js"
   },
   "files": [
     "AGENTS.md",
@@ -50,7 +53,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/validate-manifest.js && node scripts/check-versions.js && node scripts/verify-self-check-fixtures.js && node scripts/verify-parser-fixtures.js && node scripts/verify-affected-tests-fixtures.js && node scripts/verify-profile-fixtures.js && node scripts/verify-area-map.js && node scripts/verify-audit-autofix.js && node scripts/verify-docs.js && node scripts/verify-boundary.js && node scripts/verify-corpus-precision.js && node scripts/verify-diff-corpus-precision.js && node scripts/verify-baseline-schema.js && node --test scripts/test/unit.test.js",
+    "verify": "node scripts/check-rule-copies.js --check-all && node scripts/verify-agents-md.js && node scripts/verify-skills.js && node scripts/validate-manifest.js && node scripts/check-versions.js && node scripts/verify-self-check-fixtures.js && node scripts/verify-parser-fixtures.js && node scripts/verify-affected-tests-fixtures.js && node scripts/verify-profile-fixtures.js && node scripts/verify-area-map.js && node scripts/verify-audit-autofix.js && node scripts/verify-docs.js && node scripts/verify-boundary.js && node scripts/verify-corpus-precision.js && node scripts/verify-diff-corpus-precision.js && node scripts/verify-pr-review-corpus.js && node scripts/verify-baseline-schema.js && node --test scripts/test/unit.test.js scripts/test/azure-devops-pr-reviewer.test.js",
     "self-check": "node scripts/self-check.js",
     "affected-tests": "node scripts/affected-tests.js",
     "test": "npm run verify"

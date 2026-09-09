@@ -148,6 +148,7 @@ const expectedAgents = [
   'gavel-impact',
   'gavel-fail-audit',
   'gavel-refactor',
+  'gavel-architect-review',
 ];
 
 for (const agent of expectedAgents) {

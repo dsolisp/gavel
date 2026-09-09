@@ -18,8 +18,8 @@ Claude Code:
 GitHub Copilot (VS Code): Copilot discovers customizations from `.github/skills`, `.github/agents`, and `.github/prompts` by default — but gavel keeps its canonical `skills/`, `companion/skills/`, and `agents/` at the repo root. The shipped [`.vscode/settings.json`](.vscode/settings.json) points Copilot at those, so on **workspace trust**:
 
 - The QA Constitution auto-loads from [`.github/copilot-instructions.md`](.github/copilot-instructions.md).
-- All 29 core + 4 companion skills appear as `/gavel-*` slash commands in Copilot Chat.
-- The 7 agents (including `gavel-orchestrator`) appear in the **agents dropdown**.
+- All 31 core + 4 companion skills appear as `/gavel-*` slash commands in Copilot Chat.
+- The 8 agents (including `gavel-orchestrator` and `gavel-architect-review`) appear in the **agents dropdown**.
 
 Monorepo caveat: if you open a parent folder instead of the gavel repo root, add gavel's `.vscode/settings.json` keys to the workspace-root settings, or set `"chat.useCustomizationsInParentRepositories": true`. To install into another repo, copy `skills/` → `.github/skills/` and `agents/` → `.github/agents/`, or add the same location settings pointing at gavel's install path.
 

@@ -2,7 +2,7 @@
 
 Every name that looks like a “core command” in README / help must either ship a real executable path or be labeled **agent-only**.
 
-**Exit contract (CLI):** `0` clean · `1` findings at/above threshold · `2` usage/config/schema error.
+**Exit contract (CLI):** `0` clean · `1` findings at/above threshold · `2` usage/config/schema error. `ado-pr-review` additionally uses `3` for infrastructure failure and `4` for a stale PR commit.
 
 `--preset recommended|strict|legacy|api-only` selects a policy pack (CLI overrides file `"preset"`; explicit keys override pack defaults). Not a separate verb.
 
@@ -19,6 +19,7 @@ Every name that looks like a “core command” in README / help must either shi
 | `gavel adoption` | `scripts/adoption-scan.js` | **CLI** (report-only, exit `0`) |
 | `gavel flakiness` | `scripts/flakiness.js` | **CLI** (report-only, exit `0`; `2` on unreadable report) |
 | `gavel baseline` | `scripts/baseline.js` (`write` / `check`) | **CLI** |
+| `gavel ado-pr-review` | `scripts/ado-pr-review.js` | **CLI** (shadow by default) |
 | `gavel explain <tag>` | Inline in `scripts/cli.js` (RULES registry) | **CLI** |
 | `gavel companion --help` | Stub → points at `companion/README.md` | **CLI stub** (no workflow execution) |
 | `gavel --help` | Lists CLI commands only | **CLI** |
@@ -41,6 +42,7 @@ These are **optional IDE workflows**. Enterprise CI must not depend on them.
 
 | Skill / agent surface | Notes |
 |----------------------|--------|
+| `gavel-architect-review` | Runs strict CLI first, then a read-only manual architecture review; requires an AI agent host and is not a CI verb |
 | `gavel-heal`, `gavel-flake` | Diagnosis from evidence; heal may re-run failing tests (contract carve-out) |
 | `gavel-refactor`, `gavel-debt` | Remediations / ledger — prompt skills |
 | `gavel-impact` | Commit ↔ failure correlation (uses analyze envelopes) |

@@ -19,9 +19,9 @@ const { detectFramework, compareFreshness, findPlaywrightPackageMismatch } = req
 
 const RULE_META = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
 
-function runSelfCheck(repoRoot, configPath = null, preset = null) {
+function runSelfCheck(repoRoot, configPath = null, preset = null, filters = []) {
   const script = path.join(__dirname, 'self-check.js');
-  const args = [script, repoRoot, '--json'];
+  const args = [script, repoRoot, '--json', ...filters];
   if (configPath) {
     args.push('--config', configPath);
   }
@@ -80,6 +80,10 @@ function mapSelfCheckFinding(finding) {
   }
   if (finding.pollingLoop) {
     mapped.pollingLoop = true;
+  }
+  if (finding.interpretationSource) {
+    mapped.interpretationSource = finding.interpretationSource;
+    mapped.interpretationStatus = finding.interpretationStatus;
   }
   return mapped;
 }
@@ -165,12 +169,21 @@ function main() {
   const jsonEnvelope = args.includes('--json-envelope');
   const auditFormat = args.includes('--audit-format');
   const withSelfCheck = args.includes('--with-self-check');
+  const ruleIndex = args.indexOf('--rule');
+  const fileIndex = args.indexOf('--file');
+  const ruleFilter = ruleIndex >= 0 ? args[ruleIndex + 1] : null;
+  const fileFilter = fileIndex >= 0 ? args[fileIndex + 1]?.replace(/\\/g, '/') : null;
+  if ((ruleIndex >= 0 && !ruleFilter) || (fileIndex >= 0 && !fileFilter)) {
+    console.error('Usage error: --rule and --file require a value');
+    process.exit(2);
+  }
   const format = formatFlag(args);
   if (format && format !== 'sarif') {
     console.error('Usage: --format supports only "sarif"');
     process.exit(2);
   }
-  const repoRoot = args.find((arg) => !arg.startsWith('--') && arg !== 'sarif');
+  const flagValues = new Set([ruleFilter, fileFilter, format].filter(Boolean));
+  const repoRoot = args.find((arg) => !arg.startsWith('--') && !flagValues.has(arg));
 
   if (!repoRoot) {
     console.error('Usage: node scripts/audit-report.js <target-repo-root> [--with-self-check] [--json] [--json-envelope] [--audit-format]');
@@ -185,9 +198,17 @@ function main() {
     console.error(error.message);
     process.exit(2);
   }
-  const autofixCandidates = findAutofixCandidates(resolved);
+  const matchesFilters = (finding) => (
+    (!ruleFilter || finding.tag === ruleFilter)
+    && (!fileFilter || finding.file.replace(/\\/g, '/') === fileFilter || finding.file.replace(/\\/g, '/').endsWith(`/${fileFilter}`))
+  );
+  const autofixCandidates = findAutofixCandidates(resolved).filter(matchesFilters);
+  const selfCheckFilters = [
+    ...(ruleFilter ? ['--rule', ruleFilter] : []),
+    ...(fileFilter ? ['--file', fileFilter] : []),
+  ];
   const selfCheckResult = withSelfCheck
-    ? runSelfCheck(resolved, configPath, preset)
+    ? runSelfCheck(resolved, configPath, preset, selfCheckFilters)
     : { findings: [], excludedFileCount: 0 };
   const selfCheckFindings = selfCheckResult.findings;
   const excludedFileCount = selfCheckResult.excludedFileCount;

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "hardcoded-sensitive-data",
+  "samples": [
+    { "file": "violating/customer.spec.ts", "label": "violating", "language": "ts", "framework": "playwright", "rationale": "Explicit nationalId assigned a literal", "expectedFindings": [{ "line": 2, "tag": "hardcoded-sensitive-data" }] },
+    { "file": "violating/test_customer.py", "label": "violating", "language": "py", "framework": "pytest", "rationale": "Explicit iban assigned a literal", "expectedFindings": [{ "line": 2, "tag": "hardcoded-sensitive-data" }] },
+    { "file": "violating/Customer.test.java", "label": "violating", "language": "java", "framework": "junit", "rationale": "Explicit cardNumber assigned a literal", "expectedFindings": [{ "line": 3, "tag": "hardcoded-sensitive-data" }] },
+    { "file": "violating/CustomerTests.cs", "label": "violating", "language": "cs", "framework": "nunit", "rationale": "Explicit accountNumber assigned a literal", "expectedFindings": [{ "line": 3, "tag": "hardcoded-sensitive-data" }] },
+    { "file": "clean/customer.spec.ts", "label": "clean", "language": "ts", "framework": "playwright", "rationale": "Sensitive data comes from a factory" },
+    { "file": "clean/test_customer.py", "label": "clean", "language": "py", "framework": "pytest", "rationale": "Sensitive data comes from an environment variable" },
+    { "file": "clean/Customer.test.java", "label": "clean", "language": "java", "framework": "junit", "rationale": "Sensitive data comes from a factory" },
+    { "file": "clean/CustomerTests.cs", "label": "clean", "language": "cs", "framework": "nunit", "rationale": "Sensitive data comes from a factory" }
+  ]
+}

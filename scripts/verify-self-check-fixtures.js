@@ -100,6 +100,14 @@ if (missingDuration) {
   process.exit(1);
 }
 
+const missingInterpretationProvenance = manualWaits.find((finding) =>
+  finding.interpretationSource !== 'static-heuristic'
+  || finding.interpretationStatus !== 'unvalidated');
+if (missingInterpretationProvenance) {
+  console.error(`manual-wait finding missing interpretation provenance: ${missingInterpretationProvenance.file}:${missingInterpretationProvenance.line}`);
+  process.exit(1);
+}
+
 const waitPatterns = [
   { name: 'waitForTimeout', predicate: (text) => /waitForTimeout\s*\(/.test(text) },
   { name: 'time.sleep', predicate: (text) => /time\.sleep\s*\(/.test(text) },

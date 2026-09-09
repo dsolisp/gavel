@@ -10,6 +10,7 @@ const CORE_SKILLS = [
   'gavel',
   'gavel-review',
   'gavel-audit',
+  'gavel-architect-review',
   'gavel-debt',
   'gavel-gain',
   'gavel-help',
@@ -49,6 +50,7 @@ const EXPECTED_AGENTS = [
   'gavel-impact',
   'gavel-fail-audit',
   'gavel-refactor',
+  'gavel-architect-review',
 ];
 
 let failed = false;

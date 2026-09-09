@@ -49,7 +49,7 @@ Before writing any test, stop at the first rung that holds:
 
 1. DI via the stack's fixture/dependency mechanism — never direct service/page construction in specs.
 2. Semantic locators first — accessibility role/label/name > stable test ID > structural selector > XPath only when no alternative exists.
-3. External test data via factories — `EntityFactory.create()`, never hardcoded strings, IDs, URLs, or credentials in test bodies.
+3. External test data via factories — `EntityFactory.create()`, never hardcoded strings, personal/financial identifiers, URLs, or credentials in test bodies.
 4. Logical grouping — use the runner's native step/subtest/grouping primitive for all logical groupings.
 5. Use provided live-app evidence before writing locators — no guessing at DOM or API shapes. Core Gavel consumes traces, DOM snapshots, screenshots, or planning envelopes; Bailiff/live workflow performs browser exploration.
 6. Native retrying/eventual assertions — never manual waits + manual checks.
@@ -61,7 +61,7 @@ Before writing any test, stop at the first rung that holds:
 
 1. No XPath/CSS selectors when semantic locators exist
 2. No `waitForTimeout()`, `time.sleep()`, `Thread.sleep()`, or `networkidle`
-3. No hardcoded strings, IDs, URLs, or credentials
+3. No hardcoded strings, personal/financial identifiers, URLs, or credentials
 4. No `any` type (TS), no untyped variables (Python)
 5. No skipping verification
 6. No wrappers around the testing framework unless absolutely justified (YAGNI)
@@ -87,7 +87,7 @@ Expected-failure markers are valid for **7 days**. Gavel reports missing reasons
 ## Test Data Discipline
 
 - Factories create test data. `EntityFactory.create()`, `UserFactory.create()`.
-- No hardcoded data in test bodies. Names, emails, IDs, URLs — all from factories or fixtures.
+- No hardcoded data in test bodies. Names, emails, IDs, account/card numbers, URLs — all from factories or protected fixtures.
 - Test independence — every test starts from a clean state. No shared mutable state. No execution order dependency.
 - Idempotent cleanup — API cleanup in afterEach/after hooks must be idempotent.
 

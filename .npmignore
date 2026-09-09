@@ -1,0 +1,5 @@
+fixtures/**/bin/
+fixtures/**/obj/
+gavel-copilot-org/
+lesson2
+*.tgz

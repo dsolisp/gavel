@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.12.0** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.12.1** (see [CHANGELOG.md](../CHANGELOG.md))
 
 Index for scripts, templates, and companion workflows. For install and first run, start at [README.md](../README.md).
 
@@ -12,8 +12,10 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [QUICKSTART.md](../QUICKSTART.md) | First session: audit → heal → write | QA engineers |
 | [ENTERPRISE.md](ENTERPRISE.md) | CI gate, SARIF, trust criteria, data handling | Platform / staff eng |
 | [CLI_MATRIX.md](CLI_MATRIX.md) | Which commands are real CLI vs agent-only | Platform / contributors |
+| [AGENTS_AND_SKILLS.md](AGENTS_AND_SKILLS.md) | Complete agent and skill inventory, scopes, limits, and job autonomy | QA, platform, architects |
 | [AGENTS.md](../AGENTS.md) | Universal QA rules | All IDE adapters |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Two-repo design, browser-first authoring principle | Contributors, architects |
+| [solicitud-habilitacion-gavel-azure-devops.md](solicitud-habilitacion-gavel-azure-devops.md) | Cross-team intake and approvals for the Azure DevOps PR reviewer pilot | Business, QA, DevOps, security, architects |
 | [BAILIFF.md](BAILIFF.md) | Sibling QA-workflow repo (planning only) | Architects |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Verify gate, model tiers, budgets | Contributors |
 | [fixtures/corpus/README.md](../fixtures/corpus/README.md) | Corpus label + precision contract (v0.8) | Contributors |
@@ -74,11 +76,11 @@ node scripts/affected-tests.js ../my-repo --tag smoke
 
 ## Skills and agents
 
-- **Core skills:** `skills/*/SKILL.md` (29 skills — in default plugin manifest)
+- **Core skills:** `skills/*/SKILL.md` (31 skills — in default plugin manifest)
 - **Companion skills:** `companion/skills/*/SKILL.md` (4 optional workflows)
 - **Agents:** `agents/*.md` — workflow specialists
 - **Templates:** `templates/result-envelope.md` — completion contract
 
-See [CLI_MATRIX.md](CLI_MATRIX.md) before treating a skill name as a CI binary.
+See [AGENTS_AND_SKILLS.md](AGENTS_AND_SKILLS.md) for the full catalog and [CLI_MATRIX.md](CLI_MATRIX.md) before treating a skill name as a CI binary.
 
 Run `npm run verify` from the gavel package root before release.

@@ -63,7 +63,8 @@ Before any agent writes a test, run the ladder:
 | Flaky investigation | gavel-healer → gavel-flake → gavel-refactor |
 | Refactoring | gavel-refactor → gavel-healer |
 | Safe autofix (audit/review `safe` tags) | gavel-refactor (apply-safe) → gavel-run |
-| Whole-repo audit | gavel-audit → gavel-refactor (for `safe`/`review` findings) |
+| Whole-repo strict + manual audit | gavel-architect-review → gavel-refactor (for confirmed findings) |
+| Deterministic whole-repo audit only | gavel-audit → gavel-refactor (for `safe`/`review` findings) |
 | Diff review | gavel-review → gavel-refactor (for `safe`/`review` findings) |
 | Constitution self-check | gavel-self-check |
 | test.fail() audit | gavel-fail-audit |
@@ -73,6 +74,8 @@ Before any agent writes a test, run the ladder:
 | Backend triage (test-failure evidence only) | gavel-triage |
 | Bootstrap new QA project | gavel-init |
 | Help / commands | gavel-help |
+
+For rule-scoped remediation, the implementer must return both the target-rule before/after count and any other tags still present in touched files. Remaining tags are visible debt, not implicit scope expansion.
 
 ## Companion workflows (optional)
 

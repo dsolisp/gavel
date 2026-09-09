@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-09-09
+
+Theme: **Auditable CLI + privacy-safe review** — reproducible output contracts, focused remediation, sensitive-data safeguards, and Azure DevOps PR review foundations.
+
+### Added
+
+- **Azure DevOps PR reviewer runtime** — `gavel ado-pr-review` with schema validation, redaction, deterministic Gavel checks, incremental snapshot contracts, conservative verdicts, and shadow-mode pipeline templates. The interactive agent remains read-only; CI runs the CLI.
+- **`gavel-architect-review`** — read-only agent/skill that runs strict audit first and then a separate evidence-based architecture review without replacing deterministic findings.
+- **`hardcoded-sensitive-data`** — redacted detection for explicitly named personal and financial identifier literals in test specs, precision-gated across C#, Java, Python, and TypeScript.
+- **Focused audit filters** — `audit` and `self-check` accept `--rule` and `--file`, with exit codes calculated from the selected target.
+
+### Changed
+
+- **CLI output compatibility** — unified CLI supports `--format json`, `--out`, `--version`, `-v`, and `version`.
+- **Manual-wait provenance** — semantic sub-case guidance now declares `interpretationSource: static-heuristic` and `interpretationStatus: unvalidated`; detection remains deterministic while remediation judgment requires evidence.
+- **Agent safeguards** — healer reuses existing DI conventions, confirms scope before changing shared infrastructure, and reports remaining rule debt in touched files.
+- **Catalog** — 31 core skills, 4 companion skills, and 8 packaged core agents.
+- **Package hygiene** — npm publication excludes generated fixture build outputs and local handoff artifacts.
+
 ## [0.12.0] - 2026-08-20
 
 Theme: **.NET + Appium depth & baseline gates** — full C# rule parity, Appium golden fixtures, incremental adoption.
@@ -308,7 +327,8 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/dsolisp/gavel/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/dsolisp/gavel/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/dsolisp/gavel/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/dsolisp/gavel/compare/v0.9.0...v0.10.0

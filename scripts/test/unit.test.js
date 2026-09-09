@@ -23,6 +23,62 @@ function runCli(args, options = {}) {
   });
 }
 
+test('CLI reports package version and supports JSON output files', () => {
+  const expectedVersion = require('../../package.json').version;
+  for (const args of [['--version'], ['-v'], ['version']]) {
+    const result = runCli(args);
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout.trim(), expectedVersion);
+  }
+
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-cli-output-'));
+  const outputPath = path.join(directory, 'audit.json');
+  const result = runCli([
+    'audit',
+    'fixtures/sample-repos/playwright',
+    '--format',
+    'json',
+    '--out',
+    outputPath,
+  ]);
+  assert.ok([0, 1].includes(result.status));
+  assert.equal(fs.existsSync(outputPath), true);
+  const report = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+  assert.equal(path.basename(report.repo), 'playwright');
+  assert.ok(report.suiteHealth);
+});
+
+test('audit filters findings and exit code by rule and file', () => {
+  const result = runCli([
+    'audit',
+    'fixtures/self-check/violations',
+    '--rule',
+    'manual-wait',
+    '--file',
+    'manual-wait/fixed-wait.spec.ts',
+    '--format',
+    'json',
+  ]);
+  assert.equal(result.status, 1);
+  const report = JSON.parse(result.stdout);
+  assert.ok(report.suiteHealth.scoredFindings.length > 0);
+  assert.ok(report.suiteHealth.scoredFindings.every((finding) => finding.tag === 'manual-wait'));
+  assert.ok(report.suiteHealth.scoredFindings.every((finding) => finding.file === 'manual-wait/fixed-wait.spec.ts'));
+
+  const clean = runCli([
+    'audit',
+    'fixtures/self-check/violations',
+    '--rule',
+    'manual-wait',
+    '--file',
+    'tests/clean.spec.ts',
+    '--format',
+    'json',
+  ]);
+  assert.equal(clean.status, 0);
+  assert.deepEqual(JSON.parse(clean.stdout).suiteHealth.scoredFindings, []);
+});
+
 test('parseJUnitXml reads failure count and file paths', () => {
   const xml = fs.readFileSync(path.join(root, 'fixtures/reports/junit/sample-failures.xml'), 'utf8');
   const result = parseJUnitXml(xml);
@@ -237,6 +293,15 @@ test('hardcoded-env detects spec values without exposing credentials', () => {
   assert.equal(JSON.parse(clean.stdout).findings.some((finding) => finding.tag === 'hardcoded-env'), false);
 });
 
+test('manual-wait separates deterministic detection from unvalidated interpretation', () => {
+  const result = runCli(['self-check', 'fixtures/self-check/violations/manual-wait', '--json']);
+  const findings = JSON.parse(result.stdout).findings.filter((finding) => finding.tag === 'manual-wait');
+
+  assert.ok(findings.length > 0);
+  assert.ok(findings.every((finding) => finding.interpretationSource === 'static-heuristic'));
+  assert.ok(findings.every((finding) => finding.interpretationStatus === 'unvalidated'));
+});
+
 test('hardcoded-env excludes configured fixture paths and sample repos', () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-hardcoded-env-'));
   fs.mkdirSync(path.join(repo, 'tests', 'fixtures'), { recursive: true });
@@ -310,6 +375,10 @@ test('package publishes unified gavel bins and config schema', () => {
   for (const name of ['gavel', 'gavel-audit', 'gavel-review', 'gavel-self-check', 'gavel-analyze', 'gavel-affected-tests', 'gavel-detect']) {
     assert.equal(pkg.bin[name], './scripts/cli.js');
   }
+    assert.equal(
+      pkg.exports['./azure-devops-pr-review-blob-store.schema.json'],
+      './schemas/azure-devops-pr-review-blob-store.schema.json',
+    );
   const schema = JSON.parse(fs.readFileSync(path.join(root, 'schemas/gavel-config.schema.json'), 'utf8'));
   assert.deepEqual(schema.properties.preset.enum, ['recommended', 'strict', 'legacy', 'api-only']);
   assert.ok(schema.properties.failThreshold.enum.includes('warning'));

@@ -1,0 +1,30 @@
+{
+  "context": {
+    "reason": "PullRequest",
+    "pullRequestId": "42",
+    "sourceBranch": "refs/heads/feature/example",
+    "targetBranch": "refs/heads/main",
+    "repositoryId": "00000000-0000-0000-0000-000000000001",
+    "repositoryName": "sample-mobile-tests",
+    "sourceVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "collectionUri": "https://dev.azure.com/example/",
+    "project": "Example"
+  },
+  "pullRequest": {
+    "lastMergeSourceCommit": {
+      "commitId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "lastMergeTargetCommit": {
+      "commitId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  },
+  "diff": "--- a/tests/ExampleTest.cs\n+++ b/tests/ExampleTest.cs\n@@ -9 +9 @@\n-Assert.That(oldValue);\n+Assert.That(newValue);\n",
+  "checks": [
+    {
+      "name": "build-and-test",
+      "required": true,
+      "status": "passed",
+      "attributableToPullRequest": false
+    }
+  ]
+}
