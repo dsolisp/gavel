@@ -29,6 +29,11 @@ docs/graduation-evidence-v0.9.0.md
 docs/graduation-evidence-v0.10.0.md
 docs/graduation-verdict-v0.8.0.md
 docs/graduation/
+dev/prompts/
+**/LESSONS_LEARNED*.md
+**/*RETROSPECTIVE*.md
+**/*retrospective*.md
+**/*AUDIT_FINDINGS*.md
 
 # Local release and organization handoff artifacts
 gavel-copilot-org/

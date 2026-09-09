@@ -93,7 +93,7 @@ CLI-wide options added in `0.12.1`: `--version` / `-v` / `version`, `--format js
 | **Locators** | Semantic/accessibility first; no raw selector chains outside locator classes |
 | **Waits** | Native retry assertions; no arbitrary sleeps |
 | **DI** | Fixtures over `new PageObject(page)` in specs |
-| **Sensitive data** | Redacted detection of hardcoded personal and financial identifiers in test specs |
+| **Sensitive data** | [Redacted detection](docs/rules/hardcoded-sensitive-data.md) of hardcoded personal and financial identifiers in test specs |
 | **Suite health** | Dead POMs/locators/factories, skip markers, bare `test.fail()` |
 | **Suppression** | Tag-scoped `@gavel-ignore(TICKET-123)` — unreasoned suppressions flagged |
 | **SARIF export** | Valid SARIF 2.1.0 output for GitHub Code Scanning & CI dashboards |

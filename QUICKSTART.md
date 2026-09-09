@@ -1,6 +1,6 @@
 # Gavel Quickstart
 
-The judge's hammer for test quality. Seven commands, seven flows. Ten minutes from install to first verdict.
+The judge's hammer for test quality. One CLI, focused workflows. Ten minutes from install to first verdict.
 
 ## 1. Install (1 minute)
 
@@ -66,7 +66,13 @@ gavel <command> [args] [--config gavel.config.json]
 | `gavel analyze` | Post-run failure classification |
 | `gavel affected-tests` | Import-graph test discovery |
 | `gavel detect` | Stack and profile detection |
+| `gavel adoption` | Report unused helpers and fixtures |
+| `gavel flakiness` | Score mixed outcomes and retries from test reports |
+| `gavel baseline write/check` | Ratchet existing findings and block only new debt |
+| `gavel ado-pr-review` | Review an Azure DevOps PR; shadow mode by default |
 | `gavel explain <tag>` | Rule contract lookup |
+
+**Common options:** `gavel --version` (also `-v` or `version`), `--format json`, `--out <path>`, and focused `--rule <id>` / `--file <relative-path>` filters for `audit` and `self-check`.
 
 **Exit codes:**
 
@@ -75,6 +81,8 @@ gavel <command> [args] [--config gavel.config.json]
 | `0` | Clean — no actionable findings |
 | `1` | Actionable findings at or above fail threshold |
 | `2` | Usage, config, or schema error |
+
+`ado-pr-review` additionally uses `3` for infrastructure failure and `4` when the pull request commit changed during review.
 
 **Config resolution:** `--config` flag → `gavel.config.json` in CWD → `package.json#gavel` → defaults. Zero-config first run works with defaults plus a one-line hint toward `gavel.config.json`.
 
@@ -213,7 +221,12 @@ gavel self-check
 
 4. Optional: JSON output for CI integration:
    ```bash
-   gavel self-check --json
+   gavel self-check --format json --out gavel-report.json
+   ```
+
+   To verify one remediation without hiding other debt from the full report:
+   ```bash
+   gavel self-check --rule hardcoded-sensitive-data --file tests/customer.spec.ts
    ```
 
 5. Suppress false positives with scoped ignores:

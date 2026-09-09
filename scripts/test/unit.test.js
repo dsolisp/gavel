@@ -1022,7 +1022,7 @@ test('literalSelector extracts C# Locator and Appium XPath strings', () => {
   // C# Locator("#cph...") scores as complex-locator via generated id.
   const csharpHits = complexLocator.test(
     'pages/locators/CsLocators.cs',
-    'public class CsLocators {\n  ILocator x = page.Locator("#BNCRMP_cphContenidoPagina_x");\n}',
+    'public class CsLocators {\n  ILocator x = page.Locator("#LEGACYAPP_cphContent_x");\n}',
   );
   assert.equal(csharpHits.length, 1);
   assert.match(csharpHits[0].text, /generated id/);

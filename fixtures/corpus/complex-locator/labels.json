@@ -8,7 +8,7 @@
       "label": "violating",
       "language": "cs",
       "framework": "playwright-dotnet",
-      "rationale": "WebForms generated id #BNCRMP_cphContenidoPagina_ddlCuentas",
+      "rationale": "WebForms generated id #LEGACYAPP_cphContent_ddlAccounts",
       "expectedFindings": [{ "line": 4, "tag": "complex-locator" }]
     },
     {
