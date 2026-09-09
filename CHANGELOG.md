@@ -139,7 +139,7 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 
 ### Changed
 
-- Removed `GAVEL_ROADMAP.md` and `v0.8.0-prompts.txt` from published package (internal dev documents)
+- Removed internal planning documents from the published package
 - Removed graduation evidence docs (`docs/graduation*`) from distribution
 - Removed all public references to private planning documents from `docs/README.md`, `docs/ENTERPRISE.md`, `docs/CONTRIBUTING.md`
 - Added `.gitignore` entries for internal dev artifacts
@@ -181,7 +181,7 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 ### Changed
 
 - All seven version manifests aligned to `0.7.1`
-- `GAVEL_ROADMAP.md` rewritten around Trust → Resilience → Adoption → Remediation → Freeze; enterprise criteria; v0.8–v1.0 enterprise DoD (baseline schema + Action/SARIF, policy packs, monorepo, ROI export, integration pack)
+- Internal planning updated around Trust → Resilience → Adoption → Remediation → Freeze; enterprise criteria; v0.8–v1.0 enterprise DoD (baseline schema + Action/SARIF, policy packs, monorepo, ROI export, integration pack)
 - `docs/README.md` indexes enterprise and Bailiff docs
 - `scripts/verify-boundary.js` — allowlist `docs/BAILIFF.md` as planning-only (still blocks Bailiff code)
 - `v0.8.0-prompts.txt` — Item #9 for enterprise CI DoD (SARIF recipe + Action template)
@@ -323,7 +323,7 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - Profile freshness checker (`scripts/check-profile-freshness.js`)
 - Golden fixtures for self-check, parsers, and profiles
 - Release checklist (`RELEASE_CHECKLIST.md`)
-- Product roadmap (`GAVEL_ROADMAP.md`)
+- Internal product planning
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
