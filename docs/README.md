@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.12.1** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.12.2** (see [CHANGELOG.md](../CHANGELOG.md))
 
 Index for scripts, templates, and companion workflows. For install and first run, start at [README.md](../README.md).
 
