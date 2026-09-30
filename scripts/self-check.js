@@ -294,11 +294,25 @@ function findNoTeardownMatches(filePath, content) {
 
 const CSHARP_NATIVE_ACTION =
   '(?:ClickAsync|FillAsync|SelectOptionAsync|PressAsync|CheckAsync|UncheckAsync|DblClickAsync|HoverAsync|TypeAsync|ClearAsync|SetCheckedAsync|Click|Fill|SendKeys|Tap)';
-const CSHARP_SINGLE_ACTION =
-  `(?:await\\s+)?[\\w\\.\\[\\]\\(\\)]+\\.${CSHARP_NATIVE_ACTION}\\s*\\([^;]*\\)`;
 const CSHARP_ILOCATOR = '(?:[\\w.]+\\.)?ILocator';
 const CSHARP_METHOD_RETURN =
   '(?:(?:[\\w.]+\\.)?(?:Task(?:<[^>\\n]+>)?|ValueTask(?:<[^>\\n]+>)?)|void)';
+// Any single receiver.Member(...) call — thin wrappers are not limited to Click/Fill.
+const CSHARP_SINGLE_CALL =
+  '(?:await\\s+)?[\\w\\.\\[\\]\\(\\)]+\\.[A-Za-z_]\\w*\\s*\\([^;]*\\)';
+
+/** @type {null | { callSites: Map<string, number>, bodyDupes: Map<string, number> }} */
+let thinWrapperContext = null;
+
+function setThinWrapperScanContext(context) {
+  thinWrapperContext = context;
+}
+
+function isSharedPomPath(relPath) {
+  const normalized = relPath.replace(/\\/g, '/');
+  if (/(^|\/)(base|common|shared)(\/|$)/i.test(normalized)) return true;
+  return /(Base|Common|Shared)/.test(path.basename(normalized));
+}
 
 function isCsharpPomActionFile(filePath) {
   if (!filePath.endsWith('.cs')) return false;
@@ -310,36 +324,133 @@ function lineNumberAtIndex(content, index) {
   return content.slice(0, index).split('\n').length;
 }
 
-function findThinWrapperMatches(filePath, content) {
-  if (!isCsharpPomActionFile(filePath)) return [];
-  const hits = [];
+function normalizeThinBody(statement) {
+  return statement
+    .replace(/\bawait\s+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function extractThinMethods(content) {
+  const methods = [];
   const seen = new Set();
-  const pushHit = (index, name) => {
+  const pushMethod = (index, name, statement) => {
+    if (/\bWaitFor\w*\s*\(/.test(statement)) return;
     const line = lineNumberAtIndex(content, index);
     if (seen.has(line)) return;
     seen.add(line);
-    hits.push({
+    methods.push({
+      name,
       line,
-      text: `thin POM wrapper '${name}': single native interaction — call the named locator from the spec or fold into a composed flow`,
+      index,
+      bodyNorm: normalizeThinBody(statement),
     });
   };
 
   const exprRe = new RegExp(
-    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*=>\\s*${CSHARP_SINGLE_ACTION}\\s*;`,
+    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*=>\\s*(${CSHARP_SINGLE_CALL})\\s*;`,
     'g',
   );
   let match;
   while ((match = exprRe.exec(content)) !== null) {
-    pushHit(match.index, match[1]);
+    pushMethod(match.index, match[1], match[2]);
   }
 
   const blockRe = new RegExp(
-    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*\\{\\s*${CSHARP_SINGLE_ACTION}\\s*;\\s*\\}`,
+    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*\\{\\s*(${CSHARP_SINGLE_CALL})\\s*;\\s*\\}`,
     'g',
   );
   while ((match = blockRe.exec(content)) !== null) {
-    if (/\bWaitFor\w*\s*\(/.test(match[0])) continue;
-    pushHit(match.index, match[1]);
+    pushMethod(match.index, match[1], match[2]);
+  }
+
+  return methods;
+}
+
+function countMethodCallSites(methodName, contentCache) {
+  const pattern = new RegExp(`\\.${methodName}\\s*\\(`, 'g');
+  let total = 0;
+  for (const content of contentCache.values()) {
+    const hits = content.match(pattern);
+    if (hits) total += hits.length;
+  }
+  return total;
+}
+
+function buildThinWrapperIndex(filePaths, repoRoot) {
+  const contentCache = new Map();
+  const thinByFile = new Map();
+  const bodyFiles = new Map();
+
+  for (const filePath of filePaths) {
+    const relPath = path.relative(repoRoot, filePath).replace(/\\/g, '/');
+    if (!relPath.endsWith('.cs')) continue;
+    let content;
+    try {
+      content = fs.readFileSync(filePath, 'utf8');
+    } catch {
+      continue;
+    }
+    contentCache.set(relPath, content);
+    if (!isCsharpPomActionFile(relPath)) continue;
+    const methods = extractThinMethods(content);
+    if (methods.length === 0) continue;
+    thinByFile.set(relPath, methods);
+    for (const method of methods) {
+      if (!bodyFiles.has(method.bodyNorm)) bodyFiles.set(method.bodyNorm, new Set());
+      bodyFiles.get(method.bodyNorm).add(relPath);
+    }
+  }
+
+  const callSites = new Map();
+  const bodyDupes = new Map();
+  for (const [relPath, methods] of thinByFile) {
+    for (const method of methods) {
+      const key = `${relPath}#${method.name}`;
+      callSites.set(key, countMethodCallSites(method.name, contentCache));
+      bodyDupes.set(key, bodyFiles.get(method.bodyNorm)?.size || 1);
+    }
+  }
+
+  return { callSites, bodyDupes, thinByFile };
+}
+
+function findThinWrapperMatches(filePath, content) {
+  if (!isCsharpPomActionFile(filePath)) return [];
+  const methods = extractThinMethods(content);
+  const hits = [];
+  const shared = isSharedPomPath(filePath);
+
+  for (const method of methods) {
+    const key = `${filePath}#${method.name}`;
+    const callSiteCount = thinWrapperContext?.callSites?.get(key) ?? 0;
+    const bodyDupeCount = thinWrapperContext?.bodyDupes?.get(key) ?? 1;
+    const reused = callSiteCount > 1 || bodyDupeCount > 1;
+
+    if (shared) {
+      if (callSiteCount > 1) continue;
+      hits.push({
+        line: method.line,
+        subCase: 'shared-yagni',
+        text: `shared thin wrapper '${method.name}' with callSites <= 1 — delete or inline (YAGNI)`,
+      });
+      continue;
+    }
+
+    if (reused) {
+      hits.push({
+        line: method.line,
+        subCase: 'move',
+        text: `thin one-liner '${method.name}' with callSites > 1 (or body duplicated across pages) — move to Base/Common/Shared; do not keep feature-page wrappers`,
+      });
+    } else {
+      hits.push({
+        line: method.line,
+        subCase: 'delete',
+        text: `thin one-liner '${method.name}' with callSites <= 1 — call the target from the spec; do not keep a page wrapper`,
+      });
+    }
   }
 
   return hits;
@@ -1350,8 +1461,8 @@ const RULES = [
     class: 'constitution',
     scope: 'all-files',
     confidence: 'medium',
-    message: 'Thin POM wrapper: page/action method is a single native interaction',
-    remediation: 'Delete the one-liner and call the named locator from the spec, or fold it into a real multi-step composed method (AGENTS.md: WON\'T DO #6 / dual API). Never invent clickX() wrappers to move a scoreboard.',
+    message: 'Thin POM one-liner: page/action method is a single call',
+    remediation: 'If callSites <= 1: delete and call from the spec. If callSites > 1 (or body duplicated): move to Base/Common/Shared. Shared one-liners with callSites <= 1 are YAGNI. Never invent clickX() wrappers for a scoreboard (AGENTS.md: WON\'T DO #6).',
     test: findThinWrapperMatches,
   },
   {
@@ -1422,7 +1533,7 @@ const FIX_HINTS = {
   'brittle-assert': 'use a partial matcher (toContain / toHaveText(/partial/); "substring" in value; assertThat(actual).contains(expected))',
   'test-id-duplicate': 'make the test id unique per spec, or consolidate the duplicated tests',
   'test-id-gap': 'renumber to close the gap, or document the intentional skip in the id scheme',
-  'thin-wrapper': 'delete the one-liner; call the named locator from the spec, or fold into a multi-step method — never invent clickX() for a scoreboard',
+  'thin-wrapper': 'delete the one-liner (callSites <= 1); call the target from the spec — never invent clickX() for a scoreboard',
   'private-locator-alias': 'drop the private ILocator alias and call _locators.Name directly',
   'new-locator-shadow': 'remove public new ILocator; compose or rename instead of shadowing the base locator',
   'fat-method': 'split the method into private helpers; do not invent thin one-line wrappers',
@@ -1460,6 +1571,18 @@ function selectorLeakFixHint(finding) {
   return FIX_HINTS['selector-leak'];
 }
 
+function thinWrapperFixHint(finding) {
+  switch (finding.subCase) {
+    case 'move':
+      return 'move the one-liner to Base/Common/Shared (callSites > 1 or duplicated body); do not keep feature-page wrappers';
+    case 'shared-yagni':
+      return 'delete or inline the shared thin wrapper — callSites <= 1 is YAGNI even in Base/Common/Shared';
+    case 'delete':
+    default:
+      return FIX_HINTS['thin-wrapper'];
+  }
+}
+
 // Resolve the fix hint for a finding: context-aware for manual-wait and selector-leak, static otherwise.
 function fixHintFor(finding) {
   if (finding.tag === 'manual-wait') {
@@ -1467,6 +1590,9 @@ function fixHintFor(finding) {
   }
   if (finding.tag === 'selector-leak') {
     return selectorLeakFixHint(finding);
+  }
+  if (finding.tag === 'thin-wrapper') {
+    return thinWrapperFixHint(finding);
   }
   return FIX_HINTS[finding.tag] || null;
 }
@@ -1648,6 +1774,8 @@ function main() {
     scanned.push(filePath);
   }
 
+  setThinWrapperScanContext(buildThinWrapperIndex(scanned, resolvedRoot));
+
   for (const filePath of scanned) {
     const relPath = path.relative(resolvedRoot, filePath).replace(/\\/g, '/');
     const content = fs.readFileSync(filePath, 'utf8');
@@ -1787,7 +1915,21 @@ function main() {
   process.exit(1);
 }
 
-module.exports = { RULES, findMatches, TEST_FILE_RE, parseManualWaitDuration, FIX_HINTS, manualWaitFixHint, fixHintFor, isNoDiInfrastructureFile, splitCSharpTestBlocks };
+module.exports = {
+  RULES,
+  findMatches,
+  TEST_FILE_RE,
+  parseManualWaitDuration,
+  FIX_HINTS,
+  manualWaitFixHint,
+  fixHintFor,
+  isNoDiInfrastructureFile,
+  splitCSharpTestBlocks,
+  setThinWrapperScanContext,
+  buildThinWrapperIndex,
+  extractThinMethods,
+  isSharedPomPath,
+};
 
 if (require.main === module) {
   main();

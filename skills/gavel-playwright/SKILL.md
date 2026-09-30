@@ -168,7 +168,7 @@ page.GetByTestId("submit-btn")                                 // 5th — last r
 
 Locator classes live under `Pages/Locators/` (or `locators/`). Actions and specs call named locator methods — no inline `GetByRole` / `Locator("...")` chains outside that layer (`selector-leak`).
 
-**Dual API:** exposing `public ILocator Submit => _locators.Submit` on the page for specs is valid. Page methods must be real composed flows — never one-line `SubmitAsync() => await _locators.Submit.ClickAsync()` (`thin-wrapper`). Fat POM suite-health counts selector *creation* in the page file, not `ILocator` type aliases.
+**Dual API:** exposing `public ILocator Submit => _locators.Submit` on the page for specs is valid. Page methods must be real composed flows — never feature-page one-liners (`thin-wrapper`). If a one-liner is reused (`callSites > 1`), move it to Base/Common/Shared; if `callSites <= 1`, delete it. Fat POM suite-health counts selector *creation* in the page file, not `ILocator` type aliases.
 
 Extract `ILocator` properties **out** of page classes into the locator layer:
 

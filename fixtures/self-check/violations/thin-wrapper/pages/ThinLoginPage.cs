@@ -1,16 +1,11 @@
-using Microsoft.Playwright;
-
 namespace ThinWrapper.Pages;
 
 public class ThinLoginPage
 {
-    private readonly ILocator _submit;
+    private readonly Locators.ThinLocators _locators;
 
-    public ThinLoginPage(IPage page)
-    {
-        _submit = page.GetByRole(AriaRole.Button, new() { Name = "Submit" });
-    }
+    public ThinLoginPage(Locators.ThinLocators locators) => _locators = locators;
 
-    // Thin wrapper: single native interaction — should fire thin-wrapper.
-    public async Task SubmitAsync() => await _submit.ClickAsync();
+    // callSites <= 1 — should flag delete
+    public async System.Threading.Tasks.Task SubmitAsync() => await _locators.SubmitButton.ClickAsync();
 }

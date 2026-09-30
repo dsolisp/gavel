@@ -7,6 +7,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-09-30
+
+### Changed
+
+- **`thin-wrapper` reuse gate (C#)** — any single-call page/action one-liner (not only Click/Fill). Verdict: `callSites <= 1` → delete; `callSites > 1` or duplicated body across pages → move to Base/Common/Shared; Shared + `callSites <= 1` → YAGNI. Cross-file index built once per self-check scan.
+
 ## [0.12.3] - 2026-09-30
 
 ### Added
@@ -347,7 +353,8 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.4...HEAD
+[0.12.4]: https://github.com/dsolisp/gavel/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/dsolisp/gavel/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/dsolisp/gavel/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/dsolisp/gavel/compare/v0.12.0...v0.12.1

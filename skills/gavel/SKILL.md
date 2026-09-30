@@ -89,7 +89,7 @@ lazy -- it's a lie.
 3. No hardcoded strings, IDs, URLs, or credentials
 4. No `any` type (TS), no untyped variables (Python)
 5. No skipping verification (tsc/lint/test run)
-6. No wrappers around the testing framework unless absolutely justified (YAGNI). Also no thin POM wrappers (single native click/fill/select in a page method) — call the named locator from the spec, or keep methods only for composition / wait-then-act / parse.
+6. No wrappers around the testing framework unless absolutely justified (YAGNI). Also no thin POM one-liners (any single-call page method): delete when callSites ≤ 1; move to Base/Common/Shared when callSites > 1. Shared unused one-liners are YAGNI.
 7. No deep inheritance (max depth 1, prefer mixins or composition)
 8. No `expect()`, `assert()`, or framework assertion calls in action,
    page, or locator classes. State checks return values; specs assert.

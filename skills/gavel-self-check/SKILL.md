@@ -43,7 +43,7 @@ Exit code `0` = no violations. Exit code `1` = violations found.
 | `skip-marker` | Skip/quarantine/WIP marker without reason |
 | `test-id-duplicate` | Duplicate test IDs (when `gavel.config.json` defines pattern) |
 | `test-id-gap` | Gap in consecutive test IDs (when `enforceConsecutiveTestIds: true`) |
-| `thin-wrapper` | Page/action method that is a single native click/fill/select (C#) |
+| `thin-wrapper` | C# page/action one-liner call; delete if callSites ≤ 1, move to Base/Common/Shared if callSites > 1 (or body duplicated); shared YAGNI if unused |
 | `private-locator-alias` | Private 1:1 `ILocator` alias of the locator layer (C#) |
 | `new-locator-shadow` | `public new ILocator` hiding a base locator (C#) |
 | `fat-method` | Oversized page method with many native interactions (C#) |

@@ -1003,19 +1003,26 @@ test('DualApiPage is not counted as fat POM', () => {
 });
 
 test('C# thin-wrapper / private-alias / new-shadow / fat-method', () => {
-  const { RULES } = require('../self-check');
+  const {
+    RULES,
+    setThinWrapperScanContext,
+    buildThinWrapperIndex,
+    fixHintFor,
+  } = require('../self-check');
   const thin = RULES.find((r) => r.id === 'thin-wrapper');
   const alias = RULES.find((r) => r.id === 'private-locator-alias');
   const shadow = RULES.find((r) => r.id === 'new-locator-shadow');
   const fat = RULES.find((r) => r.id === 'fat-method');
 
-  assert.equal(
-    thin.test(
-      'Pages/Thin.cs',
-      'public class Thin {\n  public async Task SubmitAsync() => await _locators.Submit.ClickAsync();\n}\n',
-    ).length,
-    1,
+  setThinWrapperScanContext(null);
+  const deleteHits = thin.test(
+    'Pages/Thin.cs',
+    'public class Thin {\n  public async Task SubmitAsync() => await _locators.Submit.ClickAsync();\n}\n',
   );
+  assert.equal(deleteHits.length, 1);
+  assert.equal(deleteHits[0].subCase, 'delete');
+  assert.match(fixHintFor({ tag: 'thin-wrapper', subCase: 'delete' }), /callSites <= 1/);
+
   assert.equal(
     thin.test(
       'Pages/Composed.cs',
@@ -1023,6 +1030,46 @@ test('C# thin-wrapper / private-alias / new-shadow / fat-method', () => {
     ).length,
     0,
   );
+
+  // Synthetic index: shared with callSites > 1 is clean; page-local reused → move
+  setThinWrapperScanContext({
+    callSites: new Map([
+      ['Pages/Shared/HelperPage.cs#ReuseAsync', 3],
+      ['Pages/FeaturePage.cs#ReuseAsync', 3],
+    ]),
+    bodyDupes: new Map([
+      ['Pages/Shared/HelperPage.cs#ReuseAsync', 1],
+      ['Pages/FeaturePage.cs#ReuseAsync', 1],
+    ]),
+  });
+  assert.equal(
+    thin.test(
+      'Pages/Shared/HelperPage.cs',
+      'public class HelperPage {\n  public async Task ReuseAsync() => await _locators.X.ClickAsync();\n}\n',
+    ).length,
+    0,
+  );
+  const moveHits = thin.test(
+    'Pages/FeaturePage.cs',
+    'public class FeaturePage {\n  public async Task ReuseAsync() => await _locators.X.ClickAsync();\n}\n',
+  );
+  assert.equal(moveHits.length, 1);
+  assert.equal(moveHits[0].subCase, 'move');
+  assert.match(fixHintFor({ tag: 'thin-wrapper', subCase: 'move' }), /Base\/Common\/Shared/);
+
+  setThinWrapperScanContext({
+    callSites: new Map([['Pages/Shared/DeadPage.cs#OrphanAsync', 0]]),
+    bodyDupes: new Map([['Pages/Shared/DeadPage.cs#OrphanAsync', 1]]),
+  });
+  const yagni = thin.test(
+    'Pages/Shared/DeadPage.cs',
+    'public class DeadPage {\n  public async Task OrphanAsync() => await _locators.X.ClickAsync();\n}\n',
+  );
+  assert.equal(yagni.length, 1);
+  assert.equal(yagni[0].subCase, 'shared-yagni');
+
+  setThinWrapperScanContext(null);
+
   assert.equal(
     alias.test(
       'Pages/Alias.cs',
@@ -1059,6 +1106,19 @@ test('C# thin-wrapper / private-alias / new-shadow / fat-method', () => {
     ].join('\n'),
   );
   assert.ok(fatHits.length >= 1);
+
+  // Index builder counts .Method( call sites across a fixture root
+  const fixtureRoot = path.join(root, 'fixtures/self-check/clean/thin-wrapper');
+  const files = [];
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.cs')) files.push(full);
+    }
+  })(fixtureRoot);
+  const index = buildThinWrapperIndex(files, fixtureRoot);
+  assert.ok(index.callSites.get('pages/shared/SharedSubmitPage.cs#SharedSubmitAsync') > 1);
 });
 
 test('good locator-folder sample repo has fatPomFiles 0', () => {
