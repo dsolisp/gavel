@@ -15,6 +15,7 @@ public class UsesFixturesTests
         var used = new UsedPage(page);
         var locators = new LoginLocators(page);
         _ = locators.UsedButton;
+        _ = locators.NestedUsedButton;
         _ = UserFactory.CreateUsed();
         _ = used;
     }

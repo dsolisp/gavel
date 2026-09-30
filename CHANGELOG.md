@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **POM contract lessons learned** — [`LESSONS_LEARNED_POM_CONTRACT.md`](./LESSONS_LEARNED_POM_CONTRACT.md): documents the false remediation path where a broken Fat POM scoreboard pushed agents to invent one-line wrappers; language-independent principles (thin wrappers, dual API, fat POM vs type exposure) vs C#/Playwright.NET bindings. **Backlog only:** `thin-wrapper` detector and anti-scoreboard agent text are explicitly deferred — do not implement yet.
+
+### Changed
+
+- **Fat POM heuristic** — `ILocator` type aliases no longer count as locator ownership. Fat POM requires selector *creation* (`GetBy*`, `.Locator(`, `FindElement`, Appium/MobileBy) plus actions in the same page file. Dual-API pages that only re-export named locators are excluded. This stops the scoreboard from incentivizing thin `ClickX()` wrappers; it does **not** yet add a `thin-wrapper` rule.
+
+## [0.12.2] - 2026-09-30
+
+### Fixed
+
+- **dead-locator false positive (C# / TS)** — `countExternalReferences` used `String.match(RegExp)` **without** the `g` flag, so only the first hit counted. Locators reused inside the same file (e.g. `GridComprobantes` → `FilaComprobante`, or `TableRows` → `NestedUsedButton`) were reported as `never referenced`. Now uses `RegExp(..., 'g')` so in-file uses count. Fixture + verify cover the nested case.
+
 ## [0.12.1] - 2026-09-09
 
 Theme: **Auditable CLI + privacy-safe review** — reproducible output contracts, focused remediation, sensitive-data safeguards, and Azure DevOps PR review foundations.

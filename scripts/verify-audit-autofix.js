@@ -223,6 +223,14 @@ if (csharpDeadLocators.some((item) => item.symbol === 'UsedButton')) {
   console.error('UsedButton should not be flagged as dead.');
   process.exit(1);
 }
+if (csharpDeadLocators.some((item) => item.symbol === 'TableRows')) {
+  console.error('TableRows is used by NestedUsedButton in-file; must not be dead-locator (RegExp global match).');
+  process.exit(1);
+}
+if (csharpDeadLocators.some((item) => item.symbol === 'NestedUsedButton')) {
+  console.error('NestedUsedButton should not be flagged as dead.');
+  process.exit(1);
+}
 const csharpFactories = findUnusedFactories(csharpRoot);
 if (!csharpFactories.some((item) => item.symbol === 'CreateUnused')) {
   console.error('Expected CreateUnused to be flagged as unused factory.');

@@ -131,6 +131,8 @@ test('C# dead-code graph flags unused POM/locator/factory and not used ones', ()
   const deadLocators = findDeadLocators(csharpRoot);
   assert.ok(deadLocators.some((item) => item.symbol === 'UnusedButton'));
   assert.equal(deadLocators.some((item) => item.symbol === 'UsedButton'), false);
+  assert.equal(deadLocators.some((item) => item.symbol === 'TableRows'), false);
+  assert.equal(deadLocators.some((item) => item.symbol === 'NestedUsedButton'), false);
 
   const unusedFactories = findUnusedFactories(csharpRoot);
   assert.ok(unusedFactories.some((item) => item.symbol === 'CreateUnused'));

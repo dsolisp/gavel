@@ -152,7 +152,7 @@ function buildContentCache(repoRoot) {
 
 function countExternalReferences(repoRoot, symbol, definingFile, contentCache, options = {}) {
   const cache = contentCache || buildContentCache(repoRoot);
-  const pattern = new RegExp(`\\b${symbol}\\b`);
+  const pattern = new RegExp(`\\b${symbol}\\b`, 'g');
   let external = 0;
   const normalizedDefining = path.normalize(definingFile);
 
