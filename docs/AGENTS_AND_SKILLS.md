@@ -161,7 +161,7 @@ La capacidad productiva completa es mayor que este total. Por ejemplo, el review
 Para un gate autónomo, reproducible y sin dependencia de LLM:
 
 ```bash
-npx --yes @dsolisp/gavel@0.12.2 audit --format sarif > gavel.sarif
+npx --yes @dsolisp/gavel@0.12.3 audit --format sarif > gavel.sarif
 ```
 
 Códigos de salida:

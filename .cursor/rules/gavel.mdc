@@ -38,7 +38,7 @@ Before writing any test, stop at the first rung that holds:
 3. No hardcoded strings, IDs, URLs, credentials
 4. No `any` type / untyped params
 5. No skipping verification
-6. No wrappers around the framework (YAGNI)
+6. No wrappers around the framework (YAGNI); no thin POM one-liners (`ClickX()` that only clicks)
 7. No deep inheritance (max depth 1, prefer mixins)
 
 ## Page Object Discipline
@@ -47,6 +47,7 @@ Before writing any test, stop at the first rung that holds:
 - Actions in separate methods, not in test bodies
 - Composition via mixins or constructor injection, not deep inheritance
 - Max depth 1 — prefer flat composition
+- Dual API OK (named locator + composed flows); never invent thin wrappers for scoreboards
 
 ## Selector Boundary Rule
 

@@ -32,7 +32,7 @@ Before writing any test, stop at the first rung that holds:
 3. No hardcoded strings, IDs, URLs, credentials
 4. No `any` type / untyped params
 5. No skipping verification
-6. No wrappers around the framework (YAGNI)
+6. No wrappers around the framework (YAGNI); no thin POM one-liners
 7. No deep inheritance (max depth 1, prefer mixins)
 
 ## Page Object Discipline

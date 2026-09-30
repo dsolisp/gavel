@@ -7,13 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-09-30
+
 ### Added
 
-- **POM contract lessons learned** — [`LESSONS_LEARNED_POM_CONTRACT.md`](./LESSONS_LEARNED_POM_CONTRACT.md): documents the false remediation path where a broken Fat POM scoreboard pushed agents to invent one-line wrappers; language-independent principles (thin wrappers, dual API, fat POM vs type exposure) vs C#/Playwright.NET bindings. **Backlog only:** `thin-wrapper` detector and anti-scoreboard agent text are explicitly deferred — do not implement yet.
+- **`thin-wrapper` (C#)** — flags page/action methods whose body is a single native click/fill/select/type/press (expression-bodied or one-statement block). Fix: call the named locator from the spec, or fold into a composed flow — never invent `ClickX()` for a scoreboard.
+- **`private-locator-alias` (C#)** — private/protected 1:1 `ILocator` aliases of the locator layer.
+- **`new-locator-shadow` (C#)** — `public new ILocator` hiding a base locator.
+- **`fat-method` (C#)** — oversized page methods with many native interactions; remediation forbids thin wrappers.
 
 ### Changed
 
-- **Fat POM heuristic** — `ILocator` type aliases no longer count as locator ownership. Fat POM requires selector *creation* (`GetBy*`, `.Locator(`, `FindElement`, Appium/MobileBy) plus actions in the same page file. Dual-API pages that only re-export named locators are excluded. This stops the scoreboard from incentivizing thin `ClickX()` wrappers; it does **not** yet add a `thin-wrapper` rule.
+- **Fat POM heuristic** — `ILocator` type aliases no longer count as locator ownership. Fat POM requires selector *creation* (`GetBy*`, `.Locator(`, `FindElement`, Appium/MobileBy) plus actions in the same page file. Dual-API pages that only re-export named locators are excluded.
+- **Constitution / agents** — WON'T DO #6 now bans thin POM one-liners; Page Object Discipline documents dual API and anti-scoreboard remediations.
 
 ## [0.12.2] - 2026-09-30
 
@@ -341,7 +347,8 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.3...HEAD
+[0.12.3]: https://github.com/dsolisp/gavel/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/dsolisp/gavel/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/dsolisp/gavel/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/dsolisp/gavel/compare/v0.11.0...v0.12.0

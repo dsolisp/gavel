@@ -39,7 +39,7 @@ Before any agent writes a test, run the ladder:
 3. No hardcoded strings, IDs, URLs, credentials
 4. No `any` type (TS) / untyped params (Python)
 5. No skipping verification
-6. No wrappers around the framework unless absolutely justified (YAGNI)
+6. No wrappers around the framework unless absolutely justified (YAGNI); no thin POM one-liners
 7. No deep inheritance (max depth 1, prefer mixins/composition)
 
 ## Workflow Routing

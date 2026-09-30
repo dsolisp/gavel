@@ -89,7 +89,7 @@ lazy -- it's a lie.
 3. No hardcoded strings, IDs, URLs, or credentials
 4. No `any` type (TS), no untyped variables (Python)
 5. No skipping verification (tsc/lint/test run)
-6. No wrappers around the testing framework unless absolutely justified (YAGNI)
+6. No wrappers around the testing framework unless absolutely justified (YAGNI). Also no thin POM wrappers (single native click/fill/select in a page method) — call the named locator from the spec, or keep methods only for composition / wait-then-act / parse.
 7. No deep inheritance (max depth 1, prefer mixins or composition)
 8. No `expect()`, `assert()`, or framework assertion calls in action,
    page, or locator classes. State checks return values; specs assert.
@@ -107,6 +107,9 @@ lazy -- it's a lie.
   raw pages.
 - **Page objects** compose locators + actions via mixins or composition.
   Max depth 1. No inheritance chains.
+- **Dual API is valid.** Specs may use an exposed named locator + native API;
+  pages own composed flows. Never invent one-line `clickX()` wrappers or
+  mass-privatize locators to improve a Fat POM scoreboard.
 - **Specs are thin.** One assertion per line. No inline selectors. No logic
   that belongs in actions.
 - **Actions call locator methods only.** No inline `getByRole()`, `getByText()`,

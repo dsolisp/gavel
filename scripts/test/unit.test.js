@@ -985,12 +985,80 @@ test('buildSuiteHealthSummary includes fatPomFiles and leakFiles', () => {
   ];
   const summary = buildSuiteHealthSummary([], selfCheck, fixtureRoot);
   // Two selector-leak files → leakFiles === 2; one fat POM (Pages/LoginPage.cs) → fatPomFiles === 1.
+  // DualApiPage.cs re-exports ILocator + actions only — must NOT count as fat POM.
   assert.equal(summary.leakFiles, 2);
   assert.equal(summary.fatPomFiles, 1);
   assert.equal(summary.selectorLeaks, 3);
+  const { countFatPomFiles } = require('../suite-health');
+  assert.equal(countFatPomFiles(fixtureRoot), 1);
   const formatted = formatSuiteHealth(summary);
   assert.match(formatted, /Fat POM files: 1/);
   assert.match(formatted, /Leak files: 2/);
+});
+
+test('DualApiPage is not counted as fat POM', () => {
+  const { countFatPomFiles } = require('../suite-health');
+  const fixtureRoot = path.join(root, 'fixtures/suite-health/fat-pom');
+  assert.equal(countFatPomFiles(fixtureRoot), 1);
+});
+
+test('C# thin-wrapper / private-alias / new-shadow / fat-method', () => {
+  const { RULES } = require('../self-check');
+  const thin = RULES.find((r) => r.id === 'thin-wrapper');
+  const alias = RULES.find((r) => r.id === 'private-locator-alias');
+  const shadow = RULES.find((r) => r.id === 'new-locator-shadow');
+  const fat = RULES.find((r) => r.id === 'fat-method');
+
+  assert.equal(
+    thin.test(
+      'Pages/Thin.cs',
+      'public class Thin {\n  public async Task SubmitAsync() => await _locators.Submit.ClickAsync();\n}\n',
+    ).length,
+    1,
+  );
+  assert.equal(
+    thin.test(
+      'Pages/Composed.cs',
+      'public class Composed {\n  public async Task SignInAsync(string e) {\n    await _locators.Email.FillAsync(e);\n    await _locators.Submit.ClickAsync();\n  }\n}\n',
+    ).length,
+    0,
+  );
+  assert.equal(
+    alias.test(
+      'Pages/Alias.cs',
+      'public class Alias {\n  private ILocator Submit => _locators.Submit;\n}\n',
+    ).length,
+    1,
+  );
+  assert.equal(
+    alias.test(
+      'Pages/PublicDual.cs',
+      'public class PublicDual {\n  public ILocator Submit => _locators.Submit;\n}\n',
+    ).length,
+    0,
+  );
+  assert.equal(
+    shadow.test(
+      'Pages/Shadow.cs',
+      'public class Shadow {\n  public new ILocator Submit => _locators.Submit;\n}\n',
+    ).length,
+    1,
+  );
+  const fatHits = fat.test(
+    'Pages/Fat.cs',
+    [
+      'public class Fat {',
+      '  public async Task BigAsync() {',
+      '    await _l.A.FillAsync("1");',
+      '    await _l.B.FillAsync("2");',
+      '    await _l.C.FillAsync("3");',
+      '    await _l.D.ClickAsync();',
+      ...Array.from({ length: 22 }, (_, i) => `    var pad${i} = ${i};`),
+      '  }',
+      '}',
+    ].join('\n'),
+  );
+  assert.ok(fatHits.length >= 1);
 });
 
 test('good locator-folder sample repo has fatPomFiles 0', () => {

@@ -292,6 +292,125 @@ function findNoTeardownMatches(filePath, content) {
     }));
 }
 
+const CSHARP_NATIVE_ACTION =
+  '(?:ClickAsync|FillAsync|SelectOptionAsync|PressAsync|CheckAsync|UncheckAsync|DblClickAsync|HoverAsync|TypeAsync|ClearAsync|SetCheckedAsync|Click|Fill|SendKeys|Tap)';
+const CSHARP_SINGLE_ACTION =
+  `(?:await\\s+)?[\\w\\.\\[\\]\\(\\)]+\\.${CSHARP_NATIVE_ACTION}\\s*\\([^;]*\\)`;
+const CSHARP_ILOCATOR = '(?:[\\w.]+\\.)?ILocator';
+const CSHARP_METHOD_RETURN =
+  '(?:(?:[\\w.]+\\.)?(?:Task(?:<[^>\\n]+>)?|ValueTask(?:<[^>\\n]+>)?)|void)';
+
+function isCsharpPomActionFile(filePath) {
+  if (!filePath.endsWith('.cs')) return false;
+  if (LOCATOR_FILE_RE.test(filePath) || TEST_FILE_RE.test(filePath)) return false;
+  return ACTION_PAGE_FILE_RE.test(filePath) || /Page\.cs$/i.test(path.basename(filePath));
+}
+
+function lineNumberAtIndex(content, index) {
+  return content.slice(0, index).split('\n').length;
+}
+
+function findThinWrapperMatches(filePath, content) {
+  if (!isCsharpPomActionFile(filePath)) return [];
+  const hits = [];
+  const seen = new Set();
+  const pushHit = (index, name) => {
+    const line = lineNumberAtIndex(content, index);
+    if (seen.has(line)) return;
+    seen.add(line);
+    hits.push({
+      line,
+      text: `thin POM wrapper '${name}': single native interaction — call the named locator from the spec or fold into a composed flow`,
+    });
+  };
+
+  const exprRe = new RegExp(
+    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*=>\\s*${CSHARP_SINGLE_ACTION}\\s*;`,
+    'g',
+  );
+  let match;
+  while ((match = exprRe.exec(content)) !== null) {
+    pushHit(match.index, match[1]);
+  }
+
+  const blockRe = new RegExp(
+    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*\\{\\s*${CSHARP_SINGLE_ACTION}\\s*;\\s*\\}`,
+    'g',
+  );
+  while ((match = blockRe.exec(content)) !== null) {
+    if (/\bWaitFor\w*\s*\(/.test(match[0])) continue;
+    pushHit(match.index, match[1]);
+  }
+
+  return hits;
+}
+
+function findPrivateLocatorAliasMatches(filePath, content) {
+  if (!isCsharpPomActionFile(filePath)) return [];
+  const hits = [];
+  const re = new RegExp(
+    `(?:private|protected)\\s+(?:readonly\\s+)?${CSHARP_ILOCATOR}\\s+(\\w+)\\s*=>\\s*_?\\w*[Ll]ocators?\\.\\1\\s*;`,
+    'g',
+  );
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    hits.push({
+      line: lineNumberAtIndex(content, match.index),
+      text: `private locator alias '${match[1]}' is 1:1 with the locator layer — call the locator member directly`,
+    });
+  }
+  return hits;
+}
+
+function findNewLocatorShadowMatches(filePath, content) {
+  if (!isCsharpPomActionFile(filePath)) return [];
+  const hits = [];
+  const re = new RegExp(
+    `(?:public|protected|internal)\\s+new\\s+${CSHARP_ILOCATOR}\\s+(\\w+)\\b`,
+    'g',
+  );
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    hits.push({
+      line: lineNumberAtIndex(content, match.index),
+      text: `locator shadow 'new ${match[1]}' hides a base locator — prefer composition or rename instead of new`,
+    });
+  }
+  return hits;
+}
+
+function findFatMethodMatches(filePath, content) {
+  if (!isCsharpPomActionFile(filePath)) return [];
+  const hits = [];
+  const methodRe = new RegExp(
+    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*\\{`,
+    'g',
+  );
+  let match;
+  while ((match = methodRe.exec(content)) !== null) {
+    const name = match[1];
+    const bodyStart = match.index + match[0].length;
+    let depth = 1;
+    let i = bodyStart;
+    for (; i < content.length && depth > 0; i += 1) {
+      const ch = content[i];
+      if (ch === '{') depth += 1;
+      else if (ch === '}') depth -= 1;
+    }
+    if (depth !== 0) continue;
+    const body = content.slice(bodyStart, i - 1);
+    const nonBlank = body.split('\n').filter((line) => line.trim().length > 0).length;
+    const actionCount = (body.match(new RegExp(`\\.${CSHARP_NATIVE_ACTION}\\s*\\(`, 'g')) || []).length;
+    if (nonBlank >= 25 && actionCount >= 4) {
+      hits.push({
+        line: lineNumberAtIndex(content, match.index),
+        text: `fat method '${name}' (${nonBlank} lines, ${actionCount} actions) — split private helpers; do not invent one-line wrappers`,
+      });
+    }
+  }
+  return hits;
+}
+
 function literalSelector(line) {
   const match = line.match(/(?:\.?\s*(?:locator|Locator)|(?:querySelector(?:All)?|QuerySelector(?:All)?)|\$(?:\$)?|(?:AppiumBy|MobileBy|By)\.XPath|FindElement\s*\(\s*By\.XPath)\s*\(\s*(?:'([^']*)'|"([^"]*)"|`([^`]*)`)/);
   return match && match.slice(1).find((value) => value !== undefined);
@@ -1224,6 +1343,50 @@ const RULES = [
     remediation: 'Use a native partial matcher: Playwright toContain() or expect(locator).toHaveText(/partial/); pytest assert "substring" in value; JUnit assertThat(actual).contains(expected); Cypress should(\'contain\', \'partial\').',
     test: findBrittleAssertMatches,
   },
+  {
+    id: 'thin-wrapper',
+    severity: 'warning',
+    envelopeSeverity: 'fix',
+    class: 'constitution',
+    scope: 'all-files',
+    confidence: 'medium',
+    message: 'Thin POM wrapper: page/action method is a single native interaction',
+    remediation: 'Delete the one-liner and call the named locator from the spec, or fold it into a real multi-step composed method (AGENTS.md: WON\'T DO #6 / dual API). Never invent clickX() wrappers to move a scoreboard.',
+    test: findThinWrapperMatches,
+  },
+  {
+    id: 'private-locator-alias',
+    severity: 'info',
+    envelopeSeverity: 'cleanup',
+    class: 'locator',
+    scope: 'all-files',
+    confidence: 'medium',
+    message: 'Private 1:1 locator alias duplicates the locator layer',
+    remediation: 'Call _locators.Name directly from page methods; keep public ILocator re-exports only when dual API is intentional.',
+    test: findPrivateLocatorAliasMatches,
+  },
+  {
+    id: 'new-locator-shadow',
+    severity: 'warning',
+    envelopeSeverity: 'fix',
+    class: 'locator',
+    scope: 'all-files',
+    confidence: 'medium',
+    message: 'C# new ILocator hides a base locator',
+    remediation: 'Prefer composition or a distinct name over public new ILocator that shadows a base member.',
+    test: findNewLocatorShadowMatches,
+  },
+  {
+    id: 'fat-method',
+    severity: 'info',
+    envelopeSeverity: 'report',
+    class: 'constitution',
+    scope: 'all-files',
+    confidence: 'low',
+    message: 'Oversized page/action method with many native interactions',
+    remediation: 'Split into private helpers or composed methods. Do not remediate by inventing thin one-line wrappers.',
+    test: findFatMethodMatches,
+  },
 ];
 
 const DEFAULT_EXCLUDE_PATHS = ['scripts/**', 'fixtures/**', 'tools/**', 'utility_scripts/**'];
@@ -1259,6 +1422,10 @@ const FIX_HINTS = {
   'brittle-assert': 'use a partial matcher (toContain / toHaveText(/partial/); "substring" in value; assertThat(actual).contains(expected))',
   'test-id-duplicate': 'make the test id unique per spec, or consolidate the duplicated tests',
   'test-id-gap': 'renumber to close the gap, or document the intentional skip in the id scheme',
+  'thin-wrapper': 'delete the one-liner; call the named locator from the spec, or fold into a multi-step method — never invent clickX() for a scoreboard',
+  'private-locator-alias': 'drop the private ILocator alias and call _locators.Name directly',
+  'new-locator-shadow': 'remove public new ILocator; compose or rename instead of shadowing the base locator',
+  'fat-method': 'split the method into private helpers; do not invent thin one-line wrappers',
 };
 
 // Context-aware manual-wait fix hint driven by subCase/replaceable (roadmap #2).

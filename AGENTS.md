@@ -64,7 +64,7 @@ Before writing any test, stop at the first rung that holds:
 3. No hardcoded strings, personal/financial identifiers, URLs, or credentials
 4. No `any` type (TS), no untyped variables (Python)
 5. No skipping verification
-6. No wrappers around the testing framework unless absolutely justified (YAGNI)
+6. No wrappers around the testing framework unless absolutely justified (YAGNI). Also no **thin POM wrappers**: a page/action method whose body is a single native click/fill/select/type/press — call the named locator from the spec, or keep a method only for composition / wait-then-act / parse.
 7. No deep inheritance (max depth 1, prefer mixins or composition)
 
 ## Expected-Failure Expiry Policy
@@ -77,6 +77,8 @@ Expected-failure markers are valid for **7 days**. Gavel reports missing reasons
 - Action classes own user workflows. They receive locator classes, never raw pages.
 - Page objects compose locators + actions via mixins or composition. Max depth 1.
 - Specs are thin. One assertion per line. No inline selectors. No logic that belongs in actions.
+- **Dual API is valid:** specs may call an exposed named locator with the native driver API; pages own composed multi-step flows. Do not invent one-line `ClickX()` wrappers or mass-privatize locators to move a Fat POM / suite-health scoreboard.
+- Fat POM means a page/action file that **creates** selectors and owns actions. Re-exporting typed locators from the locator layer is not selector ownership.
 
 ## Selector Boundary Rule
 
