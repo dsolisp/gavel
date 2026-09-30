@@ -1,0 +1,287 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "thin-wrapper",
+  "samples": [
+    {
+      "file": "violating/pages/ThinAlphaTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS thin one-liner Alpha with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinBetaTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS thin one-liner Beta with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinGammaTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS thin one-liner Gamma with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinDeltaTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS thin one-liner Delta with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinEpsilonTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS thin one-liner Epsilon with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/DupBodyAlphaTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS duplicated thin body across pages → move",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "move"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/DupBodyBetaTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS duplicated thin body sibling → move",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "move"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/shared/UnusedSharedTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS shared thin wrapper with callSites <= 1 → shared-yagni",
+      "expectedFindings": [
+        {
+          "line": 4,
+          "tag": "thin-wrapper",
+          "subCase": "shared-yagni"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinZetaCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# thin one-liner Zeta with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 9,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinEtaCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# thin one-liner Eta with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 9,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinThetaCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# thin one-liner Theta with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 9,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/ThinIotaCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# thin one-liner Iota with callSites <= 1",
+      "expectedFindings": [
+        {
+          "line": 9,
+          "tag": "thin-wrapper",
+          "subCase": "delete"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/DupBodyAlphaCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# duplicated thin body across pages → move",
+      "expectedFindings": [
+        {
+          "line": 9,
+          "tag": "thin-wrapper",
+          "subCase": "move"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/DupBodyBetaCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# duplicated thin body sibling → move",
+      "expectedFindings": [
+        {
+          "line": 9,
+          "tag": "thin-wrapper",
+          "subCase": "move"
+        }
+      ]
+    },
+    {
+      "file": "violating/pages/shared/UnusedSharedCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# shared thin wrapper with callSites <= 1 → shared-yagni",
+      "expectedFindings": [
+        {
+          "line": 9,
+          "tag": "thin-wrapper",
+          "subCase": "shared-yagni"
+        }
+      ]
+    },
+    {
+      "file": "clean/pages/ComposedLoginTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS composed multi-call flow plus dual-API getter"
+    },
+    {
+      "file": "clean/pages/ComposedCheckoutTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS composed checkout flow"
+    },
+    {
+      "file": "clean/pages/ComposedProfileTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS composed profile save flow"
+    },
+    {
+      "file": "clean/pages/DualApiExportTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS public locator re-export is dual API, not thin-wrapper"
+    },
+    {
+      "file": "clean/pages/WaitOnlyTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "Wait-only one-liner excluded; composed openPanel clean"
+    },
+    {
+      "file": "clean/pages/shared/SharedSubmitTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS shared thin helper with callSites > 1 stays clean"
+    },
+    {
+      "file": "clean/pages/ComposedLoginCsPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# composed login plus public dual-API locator"
+    },
+    {
+      "file": "clean/pages/ComposedCheckoutCsPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# composed checkout flow"
+    },
+    {
+      "file": "clean/pages/DualApiExportCsPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# public ILocator re-export is dual API"
+    },
+    {
+      "file": "clean/pages/shared/SharedSubmitCsPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# shared thin helper with callSites > 1 stays clean"
+    }
+  ]
+}

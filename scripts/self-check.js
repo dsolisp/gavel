@@ -20,7 +20,8 @@ let scanRoot = '';
 const TEST_FILE_RE =
   /\.(spec|test|cy)\.(ts|js|tsx|jsx|py|java|cs|feature)$|(^|\/)(test_.+|.+_test)\.[a-z]+$|(^|\/)[^/]+Tests?\.cs$/;
 const LOCATOR_FILE_RE = /locators?\//i;
-const ACTION_PAGE_FILE_RE = /(?:pages?|actions?)\//i;
+const ACTION_PAGE_FILE_RE = /(?:pages?|page-objects?|actions?)\//i;
+const POM_ACTION_EXT_RE = /\.(cs|ts|tsx|js|jsx|py|java)$/i;
 
 // Recognized skip-marker prefixes; configurable via gavel.config.json skipPrefixes.
 const DEFAULT_SKIP_PREFIXES = [
@@ -294,12 +295,18 @@ function findNoTeardownMatches(filePath, content) {
 
 const CSHARP_NATIVE_ACTION =
   '(?:ClickAsync|FillAsync|SelectOptionAsync|PressAsync|CheckAsync|UncheckAsync|DblClickAsync|HoverAsync|TypeAsync|ClearAsync|SetCheckedAsync|Click|Fill|SendKeys|Tap)';
+const NATIVE_ACTION =
+  `(?:${CSHARP_NATIVE_ACTION}|click|fill|press|selectOption|check|uncheck|type|hover|dblclick|tap|send_keys|sendKeys|clear)`;
 const CSHARP_ILOCATOR = '(?:[\\w.]+\\.)?ILocator';
 const CSHARP_METHOD_RETURN =
   '(?:(?:[\\w.]+\\.)?(?:Task(?:<[^>\\n]+>)?|ValueTask(?:<[^>\\n]+>)?)|void)';
 // Any single receiver.Member(...) call — thin wrappers are not limited to Click/Fill.
 const CSHARP_SINGLE_CALL =
   '(?:await\\s+)?[\\w\\.\\[\\]\\(\\)]+\\.[A-Za-z_]\\w*\\s*\\([^;]*\\)';
+const JS_SINGLE_CALL =
+  '(?:await\\s+)?[\\w\\.\\[\\]\\(\\)]+\\.[A-Za-z_]\\w*\\s*\\([^;\\n]*\\)';
+const JAVA_SINGLE_CALL =
+  '[\\w\\.\\[\\]\\(\\)]+\\.[A-Za-z_]\\w*\\s*\\([^;]*\\)';
 
 /** @type {null | { callSites: Map<string, number>, bodyDupes: Map<string, number> }} */
 let thinWrapperContext = null;
@@ -314,10 +321,25 @@ function isSharedPomPath(relPath) {
   return /(Base|Common|Shared)/.test(path.basename(normalized));
 }
 
+function isLocatorPath(filePath) {
+  const normalized = filePath.replace(/\\/g, '/');
+  if (LOCATOR_FILE_RE.test(normalized)) return true;
+  return /\.locators\.(ts|tsx|js|jsx)$/i.test(normalized);
+}
+
+function isPomActionFile(filePath) {
+  const normalized = filePath.replace(/\\/g, '/');
+  if (!POM_ACTION_EXT_RE.test(normalized)) return false;
+  if (isLocatorPath(normalized) || TEST_FILE_RE.test(normalized)) return false;
+  const base = path.basename(normalized);
+  if (ACTION_PAGE_FILE_RE.test(normalized)) return true;
+  if (/Page\.(cs|ts|tsx|js|jsx|java)$/i.test(base)) return true;
+  if (/_page\.py$/i.test(base)) return true;
+  return false;
+}
+
 function isCsharpPomActionFile(filePath) {
-  if (!filePath.endsWith('.cs')) return false;
-  if (LOCATOR_FILE_RE.test(filePath) || TEST_FILE_RE.test(filePath)) return false;
-  return ACTION_PAGE_FILE_RE.test(filePath) || /Page\.cs$/i.test(path.basename(filePath));
+  return filePath.endsWith('.cs') && isPomActionFile(filePath);
 }
 
 function lineNumberAtIndex(content, index) {
@@ -327,34 +349,39 @@ function lineNumberAtIndex(content, index) {
 function normalizeThinBody(statement) {
   return statement
     .replace(/\bawait\s+/g, '')
+    .replace(/^\s*return\s+/, '')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
 }
 
-function extractThinMethods(content) {
+function isWaitOnlyStatement(statement) {
+  return /\b(?:waitFor\w*|WaitFor\w*|until|WebDriverWait)\b/.test(statement);
+}
+
+function pushThinMethod(methods, seen, content, index, name, statement) {
+  if (isWaitOnlyStatement(statement)) return;
+  const line = lineNumberAtIndex(content, index);
+  if (seen.has(line)) return;
+  seen.add(line);
+  methods.push({
+    name,
+    line,
+    index,
+    bodyNorm: normalizeThinBody(statement),
+  });
+}
+
+function extractCsharpThinMethods(content) {
   const methods = [];
   const seen = new Set();
-  const pushMethod = (index, name, statement) => {
-    if (/\bWaitFor\w*\s*\(/.test(statement)) return;
-    const line = lineNumberAtIndex(content, index);
-    if (seen.has(line)) return;
-    seen.add(line);
-    methods.push({
-      name,
-      line,
-      index,
-      bodyNorm: normalizeThinBody(statement),
-    });
-  };
-
   const exprRe = new RegExp(
     `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*=>\\s*(${CSHARP_SINGLE_CALL})\\s*;`,
     'g',
   );
   let match;
   while ((match = exprRe.exec(content)) !== null) {
-    pushMethod(match.index, match[1], match[2]);
+    pushThinMethod(methods, seen, content, match.index, match[1], match[2]);
   }
 
   const blockRe = new RegExp(
@@ -362,18 +389,116 @@ function extractThinMethods(content) {
     'g',
   );
   while ((match = blockRe.exec(content)) !== null) {
-    pushMethod(match.index, match[1], match[2]);
+    pushThinMethod(methods, seen, content, match.index, match[1], match[2]);
   }
 
   return methods;
 }
 
+function extractJsThinMethods(content) {
+  const methods = [];
+  const seen = new Set();
+  let match;
+  const blockRe = new RegExp(
+    `(?:async\\s+)?([A-Za-z_]\\w*)\\s*\\([^)]*\\)\\s*(?::\\s*[^{;]+)?\\{\\s*(?:return\\s+)?(${JS_SINGLE_CALL})\\s*;?\\s*\\}`,
+    'g',
+  );
+  while ((match = blockRe.exec(content)) !== null) {
+    pushThinMethod(methods, seen, content, match.index, match[1], match[2]);
+  }
+  const arrowBlockRe = new RegExp(
+    `([A-Za-z_]\\w*)\\s*=\\s*async\\s*\\([^)]*\\)\\s*=>\\s*\\{\\s*(?:return\\s+)?(${JS_SINGLE_CALL})\\s*;?\\s*\\}`,
+    'g',
+  );
+  while ((match = arrowBlockRe.exec(content)) !== null) {
+    pushThinMethod(methods, seen, content, match.index, match[1], match[2]);
+  }
+  const arrowExprRe = new RegExp(
+    `([A-Za-z_]\\w*)\\s*=\\s*async\\s*\\([^)]*\\)\\s*=>\\s*(${JS_SINGLE_CALL})\\s*;?`,
+    'g',
+  );
+  while ((match = arrowExprRe.exec(content)) !== null) {
+    pushThinMethod(methods, seen, content, match.index, match[1], match[2]);
+  }
+  return methods;
+}
+
+function extractPythonThinMethods(content) {
+  const methods = [];
+  const seen = new Set();
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const defMatch = lines[i].match(/^(\s*)def\s+([A-Za-z_]\w*)\s*\(/);
+    if (!defMatch) continue;
+    const indent = defMatch[1].length;
+    const name = defMatch[2];
+    const bodyLines = [];
+    let j = i + 1;
+    for (; j < lines.length; j += 1) {
+      const raw = lines[j];
+      const trimmed = raw.trim();
+      if (!trimmed || trimmed.startsWith('#')) {
+        if (bodyLines.length === 0) continue;
+        break;
+      }
+      if ((trimmed.startsWith('"""') || trimmed.startsWith("'''")) && bodyLines.length === 0) {
+        const quote = trimmed.slice(0, 3);
+        if (!(trimmed.length >= 6 && trimmed.endsWith(quote))) {
+          j += 1;
+          while (j < lines.length && !lines[j].includes(quote)) j += 1;
+        }
+        continue;
+      }
+      const lineIndent = (raw.match(/^(\s*)/) || ['', ''])[1].length;
+      if (lineIndent <= indent) break;
+      bodyLines.push(trimmed);
+    }
+    if (bodyLines.length !== 1) continue;
+    const stmt = bodyLines[0].replace(/^return\s+/, '');
+    if (!/^[\w\.]+(?:\([^)]*\))*\.[A-Za-z_]\w*\s*\(.*\)$/.test(stmt)) continue;
+    const index = lines.slice(0, i).join('\n').length + (i > 0 ? 1 : 0);
+    pushThinMethod(methods, seen, content, index, name, stmt);
+  }
+  return methods;
+}
+
+function extractJavaThinMethods(content) {
+  const methods = [];
+  const seen = new Set();
+  const blockRe = new RegExp(
+    `(?:public|private|protected)\\s+(?:static\\s+)?(?:[\\w.<>,\\[\\]\\s]+?)\\s+([A-Za-z_]\\w*)\\s*\\([^)]*\\)\\s*\\{\\s*(?:return\\s+)?(${JAVA_SINGLE_CALL})\\s*;\\s*\\}`,
+    'g',
+  );
+  let match;
+  while ((match = blockRe.exec(content)) !== null) {
+    pushThinMethod(methods, seen, content, match.index, match[1], match[2]);
+  }
+  return methods;
+}
+
+function extractThinMethods(content, filePath = 'file.cs') {
+  if (filePath.endsWith('.cs')) return extractCsharpThinMethods(content);
+  if (/\.(ts|tsx|js|jsx)$/i.test(filePath)) return extractJsThinMethods(content);
+  if (filePath.endsWith('.py')) return extractPythonThinMethods(content);
+  if (filePath.endsWith('.java')) return extractJavaThinMethods(content);
+  return extractCsharpThinMethods(content);
+}
+
 function countMethodCallSites(methodName, contentCache) {
-  const pattern = new RegExp(`\\.${methodName}\\s*\\(`, 'g');
   let total = 0;
+  const escaped = methodName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const dotPattern = new RegExp(`\\.${escaped}\\s*\\(`, 'g');
+  const bareCall = new RegExp(`(?:^|[^.\\w])${escaped}\\s*\\(`);
+  const defPattern = new RegExp(`^\\s*(?:async\\s+)?(?:def|function)\\s+${escaped}\\s*\\(`);
+
   for (const content of contentCache.values()) {
-    const hits = content.match(pattern);
-    if (hits) total += hits.length;
+    const dotHits = content.match(dotPattern);
+    if (dotHits) total += dotHits.length;
+    for (const line of content.split('\n')) {
+      if (defPattern.test(line)) continue;
+      if (new RegExp(`\\.${escaped}\\s*\\(`).test(line)) continue;
+      if (bareCall.test(line)) total += 1;
+    }
   }
   return total;
 }
@@ -385,7 +510,7 @@ function buildThinWrapperIndex(filePaths, repoRoot) {
 
   for (const filePath of filePaths) {
     const relPath = path.relative(repoRoot, filePath).replace(/\\/g, '/');
-    if (!relPath.endsWith('.cs')) continue;
+    if (!POM_ACTION_EXT_RE.test(relPath)) continue;
     let content;
     try {
       content = fs.readFileSync(filePath, 'utf8');
@@ -393,8 +518,8 @@ function buildThinWrapperIndex(filePaths, repoRoot) {
       continue;
     }
     contentCache.set(relPath, content);
-    if (!isCsharpPomActionFile(relPath)) continue;
-    const methods = extractThinMethods(content);
+    if (!isPomActionFile(relPath)) continue;
+    const methods = extractThinMethods(content, relPath);
     if (methods.length === 0) continue;
     thinByFile.set(relPath, methods);
     for (const method of methods) {
@@ -417,8 +542,8 @@ function buildThinWrapperIndex(filePaths, repoRoot) {
 }
 
 function findThinWrapperMatches(filePath, content) {
-  if (!isCsharpPomActionFile(filePath)) return [];
-  const methods = extractThinMethods(content);
+  if (!isPomActionFile(filePath)) return [];
+  const methods = extractThinMethods(content, filePath);
   const hits = [];
   const shared = isSharedPomPath(filePath);
 
@@ -457,46 +582,179 @@ function findThinWrapperMatches(filePath, content) {
 }
 
 function findPrivateLocatorAliasMatches(filePath, content) {
-  if (!isCsharpPomActionFile(filePath)) return [];
+  if (!isPomActionFile(filePath)) return [];
   const hits = [];
-  const re = new RegExp(
-    `(?:private|protected)\\s+(?:readonly\\s+)?${CSHARP_ILOCATOR}\\s+(\\w+)\\s*=>\\s*_?\\w*[Ll]ocators?\\.\\1\\s*;`,
-    'g',
-  );
-  let match;
-  while ((match = re.exec(content)) !== null) {
+  const pushAlias = (index, name) => {
     hits.push({
-      line: lineNumberAtIndex(content, match.index),
-      text: `private locator alias '${match[1]}' is 1:1 with the locator layer — call the locator member directly`,
+      line: lineNumberAtIndex(content, index),
+      text: `private locator alias '${name}' is 1:1 with the locator layer — call the locator member directly`,
     });
+  };
+
+  if (filePath.endsWith('.cs')) {
+    const re = new RegExp(
+      `(?:private|protected)\\s+(?:readonly\\s+)?${CSHARP_ILOCATOR}\\s+(\\w+)\\s*=>\\s*_?\\w*[Ll]ocators?\\.\\1\\s*;`,
+      'g',
+    );
+    let match;
+    while ((match = re.exec(content)) !== null) {
+      pushAlias(match.index, match[1]);
+    }
+    return hits;
+  }
+
+  if (/\.(ts|tsx|js|jsx)$/i.test(filePath)) {
+    const fieldRe = /(?:private|protected)\s+(?:readonly\s+)?([A-Za-z_]\w*)\s*=\s*this\._?[A-Za-z]*[Ll]ocators?\.\1\b/g;
+    let match;
+    while ((match = fieldRe.exec(content)) !== null) {
+      pushAlias(match.index, match[1]);
+    }
+    const getterRe = /(?:private|protected)\s+get\s+([A-Za-z_]\w*)\s*\(\s*\)\s*\{\s*return\s+this\._?[A-Za-z]*[Ll]ocators?\.\1\s*;?\s*\}/g;
+    while ((match = getterRe.exec(content)) !== null) {
+      pushAlias(match.index, match[1]);
+    }
+    return hits;
+  }
+
+  if (filePath.endsWith('.py')) {
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      const defMatch = lines[i].match(/^(\s*)def\s+(_?[A-Za-z]\w*)\s*\(\s*self\s*\)\s*:/);
+      if (!defMatch) continue;
+      const indent = defMatch[1].length;
+      const name = defMatch[2];
+      const aliasName = name.replace(/^_/, '');
+      for (let j = i + 1; j < lines.length; j += 1) {
+        const trimmed = lines[j].trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const lineIndent = (lines[j].match(/^(\s*)/) || ['', ''])[1].length;
+        if (lineIndent <= indent) break;
+        const ret = trimmed.match(new RegExp(`^return\\s+self\\._?[A-Za-z]*[Ll]ocators?\\.${aliasName}\\s*$`));
+        if (ret) {
+          const index = lines.slice(0, i).join('\n').length + (i > 0 ? 1 : 0);
+          pushAlias(index, name);
+        }
+        break;
+      }
+    }
+    return hits;
+  }
+
+  if (filePath.endsWith('.java')) {
+    const re = /private\s+(?:final\s+)?(?:[\w.]+\.)?(?:Locator|By|WebElement)\s+([A-Za-z_]\w*)\s*\(\s*\)\s*\{\s*return\s+[A-Za-z_]\w*[Ll]ocators?\.\1\s*\(\s*\)\s*;\s*\}/g;
+    let match;
+    while ((match = re.exec(content)) !== null) {
+      pushAlias(match.index, match[1]);
+    }
   }
   return hits;
+}
+
+function collectSameFileLocatorMembers(content) {
+  /** @type {Map<string, Set<string>>} */
+  const byClass = new Map();
+  const classRe = /\bclass\s+([A-Za-z_]\w*)(?:\s+extends\s+([A-Za-z_]\w*))?/g;
+  const classes = [];
+  let match;
+  while ((match = classRe.exec(content)) !== null) {
+    classes.push({ name: match[1], base: match[2] || null, index: match.index });
+  }
+  for (let c = 0; c < classes.length; c += 1) {
+    const start = classes[c].index;
+    const end = c + 1 < classes.length ? classes[c + 1].index : content.length;
+    const body = content.slice(start, end);
+    const members = new Set();
+    for (const m of body.matchAll(/\b(?:public|protected|private)?\s*(?:override\s+)?(?:get\s+)?([A-Za-z_]\w*)\s*(?:=\s*this\._?[A-Za-z]*[Ll]ocators?\.| \(\) \{ return this\._?[A-Za-z]*[Ll]ocators?\.|=>\s*_?[A-Za-z]*[Ll]ocators?\.)/g)) {
+      members.add(m[1]);
+    }
+    for (const m of body.matchAll(/\b(?:public|protected)\s+(?:new\s+)?(?:[\w.]+\.)?ILocator\s+([A-Za-z_]\w*)\b/g)) {
+      members.add(m[1]);
+    }
+    for (const m of body.matchAll(/\b(?:public|protected)\s+(?:[\w.]+\.)?(?:Locator|By|WebElement)\s+([A-Za-z_]\w*)\s*\(/g)) {
+      members.add(m[1]);
+    }
+    byClass.set(classes[c].name, members);
+  }
+  return { classes, byClass };
 }
 
 function findNewLocatorShadowMatches(filePath, content) {
-  if (!isCsharpPomActionFile(filePath)) return [];
+  if (!isPomActionFile(filePath)) return [];
   const hits = [];
-  const re = new RegExp(
-    `(?:public|protected|internal)\\s+new\\s+${CSHARP_ILOCATOR}\\s+(\\w+)\\b`,
-    'g',
-  );
-  let match;
-  while ((match = re.exec(content)) !== null) {
-    hits.push({
-      line: lineNumberAtIndex(content, match.index),
-      text: `locator shadow 'new ${match[1]}' hides a base locator — prefer composition or rename instead of new`,
-    });
+
+  if (filePath.endsWith('.cs')) {
+    const re = new RegExp(
+      `(?:public|protected|internal)\\s+new\\s+${CSHARP_ILOCATOR}\\s+(\\w+)\\b`,
+      'g',
+    );
+    let match;
+    while ((match = re.exec(content)) !== null) {
+      hits.push({
+        line: lineNumberAtIndex(content, match.index),
+        // C# `new` token is high-signal; keep rule default (medium).
+        confidence: 'medium',
+        text: `locator shadow 'new ${match[1]}' hides a base locator — prefer composition or rename instead of new`,
+      });
+    }
+    return hits;
   }
+
+  // Explicit TS override marker on a locator-like member.
+  if (/\.(ts|tsx)$/i.test(filePath)) {
+    const overrideRe = /\boverride\s+(?:async\s+)?(?:get\s+)?([A-Za-z_]\w*)\b/g;
+    let match;
+    while ((match = overrideRe.exec(content)) !== null) {
+      const around = content.slice(match.index, match.index + 180);
+      if (/[Ll]ocators?\.|ILocator|Locator\b|getBy|locator\s*\(/.test(around)) {
+        hits.push({
+          line: lineNumberAtIndex(content, match.index),
+          confidence: 'low',
+          text: `locator shadow '${match[1]}' overrides a base locator — prefer composition or rename instead of shadowing`,
+        });
+      }
+    }
+  }
+
+  // Same-file proven same-name locator on subclass of Base* / *Page.
+  const { classes, byClass } = collectSameFileLocatorMembers(content);
+  for (const cls of classes) {
+    if (!cls.base) continue;
+    if (!/^(Base|Common|Shared)/i.test(cls.base) && !/Page$/i.test(cls.base)) continue;
+    const baseMembers = byClass.get(cls.base);
+    if (!baseMembers || baseMembers.size === 0) continue;
+    const start = cls.index;
+    const idx = classes.indexOf(cls);
+    const end = idx + 1 < classes.length ? classes[idx + 1].index : content.length;
+    const body = content.slice(start, end);
+    for (const name of baseMembers) {
+      const re = new RegExp(
+        `(?:^|\\n)\\s*(?:public\\s+|private\\s+|protected\\s+)?(?:override\\s+)?(?:get\\s+)?${name}\\s*(?:=|\\(|:)`,
+        'g',
+      );
+      let match;
+      while ((match = re.exec(body)) !== null) {
+        // Skip the class declaration line / constructor.
+        const snippet = body.slice(match.index, match.index + 120);
+        if (/constructor\s*\(/.test(snippet)) continue;
+        if (!/[Ll]ocators?\.|getBy|locator\s*\(|ILocator|Locator\b|return\s+/.test(snippet)) continue;
+        hits.push({
+          line: lineNumberAtIndex(content, start + match.index),
+          confidence: 'low',
+          text: `locator shadow '${name}' hides a base locator — prefer composition or rename instead of shadowing`,
+        });
+      }
+    }
+  }
+
   return hits;
 }
 
-function findFatMethodMatches(filePath, content) {
-  if (!isCsharpPomActionFile(filePath)) return [];
-  const hits = [];
-  const methodRe = new RegExp(
-    `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*\\{`,
-    'g',
-  );
+function countNativeActions(body) {
+  return (body.match(new RegExp(`\\.${NATIVE_ACTION}\\s*\\(`, 'g')) || []).length;
+}
+
+function findBraceMethodBodies(content, methodRe) {
+  const bodies = [];
   let match;
   while ((match = methodRe.exec(content)) !== null) {
     const name = match[1];
@@ -509,15 +767,67 @@ function findFatMethodMatches(filePath, content) {
       else if (ch === '}') depth -= 1;
     }
     if (depth !== 0) continue;
-    const body = content.slice(bodyStart, i - 1);
+    bodies.push({
+      name,
+      index: match.index,
+      body: content.slice(bodyStart, i - 1),
+    });
+  }
+  return bodies;
+}
+
+function findFatMethodMatches(filePath, content) {
+  if (!isPomActionFile(filePath)) return [];
+  const hits = [];
+  const pushFat = (index, name, body) => {
     const nonBlank = body.split('\n').filter((line) => line.trim().length > 0).length;
-    const actionCount = (body.match(new RegExp(`\\.${CSHARP_NATIVE_ACTION}\\s*\\(`, 'g')) || []).length;
+    const actionCount = countNativeActions(body);
     if (nonBlank >= 25 && actionCount >= 4) {
       hits.push({
-        line: lineNumberAtIndex(content, match.index),
+        line: lineNumberAtIndex(content, index),
         text: `fat method '${name}' (${nonBlank} lines, ${actionCount} actions) — split private helpers; do not invent one-line wrappers`,
       });
     }
+  };
+
+  if (filePath.endsWith('.py')) {
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      const defMatch = lines[i].match(/^(\s*)def\s+([A-Za-z_]\w*)\s*\(/);
+      if (!defMatch) continue;
+      const indent = defMatch[1].length;
+      const name = defMatch[2];
+      const bodyLines = [];
+      for (let j = i + 1; j < lines.length; j += 1) {
+        const raw = lines[j];
+        if (!raw.trim()) {
+          bodyLines.push(raw);
+          continue;
+        }
+        const lineIndent = (raw.match(/^(\s*)/) || ['', ''])[1].length;
+        if (lineIndent <= indent) break;
+        bodyLines.push(raw);
+      }
+      const index = lines.slice(0, i).join('\n').length + (i > 0 ? 1 : 0);
+      pushFat(index, name, bodyLines.join('\n'));
+    }
+    return hits;
+  }
+
+  let methodRe;
+  if (filePath.endsWith('.cs')) {
+    methodRe = new RegExp(
+      `(?:public|private|protected|internal)\\s+(?:static\\s+)?(?:async\\s+)?${CSHARP_METHOD_RETURN}\\s+(\\w+)\\s*\\([^)]*\\)\\s*\\{`,
+      'g',
+    );
+  } else if (filePath.endsWith('.java')) {
+    methodRe = /(?:public|private|protected)\s+(?:static\s+)?(?:[\w.<>,\[\]\s]+?)\s+([A-Za-z_]\w*)\s*\([^)]*\)\s*\{/g;
+  } else {
+    methodRe = /(?:async\s+)?([A-Za-z_]\w*)\s*\([^)]*\)\s*(?::\s*[^{;]+)?\{/g;
+  }
+
+  for (const method of findBraceMethodBodies(content, methodRe)) {
+    pushFat(method.index, method.name, method.body);
   }
   return hits;
 }
@@ -1483,8 +1793,8 @@ const RULES = [
     class: 'locator',
     scope: 'all-files',
     confidence: 'medium',
-    message: 'C# new ILocator hides a base locator',
-    remediation: 'Prefer composition or a distinct name over public new ILocator that shadows a base member.',
+    message: 'Same-name locator override hides a base locator',
+    remediation: 'Prefer composition or a distinct name over shadowing a base locator. C# `public new ILocator` is high-signal (medium confidence); other languages only proven same-file override (low confidence on the finding).',
     test: findNewLocatorShadowMatches,
   },
   {
@@ -1495,7 +1805,7 @@ const RULES = [
     scope: 'all-files',
     confidence: 'low',
     message: 'Oversized page/action method with many native interactions',
-    remediation: 'Split into private helpers or composed methods. Do not remediate by inventing thin one-line wrappers.',
+    remediation: 'Split into private helpers or composed methods. Do not invent thin one-line wrappers or replace stable ids with getByText.',
     test: findFatMethodMatches,
   },
 ];
@@ -1529,14 +1839,14 @@ const FIX_HINTS = {
   'hardcoded-env': 'read the value from an env var, .env file, or config module',
   'hardcoded-sensitive-data': 'create the value through a test-data factory or protected fixture and mask it in logs',
   'no-teardown': 'add teardown in the same file/suite (afterEach, tearDown, addfinalizer, post-yield, @AfterEach)',
-  'complex-locator': 'prefer a rung-1 accessibility locator or stable test id over structural/XPath selectors',
+  'complex-locator': 'prefer a rung-1 accessibility locator or stable test id over structural/XPath selectors — never replace a stable id/By.id with getByText(...)',
   'brittle-assert': 'use a partial matcher (toContain / toHaveText(/partial/); "substring" in value; assertThat(actual).contains(expected))',
   'test-id-duplicate': 'make the test id unique per spec, or consolidate the duplicated tests',
   'test-id-gap': 'renumber to close the gap, or document the intentional skip in the id scheme',
-  'thin-wrapper': 'delete the one-liner (callSites <= 1); call the target from the spec — never invent clickX() for a scoreboard',
-  'private-locator-alias': 'drop the private ILocator alias and call _locators.Name directly',
-  'new-locator-shadow': 'remove public new ILocator; compose or rename instead of shadowing the base locator',
-  'fat-method': 'split the method into private helpers; do not invent thin one-line wrappers',
+  'thin-wrapper': 'delete the one-liner (callSites <= 1); call the target from the spec — never invent clickX() or getByText(...) remediations for a scoreboard',
+  'private-locator-alias': 'drop the private locator alias and call the locator-layer member directly',
+  'new-locator-shadow': 'remove the same-name locator override (C#: public new ILocator); compose or rename instead of shadowing the base locator',
+  'fat-method': 'split into private helpers or composed flows; do not invent thin one-line wrappers or swap stable ids for getByText',
 };
 
 // Context-aware manual-wait fix hint driven by subCase/replaceable (roadmap #2).
@@ -1574,9 +1884,9 @@ function selectorLeakFixHint(finding) {
 function thinWrapperFixHint(finding) {
   switch (finding.subCase) {
     case 'move':
-      return 'move the one-liner to Base/Common/Shared (callSites > 1 or duplicated body); do not keep feature-page wrappers';
+      return 'move the one-liner to Base/Common/Shared (callSites > 1 or duplicated body); do not keep feature-page wrappers or invent clickX()/getByText remediations';
     case 'shared-yagni':
-      return 'delete or inline the shared thin wrapper — callSites <= 1 is YAGNI even in Base/Common/Shared';
+      return 'delete or inline the shared thin wrapper — callSites <= 1 is YAGNI even in Base/Common/Shared; never invent clickX()/getByText remediations';
     case 'delete':
     default:
       return FIX_HINTS['thin-wrapper'];
@@ -1832,6 +2142,8 @@ function main() {
         }
         if (hit.confidence) {
           finding.confidence = hit.confidence;
+        } else if (rule.confidence) {
+          finding.confidence = rule.confidence;
         }
         if (hit.implicitWait) {
           finding.implicitWait = true;
@@ -1928,6 +2240,8 @@ module.exports = {
   setThinWrapperScanContext,
   buildThinWrapperIndex,
   extractThinMethods,
+  normalizeThinBody,
+  countMethodCallSites,
   isSharedPomPath,
 };
 

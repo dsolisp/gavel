@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../schemas/corpus-labels.schema.json",
+  "schemaVersion": "1.0.0",
+  "tag": "private-locator-alias",
+  "samples": [
+    {
+      "file": "violating/pages/AliasedSubmitTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS private field 1:1 alias of locator layer",
+      "expectedFindings": [{ "line": 9, "tag": "private-locator-alias" }]
+    },
+    {
+      "file": "violating/pages/AliasedCancelTsPage.ts",
+      "label": "violating",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS private getter 1:1 alias of locator layer",
+      "expectedFindings": [{ "line": 9, "tag": "private-locator-alias" }]
+    },
+    {
+      "file": "violating/pages/AliasedSubmitCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# private ILocator 1:1 alias of locator layer",
+      "expectedFindings": [{ "line": 9, "tag": "private-locator-alias" }]
+    },
+    {
+      "file": "violating/pages/AliasedCancelCsPage.cs",
+      "label": "violating",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# private ILocator cancel alias",
+      "expectedFindings": [{ "line": 9, "tag": "private-locator-alias" }]
+    },
+    {
+      "file": "clean/pages/DualApiSubmitTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS public getter re-export is dual API"
+    },
+    {
+      "file": "clean/pages/ComposedNoAliasTsPage.ts",
+      "label": "clean",
+      "language": "ts",
+      "framework": "playwright",
+      "rationale": "TS page calls locator layer directly"
+    },
+    {
+      "file": "clean/pages/DualApiSubmitCsPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# public ILocator re-export is dual API"
+    },
+    {
+      "file": "clean/pages/ComposedNoAliasCsPage.cs",
+      "label": "clean",
+      "language": "cs",
+      "framework": "playwright-dotnet",
+      "rationale": "C# page calls locator layer directly"
+    }
+  ]
+}

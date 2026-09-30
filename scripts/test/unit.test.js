@@ -1022,6 +1022,9 @@ test('C# thin-wrapper / private-alias / new-shadow / fat-method', () => {
   assert.equal(deleteHits.length, 1);
   assert.equal(deleteHits[0].subCase, 'delete');
   assert.match(fixHintFor({ tag: 'thin-wrapper', subCase: 'delete' }), /callSites <= 1/);
+  assert.match(fixHintFor({ tag: 'thin-wrapper', subCase: 'delete' }), /getByText|clickX/);
+  assert.match(fixHintFor({ tag: 'fat-method' }), /getByText|thin one-line/);
+  assert.match(fixHintFor({ tag: 'complex-locator' }), /getByText/);
 
   assert.equal(
     thin.test(
@@ -1084,13 +1087,12 @@ test('C# thin-wrapper / private-alias / new-shadow / fat-method', () => {
     ).length,
     0,
   );
-  assert.equal(
-    shadow.test(
-      'Pages/Shadow.cs',
-      'public class Shadow {\n  public new ILocator Submit => _locators.Submit;\n}\n',
-    ).length,
-    1,
+  const csShadow = shadow.test(
+    'Pages/Shadow.cs',
+    'public class Shadow {\n  public new ILocator Submit => _locators.Submit;\n}\n',
   );
+  assert.equal(csShadow.length, 1);
+  assert.equal(csShadow[0].confidence, 'medium');
   const fatHits = fat.test(
     'Pages/Fat.cs',
     [
@@ -1119,6 +1121,200 @@ test('C# thin-wrapper / private-alias / new-shadow / fat-method', () => {
   })(fixtureRoot);
   const index = buildThinWrapperIndex(files, fixtureRoot);
   assert.ok(index.callSites.get('pages/shared/SharedSubmitPage.cs#SharedSubmitAsync') > 1);
+});
+
+test('multi-language thin-wrapper / private-alias / new-shadow / fat-method', () => {
+  const {
+    RULES,
+    setThinWrapperScanContext,
+    buildThinWrapperIndex,
+    fixHintFor,
+  } = require('../self-check');
+  const thin = RULES.find((r) => r.id === 'thin-wrapper');
+  const alias = RULES.find((r) => r.id === 'private-locator-alias');
+  const shadow = RULES.find((r) => r.id === 'new-locator-shadow');
+  const fat = RULES.find((r) => r.id === 'fat-method');
+  const { countFatPomFiles } = require('../suite-health');
+
+  setThinWrapperScanContext(null);
+  const tsDelete = thin.test(
+    'pages/ThinLoginPage.ts',
+    'export class Thin {\n  async submit() { await this.locators.submitButton.click(); }\n}\n',
+  );
+  assert.equal(tsDelete.length, 1);
+  assert.equal(tsDelete[0].subCase, 'delete');
+
+  const pyDelete = thin.test(
+    'pages/thin_login_page.py',
+    'class Thin:\n    def submit(self):\n        self.locators.submit_button.click()\n',
+  );
+  assert.equal(pyDelete.length, 1);
+  assert.equal(pyDelete[0].subCase, 'delete');
+
+  const javaDelete = thin.test(
+    'pages/ThinLoginPage.java',
+    'public class Thin {\n  public void submit() { locators.submit().click(); }\n}\n',
+  );
+  assert.equal(javaDelete.length, 1);
+  assert.equal(javaDelete[0].subCase, 'delete');
+
+  assert.equal(
+    thin.test(
+      'pages/Composed.ts',
+      'export class Composed {\n  async signIn(e: string) {\n    await this.locators.email.fill(e);\n    await this.locators.submit.click();\n  }\n}\n',
+    ).length,
+    0,
+  );
+
+  setThinWrapperScanContext({
+    callSites: new Map([
+      ['pages/shared/HelperPage.ts#reuse', 3],
+      ['pages/FeaturePage.ts#reuse', 3],
+    ]),
+    bodyDupes: new Map([
+      ['pages/shared/HelperPage.ts#reuse', 1],
+      ['pages/FeaturePage.ts#reuse', 1],
+    ]),
+  });
+  assert.equal(
+    thin.test(
+      'pages/shared/HelperPage.ts',
+      'export class Helper {\n  async reuse() { await this.locators.x.click(); }\n}\n',
+    ).length,
+    0,
+  );
+  const moveHits = thin.test(
+    'pages/FeaturePage.ts',
+    'export class Feature {\n  async reuse() { await this.locators.x.click(); }\n}\n',
+  );
+  assert.equal(moveHits.length, 1);
+  assert.equal(moveHits[0].subCase, 'move');
+  assert.match(fixHintFor({ tag: 'thin-wrapper', subCase: 'move' }), /Base\/Common\/Shared/);
+
+  setThinWrapperScanContext({
+    callSites: new Map([['pages/shared/DeadPage.ts#orphan', 0]]),
+    bodyDupes: new Map([['pages/shared/DeadPage.ts#orphan', 1]]),
+  });
+  const yagni = thin.test(
+    'pages/shared/DeadPage.ts',
+    'export class Dead {\n  async orphan() { await this.locators.x.click(); }\n}\n',
+  );
+  assert.equal(yagni.length, 1);
+  assert.equal(yagni[0].subCase, 'shared-yagni');
+  setThinWrapperScanContext(null);
+
+  assert.equal(
+    alias.test(
+      'pages/Alias.ts',
+      'export class Alias {\n  private submit = this.locators.submit;\n}\n',
+    ).length,
+    1,
+  );
+  assert.equal(
+    alias.test(
+      'pages/PublicDual.ts',
+      'export class PublicDual {\n  public get submit() { return this.locators.submit; }\n}\n',
+    ).length,
+    0,
+  );
+  assert.equal(
+    alias.test(
+      'pages/aliased_login_page.py',
+      'class Alias:\n    def _submit(self):\n        return self.locators.submit\n',
+    ).length,
+    1,
+  );
+
+  const shadowHits = shadow.test(
+    'pages/Shadow.ts',
+    [
+      'class BasePage {',
+      '  constructor(protected locators: any) {}',
+      '  submit = this.locators.submit;',
+      '}',
+      'export class FeaturePage extends BasePage {',
+      '  submit = this.locators.other;',
+      '}',
+    ].join('\n'),
+  );
+  assert.ok(shadowHits.length >= 1);
+  assert.ok(shadowHits.every((hit) => hit.confidence === 'low'));
+  assert.equal(
+    shadow.test(
+      'pages/CleanShadow.ts',
+      [
+        'class BasePage {',
+        '  constructor(protected locators: any) {}',
+        '  submit = this.locators.submit;',
+        '}',
+        'export class FeaturePage extends BasePage {',
+        '  async prepare(e: string) { await this.locators.email.fill(e); await this.locators.submit.click(); }',
+        '}',
+      ].join('\n'),
+    ).length,
+    0,
+  );
+
+  const fatHits = fat.test(
+    'pages/Fat.ts',
+    [
+      'export class Fat {',
+      '  async big() {',
+      '    await this.l.a.fill("1");',
+      '    await this.l.b.fill("2");',
+      '    await this.l.c.fill("3");',
+      '    await this.l.d.click();',
+      ...Array.from({ length: 22 }, (_, i) => `    const pad${i} = ${i};`),
+      '  }',
+      '}',
+    ].join('\n'),
+  );
+  assert.ok(fatHits.length >= 1);
+
+  const fixtureRoot = path.join(root, 'fixtures/self-check/clean/thin-wrapper');
+  const files = [];
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(cs|ts|tsx|js|jsx|py|java)$/.test(entry.name)) files.push(full);
+    }
+  })(fixtureRoot);
+  const index = buildThinWrapperIndex(files, fixtureRoot);
+  assert.ok(index.callSites.get('pages/shared/SharedSubmitPage.cs#SharedSubmitAsync') > 1);
+  assert.ok(index.callSites.get('pages/shared/SharedSubmitPage.ts#sharedSubmit') > 1);
+
+  assert.equal(countFatPomFiles(path.join(root, 'fixtures/suite-health/fat-pom')), 1);
+  assert.equal(countFatPomFiles(path.join(root, 'fixtures/suite-health/fat-pom-ts')), 1);
+});
+
+test('thin-wrapper index contract: Python def line excluded; bodyNorm strips await/return', () => {
+  const { normalizeThinBody, countMethodCallSites, extractThinMethods } = require('../self-check');
+
+  assert.equal(
+    normalizeThinBody('return this.x.click()'),
+    normalizeThinBody('await this.x.click()'),
+  );
+  assert.equal(normalizeThinBody('await this.x.click()'), 'this.x.click()');
+
+  const jsReturn = extractThinMethods(
+    'export class A {\n  click() { return this.x.click(); }\n}\n',
+    'pages/APage.ts',
+  );
+  const jsAwait = extractThinMethods(
+    'export class B {\n  async click() { await this.x.click(); }\n}\n',
+    'pages/BPage.ts',
+  );
+  assert.equal(jsReturn.length, 1);
+  assert.equal(jsAwait.length, 1);
+  assert.equal(jsReturn[0].bodyNorm, jsAwait[0].bodyNorm);
+
+  // Contract: Python `def name(` lines are not call sites; `.name(` and bare `name(` are.
+  const cache = new Map([
+    ['pages/confirm_page.py', 'class ConfirmPage:\n    def confirm(self):\n        self.locators.ok.click()\n'],
+    ['tests/test_confirm.py', 'def test_twice(page):\n    page.confirm()\n    self.confirm()\n'],
+  ]);
+  assert.equal(countMethodCallSites('confirm', cache), 2);
 });
 
 test('good locator-folder sample repo has fatPomFiles 0', () => {

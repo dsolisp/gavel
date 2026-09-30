@@ -3,3 +3,5 @@ fixtures/**/obj/
 gavel-copilot-org/
 lesson2
 *.tgz
+
+docs/prompts/

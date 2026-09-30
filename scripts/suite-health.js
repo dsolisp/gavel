@@ -17,11 +17,11 @@ const FAT_POM_EXCLUDED = new Set([
 ]);
 
 const POM_PATH_RE = /(?:^|\/)(?:pages?|page-objects?)\//i;
-const POM_BASENAME_RE = /Page\.cs$/;
+const POM_BASENAME_RE = /Page\.(cs|ts|tsx|js|jsx|java)$|_page\.py$/i;
 const LOCATOR_DIR_RE = /locators?\//i;
-// Selector *creation* only — typed `ILocator` aliases (dual API re-exports) are not ownership.
-const LOCATOR_SIGNAL_RE = /\bGetByRole\b|\bGetByText\b|\bGetByLabel\b|\bGetByPlaceholder\b|\bGetByAltText\b|\bGetByTitle\b|\bGetByTestId\b|\.Locator\s*\(|\bFindElement\b|\bFindElements\b|\bAppiumBy\.[A-Za-z]|\bMobileBy\.[A-Za-z]/g;
-const ACTION_SIGNAL_RE = /\.Click\s*\(|ClickAsync\s*\(|\.Fill\s*\(|FillAsync\s*\(|GotoAsync\s*\(|\bNavigate\w*\s*\(|\bSendKeys\s*\(|\bTap\s*\(|TypeAsync\s*\(/g;
+// Selector *creation* only — typed locator aliases (dual API re-exports) are not ownership.
+const LOCATOR_SIGNAL_RE = /\bGetByRole\b|\bGetByText\b|\bGetByLabel\b|\bGetByPlaceholder\b|\bGetByAltText\b|\bGetByTitle\b|\bGetByTestId\b|\bgetByRole\b|\bgetByText\b|\bgetByLabel\b|\bgetByPlaceholder\b|\bgetByAltText\b|\bgetByTitle\b|\bgetByTestId\b|\.Locator\s*\(|\.locator\s*\(|\bFindElement\b|\bFindElements\b|\bfind_element\b|\bfind_elements\b|\bfindElement\b|\bfindElements\b|\bAppiumBy\.[A-Za-z]|\bMobileBy\.[A-Za-z]/g;
+const ACTION_SIGNAL_RE = /\.Click\s*\(|ClickAsync\s*\(|\.Fill\s*\(|FillAsync\s*\(|GotoAsync\s*\(|\bNavigate\w*\s*\(|\bSendKeys\s*\(|\bTap\s*\(|TypeAsync\s*\(|\.click\s*\(|\.fill\s*\(|\.press\s*\(|\.selectOption\s*\(|\.check\s*\(|\.uncheck\s*\(|\.type\s*\(|\.hover\s*\(|\.dblclick\s*\(|\.tap\s*\(|\.send_keys\s*\(|\.sendKeys\s*\(|\.clear\s*\(/g;
 
 function isFatPomExcluded(dirName) {
   return FAT_POM_EXCLUDED.has(dirName);

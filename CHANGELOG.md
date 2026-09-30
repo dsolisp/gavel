@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.5] - 2026-09-30
+
+### Added
+
+- **POM corpus precision** — `fixtures/corpus/thin-wrapper/` (≥10 violating + ≥10 clean, C# + TS, subCase locks) and `fixtures/corpus/private-locator-alias/` (C# + TS).
+- **Hint firewall** — `thin-wrapper`, `fat-method`, and `complex-locator` fix hints forbid inventing `clickX()` wrappers or replacing stable ids/`By.id` with `getByText(...)`.
+
+### Changed
+
+- **POM contract beyond C#** — `thin-wrapper`, `private-locator-alias`, `new-locator-shadow`, and `fat-method` now fire on TypeScript/JavaScript, Python, and Java page/action files with the same verdicts (`delete` / `move` / `shared-yagni`). `new-locator-shadow` detects same-name locator overrides (C# keeps `public new ILocator`). Fat-POM suite-health signals recognize `getBy*` / `.locator(` / `find_element` / `.click(` forms. No new rule ids. C# fixtures and assertions unchanged.
+- **`new-locator-shadow` confidence** — C# `public new ILocator` stays medium; non-C# same-file overrides emit `confidence: low` on the finding. Self-check now attaches rule/hit confidence to findings.
+
 ## [0.12.4] - 2026-09-30
 
 ### Changed
@@ -353,7 +365,8 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.4...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.5...HEAD
+[0.12.5]: https://github.com/dsolisp/gavel/compare/v0.12.4...v0.12.5
 [0.12.4]: https://github.com/dsolisp/gavel/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/dsolisp/gavel/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/dsolisp/gavel/compare/v0.12.1...v0.12.2
