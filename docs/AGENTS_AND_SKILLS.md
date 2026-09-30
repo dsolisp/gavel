@@ -1,6 +1,6 @@
 # Agentes y skills de Gavel
 
-Versión documentada: **0.12.1**.
+Versión documentada: **0.12.5**.
 
 Este documento describe las superficies de IA de Gavel, sus límites y su relación con la ejecución en CI. El inventario canónico contiene **8 agentes core**, **31 skills core** y **4 companion skills**. El repositorio también incluye un agente interactivo adicional para revisar pull requests de Azure DevOps.
 
