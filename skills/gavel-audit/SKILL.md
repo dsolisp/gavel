@@ -143,6 +143,8 @@ Suite health:
   Package mismatch: <pkg-a> <ver-a> vs <pkg-b> <ver-b> (mixed Microsoft.Playwright* versions in <file>)  # only when detected
 ```
 
+Fat POM files = selector *creation* + actions in the page (architecture). Self-check `thin-wrapper` / `fat-method` judge method shape — do not “unify” them into one refactor.
+
 Return `templates/result-envelope.md` when the audit report is complete.
 
 ## Boundaries

@@ -85,6 +85,9 @@ function mapSelfCheckFinding(finding) {
     mapped.interpretationSource = finding.interpretationSource;
     mapped.interpretationStatus = finding.interpretationStatus;
   }
+  if (finding.confidence) {
+    mapped.confidence = finding.confidence;
+  }
   return mapped;
 }
 
@@ -158,7 +161,9 @@ function buildAuditEnvelope(report, ranked) {
       ...(item.line ? { line: item.line } : {}),
       ...(item.message ? { message: item.message } : {}),
       ...(item.snippet ? { snippet: item.snippet } : {}),
-      ...(RULE_META[item.tag]?.confidence ? { confidence: RULE_META[item.tag].confidence } : {}),
+      ...((item.confidence || RULE_META[item.tag]?.confidence)
+        ? { confidence: item.confidence || RULE_META[item.tag].confidence }
+        : {}),
     })),
   };
 }

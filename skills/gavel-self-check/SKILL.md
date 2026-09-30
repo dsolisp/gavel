@@ -43,10 +43,12 @@ Exit code `0` = no violations. Exit code `1` = violations found.
 | `skip-marker` | Skip/quarantine/WIP marker without reason |
 | `test-id-duplicate` | Duplicate test IDs (when `gavel.config.json` defines pattern) |
 | `test-id-gap` | Gap in consecutive test IDs (when `enforceConsecutiveTestIds: true`) |
-| `thin-wrapper` | C# page/action one-liner call; delete if callSites ≤ 1, move to Base/Common/Shared if callSites > 1 (or body duplicated); shared YAGNI if unused |
-| `private-locator-alias` | Private 1:1 `ILocator` alias of the locator layer (C#) |
-| `new-locator-shadow` | `public new ILocator` hiding a base locator (C#) |
-| `fat-method` | Oversized page method with many native interactions (C#) |
+| `thin-wrapper` | Page/action one-liner call (C# / TS / JS / Python / Java); delete if callSites ≤ 1, move to Base/Common/Shared if callSites > 1 (or body duplicated); shared YAGNI if unused. Never invent `clickX()` / `getByText` remediations. |
+| `private-locator-alias` | Private 1:1 locator alias of the locator layer (C# `ILocator`, TS/JS private field/getter, Python `_name`, Java private Locator) |
+| `new-locator-shadow` | Same-name locator override hiding a base locator. C# `public new ILocator` is medium confidence; other languages only proven same-file override (low confidence). |
+| `fat-method` | Oversized page method with many native interactions. Split/helpers only — never invent thin wrappers or swap stable ids for `getByText`. |
+
+Fat POM suite-health count = selector *creation* + actions in the page file. `thin-wrapper` / `fat-method` judge method *shape*, not Fat POM architecture.
 
 Inline suppression: `// gavel-ignore: manual-wait` suppresses only that tag on the line (context: line before/on/after the comment); a comma-separated list (`gavel-ignore: a, b`) suppresses several tags. Bare `// gavel-ignore` (no tag) is a wildcard that suppresses every tag on the line — kept for back-compat, but scoping to a tag is preferred so one ignore can't mask an unrelated finding on the same line. `gavel-allow: <tag>` is a deprecated alias for `gavel-ignore: <tag>` with identical scoping rules.
 Repo allowlist: `gavel.config.json` → `"allowlist": [{ "file": "...", "tag": "..." }]`.
