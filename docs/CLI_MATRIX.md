@@ -20,6 +20,7 @@ Every name that looks like a “core command” in README / help must either shi
 | `gavel flakiness` | `scripts/flakiness.js` | **CLI** (report-only, exit `0`; `2` on unreadable report) |
 | `gavel baseline` | `scripts/baseline.js` (`write` / `check`) | **CLI** |
 | `gavel ado-pr-review` | `scripts/ado-pr-review.js` | **CLI** (shadow by default) |
+| `gavel pr-check` | `scripts/pr-check.js` | **CLI** (new added-line violations only; `0` pass, `1` reject, `2` incomplete) |
 | `gavel explain <tag>` | Inline in `scripts/cli.js` (RULES registry) | **CLI** |
 | `gavel companion --help` | Stub → points at `companion/README.md` | **CLI stub** (no workflow execution) |
 | `gavel --help` | Lists CLI commands only | **CLI** |

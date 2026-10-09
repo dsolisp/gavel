@@ -1,6 +1,6 @@
 # Gavel Documentation
 
-Version: **0.12.5** (see [CHANGELOG.md](../CHANGELOG.md))
+Version: **0.13.0** (see [CHANGELOG.md](../CHANGELOG.md))
 
 Index for scripts, templates, and companion workflows. For install and first run, start at [README.md](../README.md).
 
@@ -12,6 +12,7 @@ Index for scripts, templates, and companion workflows. For install and first run
 | [QUICKSTART.md](../QUICKSTART.md) | First session: audit → heal → write | QA engineers |
 | [ENTERPRISE.md](ENTERPRISE.md) | CI gate, SARIF, trust criteria, data handling | Platform / staff eng |
 | [CLI_MATRIX.md](CLI_MATRIX.md) | Which commands are real CLI vs agent-only | Platform / contributors |
+| [PR_CHECK.md](PR_CHECK.md) | Deterministic added-code PR gate, historical debt isolation and Azure build validation | Platform / QA |
 | [AGENTS_AND_SKILLS.md](AGENTS_AND_SKILLS.md) | Complete agent and skill inventory, scopes, limits, and job autonomy | QA, platform, architects |
 | [AGENTS.md](../AGENTS.md) | Universal QA rules | All IDE adapters |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Two-repo design, browser-first authoring principle | Contributors, architects |

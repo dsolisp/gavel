@@ -303,6 +303,7 @@ function findDeadLocators(repoRoot, contentCache) {
           severity: 'cleanup',
           symbol: symbol.name,
           file: relPath(repoRoot, filePath),
+          line: content.slice(0, symbol.index + content.slice(symbol.index).search(/\S/)).split('\n').length,
           kind: 'method',
         }));
       }

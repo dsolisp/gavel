@@ -8,7 +8,7 @@ const { RULES } = require('./self-check');
 const { parseConfigFlag, resolveGavelConfig } = require('./load-gavel-config');
 const { version } = require('../package.json');
 
-const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js', adoption: 'adoption-scan.js', flakiness: 'flakiness.js', baseline: 'baseline.js', 'ado-pr-review': 'ado-pr-review.js' };
+const scripts = { audit: 'audit-report.js', review: 'review.js', 'self-check': 'self-check.js', analyze: 'analyze-ci.js', 'affected-tests': 'affected-tests.js', detect: 'detect.js', adoption: 'adoption-scan.js', flakiness: 'flakiness.js', baseline: 'baseline.js', 'ado-pr-review': 'ado-pr-review.js', 'pr-check': 'pr-check.js' };
 const valueFlags = new Set(['--config', '--preset', '--app-repo', '--area-map', '--commits', '--project', '--framework', '--changed', '--tag', '--tag-framework', '--format', '--out', '--rule', '--file']);
 const severityRank = { info: 0, warning: 1, error: 2, blocker: 3 };
 const ruleSeverity = Object.fromEntries(RULES.map((rule) => [rule.id, rule.severity]));
@@ -20,7 +20,7 @@ function publicCommandName() {
 
 function printHelp() {
   console.log('Usage: gavel <command> [args] [--config gavel.config.json] [--preset name]');
-  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, adoption, flakiness, baseline, ado-pr-review, explain');
+  console.log('Commands: audit, review, self-check, analyze, affected-tests, detect, adoption, flakiness, baseline, ado-pr-review, pr-check, explain');
 }
 
 function normalizeOutputArgs(args) {
@@ -189,7 +189,7 @@ function main() {
     }
     process.exit(0);
   }
-  if (command === 'ado-pr-review') {
+  if (['ado-pr-review', 'pr-check'].includes(command)) {
     const result = runScript(command, rawArgs);
     process.exit(result.status || 0);
   }

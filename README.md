@@ -33,7 +33,7 @@ node scripts/cli.js audit ../your-automation-repo --with-self-check --audit-form
 Or gate CI with **SARIF 2.1.0** (no LLM required):
 
 ```bash
-npx --yes @dsolisp/gavel@0.12.5 audit --format sarif > gavel.sarif
+npx --yes @dsolisp/gavel@0.13.0 audit --format sarif > gavel.sarif
 ```
 
 Copy the GitHub Actions recipe from [templates/github-actions/gavel-audit-sarif.yml](templates/github-actions/gavel-audit-sarif.yml). Enterprise trust criteria, Sonar import, and exit codes: [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
@@ -63,6 +63,7 @@ Seven complete example projects under `fixtures/sample-repos/` — **Playwright*
 | Check CI safety before merge | `/gavel-ci-check` | Diff-based env var / secret / dep audit |
 | Complement strict audit with architecture review | `/gavel-architect-review` | Separate deterministic and evidence-based findings |
 | Review Azure DevOps PRs in shadow mode | `gavel ado-pr-review` | Schema-validated, redacted review artifact |
+| Reject new PR code violations without blocking historical debt | `gavel pr-check` | Commit-pinned, added-line static gate; see [docs/PR_CHECK.md](docs/PR_CHECK.md) |
 
 Run `gavel companion --help` for optional companion workflows (CI migration, env setup, hub credentials, issue closure — not in default install).
 

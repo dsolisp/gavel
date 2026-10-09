@@ -1,0 +1,71 @@
+parameters:
+- name: pool
+  type: object
+  default:
+    vmImage: ubuntu-latest
+- name: gavelRepository
+  type: string
+  default: gavel
+- name: gavelCommit
+  type: string
+
+jobs:
+- job: GavelPrStaticCheck
+  displayName: Gavel changed-code quality gate
+  timeoutInMinutes: 10
+  pool: ${{ parameters.pool }}
+  steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 0
+    fetchTags: false
+    path: s/pr-source
+  - checkout: ${{ parameters.gavelRepository }}
+    clean: true
+    fetchDepth: 1
+    path: s/pr-gavel
+  - task: NodeTool@0
+    inputs:
+      versionSpec: 20.x
+    displayName: Use Node.js 20
+  - bash: |
+      set -euo pipefail
+      mkdir -p "$GAVEL_REPORT_DIRECTORY"
+      printf '{"status":"INCOMPLETE","findings":[]}\n' > "$GAVEL_REPORT_DIRECTORY/pr-check.json"
+      if [ "$BUILD_REASON" != PullRequest ]; then
+        echo 'This gate requires an Azure Repos PR validation build.' >&2
+        exit 2
+      fi
+      case "$BUILD_SOURCEBRANCH" in
+        refs/pull/*/merge) ;;
+        *) echo 'Expected the Azure PR merge ref.' >&2; exit 2 ;;
+      esac
+      if ! [[ "$EXPECTED_GAVEL_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]]; then
+        echo 'A protected, exact Gavel commit is required.' >&2
+        exit 2
+      fi
+      actual_gavel_commit=$(git -C "$GAVEL_DIRECTORY" rev-parse HEAD)
+      if [ "${actual_gavel_commit,,}" != "${EXPECTED_GAVEL_COMMIT,,}" ]; then
+        echo 'Gavel checkout does not match the approved commit.' >&2
+        exit 2
+      fi
+      read -r merge_commit target_commit source_commit extra_parent <<< "$(git rev-list --parents -n 1 HEAD)"
+      if [ "$merge_commit" != "$BUILD_SOURCEVERSION" ] || [ -z "$source_commit" ] || [ -n "${extra_parent:-}" ]; then
+        echo 'Cannot verify the captured PR merge and its parents.' >&2
+        exit 2
+      fi
+      node "$GAVEL_DIRECTORY/scripts/cli.js" pr-check . \
+        --base "$target_commit" --head "$merge_commit" --json \
+        --out "$GAVEL_REPORT_DIRECTORY/pr-check.json"
+    workingDirectory: $(Pipeline.Workspace)/s/pr-source
+    displayName: Reject violations introduced by this PR
+    env:
+      GAVEL_DIRECTORY: $(Pipeline.Workspace)/s/pr-gavel
+      GAVEL_REPORT_DIRECTORY: $(Agent.TempDirectory)/gavel-pr-static
+      EXPECTED_GAVEL_COMMIT: ${{ parameters.gavelCommit }}
+  - task: PublishPipelineArtifact@1
+    condition: always()
+    displayName: Publish sanitized static-check evidence
+    inputs:
+      targetPath: $(Agent.TempDirectory)/gavel-pr-static
+      artifact: gavel-pr-static

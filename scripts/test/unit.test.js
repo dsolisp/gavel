@@ -23,6 +23,83 @@ function runCli(args, options = {}) {
   });
 }
 
+test('PR check preserves historical debt and blocks a newly copied violation', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-pr-git-'));
+  const git = (...args) => {
+    const result = spawnSync('git', ['-C', directory, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  try {
+    git('init');
+    git('config', 'user.name', 'Gavel fixture');
+    git('config', 'user.email', 'fixture@example.invalid');
+    fs.mkdirSync(path.join(directory, 'tests'));
+    let file = path.join(directory, 'tests', 'wait.spec.ts');
+    fs.writeFileSync(file, 'async function flow(page) {\n  await page.waitForTimeout(1000);\n}\n');
+    git('add', '.');
+    git('commit', '-m', 'Historical fixture');
+    const base = git('rev-parse', 'HEAD');
+    fs.writeFileSync(file, 'async function flow(page) {\n  await page.waitForTimeout(1000);\n  const harmless = true;\n}\n\n');
+    git('add', '.');
+    git('commit', '-m', 'Clean addition');
+    const clean = runCli(['pr-check', directory, '--base', base, '--head', 'HEAD', '--json']);
+    assert.equal(clean.status, 0, clean.stderr);
+    git('mv', 'tests/wait.spec.ts', 'tests/renamed wait.spec.ts');
+    file = path.join(directory, 'tests', 'renamed wait.spec.ts');
+    git('commit', '-m', 'Rename existing debt');
+    const renamed = runCli(['pr-check', directory, '--base', base, '--head', 'HEAD', '--json']);
+    assert.equal(renamed.status, 0, renamed.stderr);
+    fs.appendFileSync(file, 'await page.waitForTimeout(1000);\n');
+    fs.writeFileSync(path.join(directory, 'gavel.config.json'), JSON.stringify({ excludePaths: ['**'] }));
+    git('add', '.');
+    git('commit', '-m', 'Copied violation');
+    const failure = runCli(['pr-check', directory, '--base', base, '--head', 'HEAD', '--json']);
+    assert.equal(failure.status, 1, failure.stderr);
+    assert.deepEqual(JSON.parse(failure.stdout).findings.map(({ tag, file: filePath, line }) => ({ tag, file: filePath, line })),
+      [{ tag: 'manual-wait', file: 'tests/renamed wait.spec.ts', line: 6 }]);
+    fs.appendFileSync(file, '// gavel-ignore: manual-wait\n');
+    git('add', '.');
+    git('commit', '-m', 'Attempt inline suppression');
+    const suppressed = runCli(['pr-check', directory, '--base', base, '--head', 'HEAD', '--json']);
+    assert.equal(suppressed.status, 1, suppressed.stderr);
+    const invalid = runCli(['pr-check', directory, '--base', 'missing-commit', '--head', 'HEAD', '--json']);
+    assert.equal(invalid.status, 2);
+    git('rm', 'tests/renamed wait.spec.ts');
+    git('commit', '-m', 'Remove legacy fixture');
+    const deleted = runCli(['pr-check', directory, '--base', base, '--head', 'HEAD', '--json']);
+    assert.equal(deleted.status, 0, deleted.stderr);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('PR check does not attribute a whole-method finding to an edited header', () => {
+  const { introducedFindings } = require('../pr-check');
+  const file = 'pages/CheckoutPage.cs';
+  const before = [{ tag: 'fat-method', file, line: 2, text: 'fat method old name' }];
+  const after = [{ tag: 'fat-method', file, line: 2, text: 'fat method renamed' }];
+  assert.deepEqual(introducedFindings(before, after, { [file]: [2] }, { [file]: file }), {
+    findings: [], unattributed: [{ tag: 'fat-method', file, line: 2 }],
+  });
+});
+
+test('PR check blocks only the added declaration of a dead locator', () => {
+  const { findDeadLocators } = require('../audit-autofix');
+  const { introducedFindings } = require('../pr-check');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gavel-pr-dead-'));
+  try {
+    fs.mkdirSync(path.join(directory, 'locators'));
+    const file = 'locators/ExampleLocators.cs';
+    fs.writeFileSync(path.join(directory, file), 'public class ExampleLocators\n{\n  public By Unused => By.Id("fixture");\n}\n');
+    const dead = findDeadLocators(directory).map((finding) => ({ ...finding, text: finding.symbol }));
+    assert.deepEqual(introducedFindings([], dead, { [file]: [3] }, { [file]: null }).findings,
+      [{ tag: 'dead-locator', file, line: 3 }]);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('CLI reports package version and supports JSON output files', () => {
   const expectedVersion = require('../../package.json').version;
   for (const args of [['--version'], ['-v'], ['version']]) {

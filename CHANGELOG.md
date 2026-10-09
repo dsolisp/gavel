@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-09
+
+### Added
+
+- `gavel pr-check`: deterministic commit-snapshot gate for new attributable occurrences on added/replacement lines, with `0/1/2` exit codes and snippet-free JSON evidence. Historical debt, duplicate occurrences, pure renames and protected base policy are handled separately from whole-suite audit thresholds.
+- Azure Repos static build-validation template with captured merge-parent scope, immutable scanner verification and artifact publication. Branch policies must be enabled separately.
+
+### Fixed
+
+- Dead-locator candidates now carry their declaration line, allowing newly added declarations to be attributed without blaming an unchanged locator whose consumer was deleted.
+- PR snapshots exclude unrelated mobile binaries and report assets from the Git object buffer. Verified unchanged-debt, new-code blocking and innocent-method-edit behavior across all eight BN repositories (Appium and Playwright .NET/NUnit).
+
+### Security
+
+- The PR gate does not execute source-repository scripts and does not accept after-version configuration or inline suppression comments as authority to disable validation. Structural findings without instruction-level evidence remain informational rather than blocking an entire touched method.
+
 ## [0.12.5] - 2026-09-30
 
 ### Added
@@ -365,7 +381,8 @@ Public design notes: [docs/contracts/dotnet-ecosystem-v0.10.0.md](docs/contracts
 - 20+ IDE adapter rule copies and hook system
 - Playwright HTML report parser, area-map, Python behave freshness, changelog, docs
 
-[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.12.5...HEAD
+[Unreleased]: https://github.com/dsolisp/gavel/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/dsolisp/gavel/compare/v0.12.5...v0.13.0
 [0.12.5]: https://github.com/dsolisp/gavel/compare/v0.12.4...v0.12.5
 [0.12.4]: https://github.com/dsolisp/gavel/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/dsolisp/gavel/compare/v0.12.2...v0.12.3
